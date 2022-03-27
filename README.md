@@ -1,10 +1,11 @@
-# io_scene_gzrs2
+# ***io_scene_gzrs2***
 
 GunZ: The Duel RealSpace2.0 map import for Blender 2.8 or higher.  
 Intended for users wishing to visualize maps and prepare the data for a modern game engine.
 
-Download the repo as a .zip using the big green "Code" button and install as a plugin.  
 Please report bugs and unimplemented features to: Krunk#6051
+
+[***DOWNLOAD***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.8/io_scene_gzrs2.zip)
 
 
 ![Preview](meta/preview_220327_1.jpg)
