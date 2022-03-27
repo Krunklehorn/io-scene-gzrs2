@@ -111,8 +111,8 @@ def load(self, context):
     if self.doBspBounds:
         rootExtras.children.link(rootBspBounds)
         
-        for viewLayer in context.scene.view_layers:
-            lcRootMap = viewLayer.layer_collection.children[filename]
+        for viewLayer in bpy.context.scene.view_layers:
+            lcRootMap = viewLayer.layer_collection.children[0].children[filename]
             lcRootExtras = lcRootMap.children[f"{ filename }_Extras"]
             lcRootBspBounds = lcRootExtras.children[f"{ filename }_BspBounds"]
             lcRootBspBounds.hide_viewport = True
