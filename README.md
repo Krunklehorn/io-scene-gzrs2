@@ -1,6 +1,6 @@
 # ***io_scene_gzrs2***
 
-GunZ: The Duel RealSpace2.0 map import for Blender 2.8 or higher.  
+GunZ: The Duel RealSpace2.0 map import for Blender 3.1 or higher.  
 Intended for users wishing to visualize maps and prepare the data for a modern game engine.
 
 Please report bugs and unimplemented features to: Krunk#6051
