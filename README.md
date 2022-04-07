@@ -30,6 +30,7 @@ Please report bugs and unimplemented features to: Krunk#6051
 # Planned Features
 
 * .elu/.ani model import
+* option to re-center all geometry
 * other community suggestions
 
 
