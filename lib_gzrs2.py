@@ -10,29 +10,29 @@ def compareLights(light1, light2):
 def groupLights(lights):
         groups = []
         skip = []
-        
+
         for l1, light1 in enumerate(lights):
             if l1 in skip: continue
             else: skip.append(l1)
-            
+
             matches = [light1]
-                
+
             for l2, light2 in enumerate(lights):
                 if l2 in skip: continue
-                
+
                 if compareLights(light1, light2):
                     skip.append(l2)
                     matches.append(light2)
-            
+
             if len(lights) > 1:
                 groups.append(matches)
-        
+
         return groups
 
 def createArrayDriver(target, targetProp, sources, sourceProp):
     target[targetProp] = getattr(sources, sourceProp)
     curves = sources.driver_add(sourceProp)
-    
+
     for c, curve in enumerate(curves):
         driver = curve.driver
         var = driver.variables.new()
@@ -40,7 +40,7 @@ def createArrayDriver(target, targetProp, sources, sourceProp):
         var.targets[0].id = target
         var.targets[0].data_path = f"[\"{ targetProp }\"][{ c }]"
         driver.expression = var.name
-    
+
     return curves
 
 def createDriver(target, targetProp, source, sourceProp):
@@ -51,5 +51,5 @@ def createDriver(target, targetProp, source, sourceProp):
     var.targets[0].id = target
     var.targets[0].data_path = f"[\"{ targetProp }\"]"
     driver.expression = var.name
-    
+
     return driver

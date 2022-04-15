@@ -7,7 +7,7 @@ from .constants_gzrs2 import *
 def parseRSXML(self, xmlRs, tagName):
     elements = xmlRs.getElementsByTagName(tagName)
     list = []
-    
+
     for element in elements:
         entry = defaultdict(lambda: False)
 
@@ -26,12 +26,12 @@ def parseRSXML(self, xmlRs, tagName):
 
         for node in element.childNodes:
             name = node.nodeName
-            
+
             if node.nodeType == node.TEXT_NODE:
                 continue
             elif node.nodeType == node.ELEMENT_NODE:
                 data = node.firstChild and node.firstChild.nodeValue
-                    
+
                 if name in ['DIFFUSEMAP']:
                     entry[name] = data
                 elif name in ['R', 'G', 'B']:
@@ -47,53 +47,53 @@ def parseRSXML(self, xmlRs, tagName):
                     vec = Vector((float(s) for s in data.split(' ')))
                     if self.convertUnits: vec *= 0.01
                     vec.y = -vec.y
-                    
+
                     if tagName == 'OCCLUSION':
                         if entry[name] is False:
                             entry[name] = []
-                        
+
                         entry[name].append(vec)
                     else:
                         entry[name] = vec
                 else:
                     entry[name] = True
-                    
+
                     if data: self.report({ 'INFO' }, f"No rule yet for tag found in *.RS.xml, it may contain useful data: { name }, { data }")
             else:
                 self.report({ 'ERROR' }, f"No rule for *.RS.xml node type: { node.nodeType }")
                 break
 
         list.append(entry)
-    
+
     return list
 
 def parseSpawnXML(self, xmlSpawn):
     gametypes = xmlSpawn.getElementsByTagName('GAMETYPE')
     list = []
-    
+
     for gametype in gametypes:
         id = gametype.getAttribute('id')
         gametypeEntry = { 'id': id, 'spawns': [] }
         spawns = gametype.getElementsByTagName('SPAWN')
-        
+
         for spawn in spawns:
             spawnEntry = defaultdict(lambda: False)
             spawnEntry['item'] = spawn.getAttribute('item')
             spawnEntry['timesec'] = int(spawn.getAttribute('timesec'))
-            
+
             for node in spawn.childNodes:
                 name = node.nodeName
-                
+
                 if node.nodeType == node.TEXT_NODE:
                     continue
                 elif node.nodeType == node.ELEMENT_NODE:
                     data = node.firstChild and node.firstChild.nodeValue
-                    
+
                     if name in ['POSITION']:
                         vec = Vector((float(s) for s in data.split(' ')))
                         if self.convertUnits: vec *= 0.01
                         vec.y = -vec.y
-                        
+
                         spawnEntry[name] = vec
                     else:
                         spawnEntry[name] = True
@@ -104,5 +104,5 @@ def parseSpawnXML(self, xmlSpawn):
 
             gametypeEntry['spawns'].append(spawnEntry)
         list.append(gametypeEntry)
-    
+
     return list

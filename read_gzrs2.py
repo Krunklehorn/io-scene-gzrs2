@@ -4,7 +4,7 @@ from .io_gzrs2 import *
 
 def readRs(self, path, state: GZRS2State):
     file = open(path, 'rb')
-    
+
     id = readUInt(file)
     version = readUInt(file)
     matCount = readInt(file)
@@ -21,14 +21,14 @@ def readRs(self, path, state: GZRS2State):
     if id != RS_ID or version != RS_VERSION:
         self.report({ 'ERROR' }, f"RS header invalid! { id }, { version }")
         file.close()
-        
+
         return
     elif matCount != len(state.xmlMats):
         self.report({ 'ERROR' }, f"RS material count did not match the XML parse! { matCount }, { len(state.xmlMats) }")
         file.close()
-        
+
         return
-    
+
     rsPolyCount = readInt(file)
     file.seek(4, 1) # skip total vertex count
 
@@ -43,17 +43,17 @@ def readRs(self, path, state: GZRS2State):
     file.seek(4 * 2, 1) # skip leaf and polygon counts
     bspTotalVertices = readInt(file)
     file.seek(4, 1) # skip indices count
-    
+
     firstVertex = 0
 
     def openBspNode():
         nonlocal firstVertex
-        
+
         if self.doBspBounds:
             state.bspBounds.append(readBounds(file, self.convertUnits))
         else:
             file.seek(4 * 6, 1) # skip bounds data
-        
+
         file.seek(4 * 4, 1) # skip plane data
 
         if readBool(file): openBspNode() # positive
@@ -72,7 +72,7 @@ def readRs(self, path, state: GZRS2State):
                 nor = readCoordinate(file, self.convertUnits)
                 uv = readUV(file)
                 file.seek(4 * 2, 1) # skip lightmap uv data
-                
+
                 state.bspVerts.append(BspVertex(pos, nor, uv))
 
             file.seek(4 * 3, 1) # skip plane normal
@@ -93,42 +93,42 @@ def readRs(self, path, state: GZRS2State):
 
 def readCol(self, path, state: GZRS2State):
     file = open(path, 'rb')
-    
+
     id = readUInt(file)
     version = readUInt(file)
-    
+
     if id != R_COL_ID or version != R_COL_VERSION:
         self.report({ 'ERROR' }, f"Col header invalid! { id }, { version }")
         file.close()
-        
+
         return
-    
+
     file.seek(4, 1) # skip node count
     colTotalPolys = readInt(file)
-    
+
     colPolysWritten = 0
-    
+
     def openColNode():
         nonlocal colPolysWritten
-        
+
         file.seek(4 * 4 + 1, 1) # skip plane data and solidity bool
 
         if readBool(file): openColNode() # positive
         if readBool(file): openColNode() # negative
-        
+
         colPolyCount = readInt(file)
-        
+
         for _ in range(colPolyCount):
             state.colVerts.append(readCoordinate(file, self.convertUnits))
             state.colVerts.append(readCoordinate(file, self.convertUnits))
             state.colVerts.append(readCoordinate(file, self.convertUnits))
             file.seek(4 * 3, 1) # skip normal
-        
+
         colPolysWritten += colPolyCount
-        
+
     openColNode()
-    
+
     if colPolysWritten != colTotalPolys:
         self.report({ 'ERROR' }, f"Col polygon count did not match polygons written! { colPolysWritten }, { colTotalPolys }")
-    
+
     file.close()

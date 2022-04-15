@@ -17,10 +17,10 @@ bl_info = {
 
 def cleanse_modules():
     import sys
-    
-    all_modules = sys.modules 
+
+    all_modules = sys.modules
     all_modules = dict(sorted(all_modules.items(), key = lambda x:x[0]))
-    
+
     for k,v in all_modules.items():
         if k.startswith(__name__):
             del sys.modules[k]
@@ -31,102 +31,102 @@ class ImportGZRS2(Operator, ImportHelper):
     bl_idname = "import_scene.gzrs2"
     bl_label = "Import GZRS2"
     bl_options = { "UNDO", "PRESET" }
-    
+
     filter_glob: StringProperty(
         default = "*.RS",
         options = { "HIDDEN" }
     )
-    
+
     panelMain: BoolProperty(
         name = "Main",
         description = "Main panel of options.",
         default = True
     )
-    
+
     panelDrivers: BoolProperty(
         name = "Drivers",
         description = "Generate drivers to quickly adjust map data.",
         default = True
     )
-    
+
     convertUnits: BoolProperty(
         name = "Convert Units",
         description = "Convert location data from centimeters to meters.",
         default = True
     )
-    
+
     doCollision: BoolProperty(
         name = "Collision",
         description = "Import collision data.",
         default = True
     )
-    
+
     doLights: BoolProperty(
         name = "Lights",
         description = "Import light data.",
         default = True
     )
-    
+
     tweakLights: BoolProperty(
         name = "Tweak Lights",
         description = "Tweaks light data to give comparable results directly in Blender.",
         default = True
     )
-    
+
     doProps: BoolProperty(
         name = "Props",
         description = "Import model data.",
         default = True
     )
-    
+
     doDummies: BoolProperty(
         name = "Dummies",
         description = "Import lense flares, spawn points and more as empties.",
         default = True
     )
-    
+
     doOcclusion: BoolProperty(
         name = "Occlusion",
         description = "Import occlusion planes.",
         default = True
     )
-    
+
     doFog: BoolProperty(
         name = "Fog",
         description = "Create fog volume with Volume Scatter/Absorption nodes from fog settings.",
         default = True
     )
-    
+
     doSounds: BoolProperty(
         name = "Sounds",
         description = "Import ambient sounds.",
         default = True
     )
-    
+
     doItems: BoolProperty(
         name = "Items",
         description = "Import item particles.",
         default = True
     )
-    
+
     doBspBounds: BoolProperty(
         name = "BSP Bounds",
         description = "Create empties from BSP bounds data.",
         default = True
     )
-    
+
     doLightDrivers: BoolProperty(
         name = "Lights",
         description = "Generate drivers to quickly control groups of similar lights.",
         default = True
     )
-    
+
     doFogDriver: BoolProperty(
         name = "Fog",
         description = "Generate driver to control fog settings.",
         default = True
     )
-    
+
     def draw(self, context):
         pass
 
@@ -143,18 +143,18 @@ class GZRS2_PT_Import_Main(Panel):
     def draw(self, context):
         layout = self.layout
         operator = context.space_data.active_operator
-        
+
         layout.use_property_split = True
         layout.use_property_decorate = False
         layout.enabled = operator.panelMain
         layout.prop(operator, "convertUnits")
         layout.prop(operator, "doCollision")
         layout.prop(operator, "doLights")
-        
+
         row = layout.row()
-        row.prop(operator, "tweakLights")        
+        row.prop(operator, "tweakLights")
         row.enabled = operator.doLights
-        
+
         layout.prop(operator, "doProps")
         layout.prop(operator, "doDummies")
         layout.prop(operator, "doOcclusion")
@@ -175,7 +175,7 @@ class GZRS2_PT_Import_Drivers(Panel):
     def draw(self, context):
         layout = self.layout
         operator = context.space_data.active_operator
-        
+
         layout.use_property_split = True
         layout.use_property_decorate = False
         layout.enabled = operator.panelDrivers
@@ -202,7 +202,7 @@ def unregister():
 
     for cls in classes:
         bpy.utils.unregister_class(cls)
-    
+
     cleanse_modules()
 
 
