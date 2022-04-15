@@ -3,14 +3,17 @@
 GunZ: The Duel RealSpace2.0 map import for Blender 3.1 or higher.  
 Intended for users wishing to visualize maps and prepare the data for a modern game engine.
 
-Please report bugs and unimplemented features to: Krunk#6051
+Please report bugs and unimplemented features to: ***Krunk#6051***
 
-[***DOWNLOAD***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.8/io_scene_gzrs2.zip)
+RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-map-1204327/***
+
+[***DOWNLOAD v0.8.1***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.8.1/io_scene_gzrs2_v0.8.1.zip)
 
 
-![Preview](meta/preview_220327_1.jpg)
-![Preview](meta/preview_220327_2.jpg)
-![Preview](meta/preview_220327_3.jpg)
+# Recent Updates
+
+* Fixed silent fail when attempting to hide BspBounds collection
+* Fixed double dds extension causing issues parsing some texture paths
 
 
 # Current Features
@@ -31,7 +34,21 @@ Please report bugs and unimplemented features to: Krunk#6051
 
 * .elu/.ani model import
 * option to re-center all geometry
-* other community suggestions
+* nav mesh support
+
+
+# Known Issues
+
+* quest maps and community maps have not been tested at all yet
+* some alpha textures have white halos in render mode (Town)
+* collision mesh and occlusion planes appear black in render mode (just disable them for now)
+* some maps don't have a corresponding dummy for each object (is this information stored elsewhere?)
+* textures are only searched for in the surrounding map folders, there may be other locations but I don't know yet
+
+
+![Preview](meta/preview_220327_1.jpg)
+![Preview](meta/preview_220327_2.jpg)
+![Preview](meta/preview_220327_3.jpg)
 
 
 # Special Thanks
