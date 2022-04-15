@@ -152,6 +152,8 @@ def load(self, context):
             texpath = texpath.replace('/', '\\')
             texpath = f"{ directory }\\{ texpath }.dds"
 
+            texpath = texpath.replace('.dds.dds', '.dds')
+
             if os.path.exists(texpath):
                 texture = nodes.new(type = 'ShaderNodeTexImage')
                 texture.image = bpy.data.images.load(texpath)
