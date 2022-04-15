@@ -263,7 +263,7 @@ def load(self, context):
 
             for d, dummy in enumerate(state.xmlDums):
                 if dummy['name'] == splitName:
-                    if found == None:
+                    if found is None:
                         found = dummy
                     elif not multiple:
                         multiple = True
