@@ -8,7 +8,7 @@ from . import import_gzrs2
 bl_info = {
     "name": "GZRS2 Format",
     "author": "Krunklehorn",
-    "version": (0, 8, 0),
+    "version": (0, 8, 1),
     "blender": (3, 1, 0),
     "location": "File > Import",
     "description": "GunZ: The Duel RealSpace2.0 map import for geometry, models, materials, lights and more.",

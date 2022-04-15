@@ -179,7 +179,7 @@ def load(self, context):
                     tree.links.new(transparent.outputs[0], add.inputs[1])
                     tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
             else:
-                self.report({ 'INFO' }, "No texture found for material: { m }, { texpath }")
+                self.report({ 'INFO' }, f"No texture found for material: { m }, { texpath }")
 
         mesh = bpy.data.meshes.new(name)
         meshObj = bpy.data.objects.new(name, mesh)
