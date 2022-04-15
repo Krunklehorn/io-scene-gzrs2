@@ -111,11 +111,27 @@ def load(self, context):
     if self.doBspBounds:
         rootExtras.children.link(rootBspBounds)
 
-        for viewLayer in bpy.context.scene.view_layers:
-            lcRootMap = viewLayer.layer_collection.children[0].children[filename]
-            lcRootExtras = lcRootMap.children[f"{ filename }_Extras"]
-            lcRootBspBounds = lcRootExtras.children[f"{ filename }_BspBounds"]
-            lcRootBspBounds.hide_viewport = True
+        def lcFindRoot(lc):
+            if lc.collection is rootMap: return lc
+            elif len(lc.children) == 0: return None
+
+            for child in lc.children:
+                next = lcFindRoot(child)
+
+                if next is not None:
+                    return next
+
+        for viewLayer in context.scene.view_layers:
+            lcRootMap = lcFindRoot(viewLayer.layer_collection)
+
+            if lcRootMap is not None:
+                for lcExtras in lcRootMap.children:
+                        if lcExtras.collection is rootExtras:
+                            for lcBspBounds in lcExtras.children:
+                                if lcBspBounds.collection is rootBspBounds:
+                                    lcBspBounds.hide_viewport = True
+            else:
+                self.report({ 'INFO' }, f"Unable to find root collection in view layer: { viewLayer }")
 
     for m, material in enumerate(state.xmlMats):
         name = f"{ filename }_Mesh{ m }_{ material['name'] }"
