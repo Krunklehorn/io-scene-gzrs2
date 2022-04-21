@@ -7,13 +7,16 @@ Please report bugs and unimplemented features to: ***Krunk#6051***
 
 RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-map-1204327/***
 
-[***DOWNLOAD v0.8.1***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.8.1/io_scene_gzrs2_v0.8.1.zip)
+[***DOWNLOAD v0.8.2***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.8.2/io_scene_gzrs2_v0.8.2.zip)
 
 
 # Recent Updates
 
-* Fixed silent fail when attempting to hide BspBounds collection
-* Fixed double dds extension causing issues parsing some texture paths
+* (Very) basic .elu support, no .ani parsing or skinned meshes yet
+  * tested on all models loaded in vanilla GunZ maps
+  * some issues with orientation on a case-by-case basis (Factory, Mansion, Halloween Town etc.)
+* Map geometry now actually truly does load custom normals this time I promise
+* Added new switches for logging information to the console
 
 
 # Current Features
@@ -42,8 +45,8 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 * quest maps and community maps have not been tested at all yet
 * some alpha textures have white halos in render mode (Town)
 * collision mesh and occlusion planes appear black in render mode (just disable them for now)
-* some maps don't have a corresponding dummy for each object (is this information stored elsewhere?)
 * textures are only searched for in the surrounding map folders, there may be other locations but I don't know yet
+* some .elu models are oriented incorrectly. (Factory, Mansion, Halloween Town etc.)
 
 
 ![Preview](meta/preview_220327_1.jpg)

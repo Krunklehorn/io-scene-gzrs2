@@ -4,6 +4,12 @@
 # - RToken.h
 # - RBspObject.h/.cpp
 # - RMaterialList.h/.cpp
+# - RMesh_Load.cpp
+# - RMeshUtil.h
+# - MZFile.cpp
+# - R_Mtrl.cpp
+# - EluLoader.h/cpp
+# - MCPlug2_Mesh.cpp
 #
 # Please report maps with unsupported features to me on Discord: Krunk#6051
 #####
@@ -20,6 +26,19 @@ from .lib_gzrs2 import *
 
 def load(self, context):
     state = GZRS2State()
+
+    if self.panelLogging:
+        print()
+        print("=======================================================================")
+        print("===========================  GZRS2 Import  ============================")
+        print("=======================================================================")
+        print(f"== { self.filepath }")
+        print("=======================================================================")
+        print()
+    else:
+        self.logEluHeaders = False
+        self.logEluMats = False
+        self.logEluMeshNodes = False
 
     rspath = self.filepath
     xmlpath = f"{ rspath }.xml"
@@ -60,6 +79,10 @@ def load(self, context):
 
     if self.doCollision:
         readCol(self, colpath, state)
+
+    if self.doProps:
+        for p, prop in enumerate(state.xmlObjs):
+            readElu(self, f"{ directory }\\{ prop['name'] }", state)
 
     if self.doFog and not self.doLights:
             self.doFog = False
@@ -136,10 +159,10 @@ def load(self, context):
     for m, material in enumerate(state.xmlMats):
         name = f"{ filename }_Mesh{ m }_{ material['name'] }"
 
-        mat = bpy.data.materials.new(name)
-        mat.use_nodes = True
+        blMat = bpy.data.materials.new(name)
+        blMat.use_nodes = True
 
-        tree = mat.node_tree
+        tree = blMat.node_tree
         nodes = tree.nodes
 
         shader = nodes.get('Principled BSDF')
@@ -147,11 +170,10 @@ def load(self, context):
         texpath = material.get('DIFFUSEMAP')
 
         if not texpath:
-            self.report({ 'INFO' }, f"Material with empty texture path: { m }")
+            self.report({ 'INFO' }, f"Bsp material with empty texture path: { m }")
         else:
             texpath = texpath.replace('/', '\\')
             texpath = f"{ directory }\\{ texpath }.dds"
-
             texpath = texpath.replace('.dds.dds', '.dds')
 
             if os.path.exists(texpath):
@@ -162,13 +184,14 @@ def load(self, context):
                 tree.links.new(texture.outputs[0], shader.inputs[0])
 
                 if material['USEOPACITY']:
-                    mat.blend_method = 'BLEND'
-                    mat.shadow_method = 'HASHED'
-                    mat.use_backface_culling = True
+                    blMat.blend_method = 'BLEND'
+                    blMat.shadow_method = 'HASHED'
+                    blMat.show_transparent_back = True
 
                     tree.links.new(texture.outputs[1], shader.inputs[21])
                 elif material['ADDITIVE']:
-                    mat.blend_method = 'BLEND'
+                    blMat.blend_method = 'BLEND'
+                    blMat.show_transparent_back = True
 
                     add = nodes.new(type = 'ShaderNodeAddShader')
                     add.location = (300, 140)
@@ -181,18 +204,19 @@ def load(self, context):
                     tree.links.new(transparent.outputs[0], add.inputs[1])
                     tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
             else:
-                self.report({ 'INFO' }, f"No texture found for material: { m }, { texpath }")
+                self.report({ 'INFO' }, f"No texture found for bsp material: { m }, { texpath }")
 
-        mesh = bpy.data.meshes.new(name)
-        meshObj = bpy.data.objects.new(name, mesh)
+        blMesh = bpy.data.meshes.new(name)
+        blMeshObj = bpy.data.objects.new(name, blMesh)
 
-        state.blMats.append(mat)
-        state.blMeshes.append(mesh)
-        state.blMeshObjs.append(meshObj)
+        state.blMats.append(blMat)
+        state.blMeshes.append(blMesh)
+        state.blMeshObjs.append(blMeshObj)
 
-    for m, mesh in enumerate(state.blMeshes):
+    for m, blMesh in enumerate(state.blMeshes):
         meshVerts = []
         meshFaces = []
+        meshNorms = []
         meshUVs = []
         found = False
         firstIndex = 0
@@ -201,27 +225,31 @@ def load(self, context):
             if poly.materialID == m:
                 found = True
 
-                for i in range(poly.firstVertex, poly.firstVertex + poly.vertexCount):
-                    meshVerts.append(state.bspVerts[i].pos)
-                    meshUVs.append(state.bspVerts[i].uv)
+                for v in range(poly.firstVertex, poly.firstVertex + poly.vertexCount):
+                    meshVerts.append(state.bspVerts[v].pos)
+                    meshNorms.append(state.bspVerts[v].nor)
+                    meshUVs.append(state.bspVerts[v].uv)
 
                 meshFaces.append(tuple(range(firstIndex, firstIndex + poly.vertexCount)))
                 firstIndex += poly.vertexCount
 
         if not found:
             # TODO: append material to list instead, check if props use it later
-            self.report({ 'INFO' }, f"Unused material slot, associated data will be garbage collected: { m }, { state.xmlMats[m]['name'] }")
-        else:
-            mesh.from_pydata(meshVerts, [], meshFaces)
-            uvLayer = mesh.uv_layers.new()
+            self.report({ 'INFO' }, f"Unused bsp material slot, associated data will be garbage collected: { m }, { state.xmlMats[m]['name'] }")
+            continue
 
-            for u, uv in enumerate(meshUVs):
-                uvLayer.data[u].uv = uv
+        blMesh.from_pydata(meshVerts, [], meshFaces)
 
-            mesh.update()
+        blMesh.use_auto_smooth = True
+        blMesh.normals_split_custom_set_from_vertices(meshNorms)
 
-            state.blMeshObjs[m].data.materials.append(state.blMats[m])
-            rootMeshes.objects.link(state.blMeshObjs[m])
+        uvLayer = blMesh.uv_layers.new()
+        for u, uv in enumerate(meshUVs): uvLayer.data[u].uv = uv
+
+        blMesh.update()
+
+        state.blMeshObjs[m].data.materials.append(state.blMats[m])
+        rootMeshes.objects.link(state.blMeshObjs[m])
 
     if self.doLights:
         for l, light in enumerate(state.xmlLits):
@@ -263,49 +291,158 @@ def load(self, context):
                 if light['CASTSHADOW']: rootLightsSoftCasters.objects.link(litObj)
                 else: rootLightsSoftAmbient.objects.link(litObj)
 
-    #####
-    # .elu models, are not supported yet. The script will search for a corresponding dummy to create as an empty instead.
-    # Use goweiwen's updated version of Phantom*'s .elu/.ani importer for now.
-    # https://github.com/goweiwen/blender-elu-importer
-    # https://forum.ragezone.com/f245/elu-ani-blender-importer-488857/
-    #####
-
     propDums = []
 
     if self.doProps:
         for p, prop in enumerate(state.xmlObjs):
-            propName = prop['name']
-            splitName = propName.split('_', 1)[1][:-4]
+            propFile = prop['name']
+            propName = propFile.split('_', 1)[1].rsplit('.', 1)[0]
             found = None
             multiple = False
 
             for d, dummy in enumerate(state.xmlDums):
-                if dummy['name'] == splitName:
+                if dummy['name'] == propName:
                     if found is None:
                         found = dummy
                     elif not multiple:
                         multiple = True
-                        self.report({ 'INFO' }, f"Prop listed with more than one corresponding dummy, using the first: { p }, { splitName }")
+                        self.report({ 'INFO' }, f"Prop listed with more than one corresponding dummy, using the first: { p }, { propName }")
 
                     propDums.append(d)
 
             if not found:
-                self.report({ 'INFO' }, f"Prop listed with no corresponding dummy, skipping: { p }, { splitName }")
+                self.report({ 'INFO' }, f"Prop listed with no corresponding dummy, skipping: { p }, { propName }")
+                continue
+
+            pos = found['POSITION']
+            dir = found['DIRECTION']
+            up = Vector((0, 0, 1))
+            right = dir.cross(up)
+            up = right.cross(dir)
+            rot = Matrix((right, dir, up))
+
+            blPropObj = bpy.data.objects.new(f"{ filename }_Prop_{ propName }_Dummy", None)
+            blPropObj.empty_display_type = 'ARROWS'
+            blPropObj.location = pos
+            blPropObj.rotation_euler = rot.to_euler()
+
+            state.blPropObjs.append(blPropObj)
+            rootProps.objects.link(blPropObj)
+
+        matTasks = {}
+
+        for m, meshNode in enumerate(state.eluMeshNodes):
+            if meshNode.isDummyMesh:
+                self.report({ 'INFO' }, f"Prop marked as dummy mesh, skipping: { m }, { meshNode.meshName }")
+                continue
+
+            matTasks[meshNode.matID] = False
+
+        for m, material in enumerate(state.eluMats):
+            task = matTasks.get(material.matID)
+
+            if task is None:
+                self.report({ 'INFO' }, f"Unused elu material slot, associated data will be garbage collected: { material.matID }, { material.texName }")
+                continue
+            elif task:
+                continue
+
+            name = f"{ filename }_Prop{ material.matID }_{ material.texName }"
+
+            blMat = bpy.data.materials.new(name)
+            blMat.use_nodes = True
+
+            tree = blMat.node_tree
+            nodes = tree.nodes
+
+            shader = nodes.get('Principled BSDF')
+            shader.inputs[7].default_value = 0.0
+            texpath = material.texPath
+
+            if not texpath:
+                self.report({ 'INFO' }, f"Elu material with empty texture path: { material.matID }")
             else:
-                pos = found['POSITION']
-                dir = found['DIRECTION']
-                up = Vector((0, 0, 1))
-                right = dir.cross(up)
-                up = right.cross(dir)
-                rot = Matrix((right, dir, up))
+                texpath = texpath.replace('/', '\\')
 
-                blPropObj = bpy.data.objects.new(f"{ filename }_Prop_{ splitName }", None)
-                blPropObj.empty_display_type = 'ARROWS'
-                blPropObj.location = pos
-                blPropObj.rotation_euler = rot.to_euler()
+                if material.texDir == "":
+                    texpath = f"{ directory }\\{ texpath }.dds"
+                else:
+                    texpath = f"{ directory }\\..\\..\\{ texpath }.dds"
 
-                state.blPropObjs.append(blPropObj)
-                rootProps.objects.link(blPropObj)
+                texpath = texpath.replace('.dds.dds', '.dds')
+
+                if os.path.exists(texpath):
+                    texture = nodes.new(type = 'ShaderNodeTexImage')
+                    texture.image = bpy.data.images.load(texpath)
+                    texture.location = (-280, 300)
+
+                    tree.links.new(texture.outputs[0], shader.inputs[0])
+
+                    blMat.use_backface_culling = not material.twosided
+
+                    # TODO: find a way to remove elu models from the path tracing
+
+                    if material.isAlphaMap:
+                        blMat.blend_method = 'BLEND'
+                        blMat.shadow_method = 'HASHED'
+                        blMat.show_transparent_back = True
+
+                        tree.links.new(texture.outputs[1], shader.inputs[21])
+                    elif material.additive:
+                        blMat.blend_method = 'BLEND'
+                        blMat.show_transparent_back = True
+
+                        add = nodes.new(type = 'ShaderNodeAddShader')
+                        add.location = (300, 140)
+
+                        transparent = nodes.new(type = 'ShaderNodeBsdfTransparent')
+                        transparent.location = (300, 20)
+
+                        tree.links.new(texture.outputs[0], shader.inputs[19])
+                        tree.links.new(shader.outputs[0], add.inputs[0])
+                        tree.links.new(transparent.outputs[0], add.inputs[1])
+                        tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
+                else:
+                    self.report({ 'INFO' }, f"No texture found for elu material: { m }, { texpath }")
+
+            matTasks[material.matID] = blMat
+            state.blMats.append(blMat)
+
+        for meshNode in filter(lambda f: not f.isDummyMesh, state.eluMeshNodes):
+            propVerts = []
+            propNorms = []
+            propFaces = []
+            propUVs = []
+            firstIndex = 0
+
+            for f, face in enumerate(meshNode.faces):
+                for v in range(2, -1, -1):
+                    propVerts.append(meshNode.vertices[face.index[v]])
+                    propNorms.append(meshNode.normals[face.index[v]])
+                    propUVs.append(face.uv[v])
+
+                propFaces.append(tuple(range(firstIndex, firstIndex + 3)))
+                firstIndex += 3
+
+            blProp = bpy.data.meshes.new(name)
+
+            blProp.from_pydata(propVerts, [], propFaces)
+
+            blProp.use_auto_smooth = True
+            blProp.normals_split_custom_set_from_vertices(propNorms)
+
+            uvLayer = blProp.uv_layers.new()
+            for u, uv in enumerate(propUVs): uvLayer.data[u].uv = uv
+
+            blProp.update()
+
+            blProp.materials.append(matTasks[meshNode.matID])
+            blPropObj = bpy.data.objects.new(f"{ filename }_Prop_{ meshNode.meshName }", blProp)
+            blPropObj.matrix_world = meshNode.baseMatrix
+
+            state.blProps.append(blProp)
+            state.blPropObjs.append(blPropObj)
+            rootProps.objects.link(blPropObj)
 
     if self.doDummies:
         for d, dummy in enumerate(state.xmlDums):
@@ -567,33 +704,18 @@ def load(self, context):
                                                 createDriver(driverObj, energyProp, light, 'energy'),
                                                 createDriver(driverObj, softnessProp, light, 'shadow_soft_size')))
 
-                    driverObj.id_properties_ui(colorProp).update(subtype = 'COLOR',
-                                                                 min = 0.0, max = 1.0,
-                                                                 soft_min = 0.0, soft_max = 1.0,
-                                                                 precision = 3, step = 1.0)
-
-                    driverObj.id_properties_ui(energyProp).update(subtype = 'POWER',
-                                                                  min = 0.0, soft_min = 0.0,
-                                                                  precision = 1, step = 100)
-
-                    driverObj.id_properties_ui(softnessProp).update(subtype = 'DISTANCE',
-                                                                    precision = 2, step = 3,
-                                                                    min = 0.0, soft_min = 0.0)
+                    driverObj.id_properties_ui(colorProp).update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
+                    driverObj.id_properties_ui(energyProp).update(subtype = 'POWER', min = 0.0, soft_min = 0.0, precision = 1, step = 100)
+                    driverObj.id_properties_ui(softnessProp).update(subtype = 'DISTANCE', min = 0.0, soft_min = 0.0, precision = 2, step = 3)
 
             if self.doFogDriver:
                 shader = state.blFogShader
 
                 state.blDrivers.append(createArrayDriver(driverObj, 'GZRS2 Fog Color', shader.inputs[0], 'default_value'))
-                driverObj.id_properties_ui('GZRS2 Fog Color').update(subtype = 'COLOR',
-                                                                     min = 0.0, max = 1.0,
-                                                                     soft_min = 0.0, soft_max = 1.0,
-                                                                     precision = 3, step = 1.0)
+                driverObj.id_properties_ui('GZRS2 Fog Color').update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
 
                 state.blDrivers.append(createDriver(driverObj, 'GZRS2 Fog Density', shader.inputs[1], 'default_value'))
-                driverObj.id_properties_ui('GZRS2 Fog Density').update(subtype = 'NONE',
-                                                                       min = 0.000001, max = 1.0,
-                                                                       soft_min = 0.000001, soft_max = 1.0,
-                                                                       precision = 5, step = 0.001)
+                driverObj.id_properties_ui('GZRS2 Fog Density').update(subtype = 'NONE', min = 0.000001, max = 1.0, soft_min = 0.000001, soft_max = 1.0, precision = 5, step = 0.001)
 
             state.blDriverObj = driverObj
             rootExtras.objects.link(driverObj)

@@ -8,7 +8,7 @@ from . import import_gzrs2
 bl_info = {
     "name": "GZRS2 Format",
     "author": "Krunklehorn",
-    "version": (0, 8, 1),
+    "version": (0, 8, 2),
     "blender": (3, 1, 0),
     "location": "File > Import",
     "description": "GunZ: The Duel RealSpace2.0 map import for geometry, models, materials, lights and more.",
@@ -49,6 +49,12 @@ class ImportGZRS2(Operator, ImportHelper):
         default = True
     )
 
+    panelLogging: BoolProperty(
+        name = "Logging",
+        description = "Log details to the console.",
+        default = False
+    )
+
     convertUnits: BoolProperty(
         name = "Convert Units",
         description = "Convert location data from centimeters to meters.",
@@ -81,7 +87,7 @@ class ImportGZRS2(Operator, ImportHelper):
 
     doDummies: BoolProperty(
         name = "Dummies",
-        description = "Import lense flares, spawn points and more as empties.",
+        description = "Import cameras, lense flares, spawn points and more as empties.",
         default = True
     )
 
@@ -124,6 +130,24 @@ class ImportGZRS2(Operator, ImportHelper):
     doFogDriver: BoolProperty(
         name = "Fog",
         description = "Generate driver to control fog settings.",
+        default = True
+    )
+
+    logEluHeaders: BoolProperty(
+        name = "Elu Headers",
+        description = "Log ELU header data.",
+        default = True
+    )
+
+    logEluMats: BoolProperty(
+        name = "Elu Materials",
+        description = "Log ELU material data.",
+        default = True
+    )
+
+    logEluMeshNodes: BoolProperty(
+        name = "Elu Mesh Nodes",
+        description = "Log ELU mesh node data.",
         default = True
     )
 
@@ -182,10 +206,31 @@ class GZRS2_PT_Import_Drivers(Panel):
         layout.prop(operator, "doLightDrivers")
         layout.prop(operator, "doFogDriver")
 
+class GZRS2_PT_Import_Logging(Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Logging"
+    bl_parent_id = "FILE_PT_operator"
+
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelLogging
+        layout.prop(operator, "logEluHeaders")
+        layout.prop(operator, "logEluMats")
+        layout.prop(operator, "logEluMeshNodes")
+
 classes = (
     ImportGZRS2,
     GZRS2_PT_Import_Main,
-    GZRS2_PT_Import_Drivers
+    GZRS2_PT_Import_Drivers,
+    GZRS2_PT_Import_Logging
 )
 
 def menu_func_import(self, context):
