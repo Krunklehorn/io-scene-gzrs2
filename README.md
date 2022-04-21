@@ -50,7 +50,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 
 ![Preview](meta/preview_220327_1.jpg)
-![Preview](meta/preview_220327_2.jpg)
+![Preview](meta/preview_220420.jpg)
 ![Preview](meta/preview_220327_3.jpg)
 
 
