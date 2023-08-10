@@ -4,6 +4,7 @@
 ### GunZ 1
 # - RTypes.h
 # - RToken.h
+# - RealSpace2.h/.cpp
 # - RBspObject.h/.cpp
 # - RMaterialList.h/.cpp
 # - RMesh_Load.cpp
@@ -11,6 +12,7 @@
 # - MZFile.cpp
 # - R_Mtrl.cpp
 # - EluLoader.h/cpp
+# - LightmapGenerator.h/.cpp
 # - MCPlug2_Mesh.cpp
 #
 ### GunZ 2
@@ -32,11 +34,14 @@
 
 import os, math
 
+import struct
+from struct import unpack
+
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
 from .io_gzrs2 import *
 
-def readRs(self, path, state: GZRS2State):
+def readRs(self, path, state):
     file = open(path, 'rb')
 
     id = readUInt(file)
@@ -44,12 +49,15 @@ def readRs(self, path, state: GZRS2State):
 
     if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsLeaves or state.logRsVerts:
         print("===================  Read RS  ===================")
-        print(f"ID:             { hex(id) }")
-        print(f"Version:        { hex(version) }")
+        print(f"ID:                 { hex(id) }")
+        print(f"Version:            { hex(version) }")
         print()
 
     if not (id == RS2_ID or id == RS3_ID) or version < RS3_VERSION1:
         self.report({ 'ERROR' }, f"GZRS2: RS header invalid! { hex(id) }, { version }")
+        file.close()
+
+        return { 'CANCELLED' }
 
     if id == RS2_ID and version == RS2_VERSION:
         matCount = readInt(file)
@@ -60,46 +68,40 @@ def readRs(self, path, state: GZRS2State):
 
             return
 
-        for _ in range(matCount): # skip material strings
-            count = 0
-
-            while count < 256:
-                char = str(file.read(1), 'utf-8')
-                if char == chr(0):
+        for _ in range(matCount): # skip packed material strings
+            for __ in range(256):
+                if file.read(1) == b'\x00':
                     break
-                else:
-                    count = count + 1
 
         rsPolyCount = readInt(file)
         skipBytes(file, 4) # skip total vertex count
 
         for _ in range(rsPolyCount):
             skipBytes(file, 4 + 4 + (4 * 4) + 4) # skip material id, draw flags, plane and area data
-            vertexCount = readInt(file)
-
-            for _ in range(vertexCount): skipBytes(file, 4 * 3) # skip vertex data
-            for _ in range(vertexCount): skipBytes(file, 4 * 3) # skip normal data
+            skipBytes(file, 2 * readInt(file) * 4 * 3) # skip vertex data and normal data
 
         skipBytes(file, 4 * 4) # skip unused, unknown counts
-        skipBytes(file, 4 * 2) # skip leaf and polygon counts
-        totalVertices = readInt(file)
+        skipBytes(file, 4) # skip node count
+        state.lmPolygonCount = readUInt(file)
+        state.lmVertexCount = readInt(file)
         skipBytes(file, 4) # skip indices count
 
         vertexOffset = 0
+        l = 0
 
         def openRS2BspNode():
-            nonlocal vertexOffset
+            nonlocal state, vertexOffset, l
 
             state.bspBounds.append(readBounds(file, state.convertUnits, state.convertUnits))
 
-            skipBytes(file, 4 * 4) # skip plane data
+            skipBytes(file, 4 * 4) # skip plane
 
             if readBool(file): openRS2BspNode() # positive
             if readBool(file): openRS2BspNode() # negative
 
-            for l in range(readInt(file)):
-                materialID = readInt(file)
-                skipBytes(file, 4) # skip polygon index
+            for _ in range(readUInt(file)):
+                leafMatID = readInt(file)
+                lightmapIndex = readInt(file)
                 drawFlags = readUInt(file)
                 leafVertexCount = readInt(file)
 
@@ -108,6 +110,11 @@ def readRs(self, path, state: GZRS2State):
                     nor = readDirection(file, True)
                     uv1 = readUV2(file)
                     uv2 = readUV2(file)
+
+                    # file.seek(-8, os.SEEK_CUR)
+                    # uv1x = file.read(4)
+                    # uv1y = file.read(4)
+                    # print(v, format(int.from_bytes(uv1x, 'little'), '0>32b'), format(int.from_bytes(uv1y, 'little'), '0>32b'), struct.unpack('<f', uv1x)[0], struct.unpack('<f', uv1y)[0])
 
                     state.rsVerts.append(RsVertex(pos, nor, (0, 0, 0), 1, uv1, uv2))
 
@@ -121,25 +128,28 @@ def readRs(self, path, state: GZRS2State):
 
                 skipBytes(file, 4 * 3) # skip plane normal
 
-                if not (0 <= materialID < len(state.xmlRsMats)):
-                    self.report({ 'INFO' }, f"GZRS2: Material ID out of bounds, setting to 0 and continuing. { materialID }, { len(state.xmlRsMats) }")
-                    materialID = 0
+                if not (0 <= leafMatID < len(state.xmlRsMats)):
+                    self.report({ 'INFO' }, f"GZRS2: Material ID out of bounds, setting to 0 and continuing. { leafMatID }, { len(state.xmlRsMats) }")
+                    leafMatID = 0
 
-                state.rsLeaves.append(RsLeaf(materialID, drawFlags, leafVertexCount, vertexOffset))
+                state.rsLeaves.append(RsLeaf(leafMatID, drawFlags, leafVertexCount, vertexOffset))
                 vertexOffset += leafVertexCount
 
                 if state.logRsLeaves:
                     print(f"===== Leaf { l + 1 }     =============================")
-                    print(f"Material ID:    { materialID }")
-                    print(f"Draw Flags:     { drawFlags }")
-                    print(f"Vertex Count:   { leafVertexCount }")
-                    print(f"Vertex Offset:  { vertexOffset }")
+                    print(f"Material ID:        { leafMatID }")
+                    print(f"Lightmap Index:     { lightmapIndex }")
+                    print(f"Draw Flags:         { drawFlags }")
+                    print(f"Vertex Count:       { leafVertexCount }")
+                    print(f"Vertex Offset:      { vertexOffset }")
                     print()
+
+                l += 1
 
         openRS2BspNode()
 
-        if len(state.rsVerts) != totalVertices:
-            self.report({ 'ERROR' }, f"GZRS2: Bsp vertex count did not match vertices written! { len(state.rsVerts) }, { totalVertices }")
+        if len(state.rsVerts) != state.lmVertexCount:
+            self.report({ 'ERROR' }, f"GZRS2: Bsp vertex count did not match vertices written! { len(state.rsVerts) }, { state.lmVertexCount }")
     elif id == RS3_ID and version >= RS3_VERSION1:
         if not version in RS_SUPPORTED_VERSIONS:
             self.report({ 'ERROR' }, f"GZRS2: RS3 version is not supported yet! Model will not load properly! Please submit to Krunk#6051 for testing! { path }, { hex(version) }")
@@ -147,9 +157,9 @@ def readRs(self, path, state: GZRS2State):
 
             return
 
-        for p in range(readInt(file)):
+        for p in range(readUInt(file)):
             name = readString(file, readInt(file))
-            vertices = tuple(readVec3(file) for _ in range(readInt(file)))
+            vertices = tuple(readVec3(file) for _ in range(readUInt(file)))
             cellID1 = readInt(file)
             cellID2 = readInt(file)
 
@@ -157,20 +167,20 @@ def readRs(self, path, state: GZRS2State):
 
             if state.logRsPortals:
                 print(f"===== Portal { p + 1 }   ===========================")
-                print(f"Name:           { name }")
-                print(f"Vertices:       { len(vertices) }")
-                print(f"Cell ID 1:      { cellID1 }")
-                print(f"Cell ID 2:      { cellID2 }")
+                print(f"Name:               { name }")
+                print(f"Vertices:           { len(vertices) }")
+                print(f"Cell ID 1:          { cellID1 }")
+                print(f"Cell ID 2:          { cellID2 }")
                 print()
 
-        for c in range(readInt(file)):
+        for c in range(readUInt(file)):
             name = readString(file, readInt(file))
-            planes = tuple(readVec4(file) for _ in range(readInt(file)))
+            planes = tuple(readVec4(file) for _ in range(readUInt(file)))
             faces = []
             geometryCount = 1
 
             if version >= RS3_VERSION4:
-                faces = tuple(tuple(readVec3(file) for _ in range(readInt(file))) for _ in range(readInt(file)))
+                faces = tuple(tuple(readVec3(file) for _ in range(readUInt(file))) for _ in range(readUInt(file)))
 
             if version >= RS3_VERSION2:
                 geometryCount = readInt(file)
@@ -208,17 +218,17 @@ def readRs(self, path, state: GZRS2State):
                         print("UV2:                ({:>6.03f}, {:>6.03f})".format(*uv2))
                         print()
 
-                totalVertices = 0
                 vertexOffset = 0
 
                 trees = []
-                for t in range(readInt(file)):
+                for t in range(readUInt(file)):
                     matCount = readInt(file)
                     lightmapID = readInt(file)
                     treeVertexCount = readInt(file)
+                    l = 0
 
                     def openRS3BspNode():
-                        nonlocal vertexOffset, totalVertices
+                        nonlocal state, vertexOffset, l
 
                         state.bspBounds.append(readBounds(file, state.convertUnits, state.convertUnits))
 
@@ -226,8 +236,8 @@ def readRs(self, path, state: GZRS2State):
                             openRS3BspNode() # positive
                             openRS3BspNode() # negative
 
-                        for n in range(readUInt(file)):
-                            materialID = readInt(file)
+                        for _ in range(readUInt(file)):
+                            leafMatID = readInt(file)
                             drawFlags = readUInt(file)
 
                             if version >= RS3_VERSION2:
@@ -236,47 +246,49 @@ def readRs(self, path, state: GZRS2State):
                             leafVertexCount = readInt(file)
                             skipBytes(file, 4) # skip vertex offset, we determine our own
 
-                            state.rsLeaves.append(RsLeaf(materialID, drawFlags, leafVertexCount, vertexOffset))
+                            state.rsLeaves.append(RsLeaf(leafMatID, drawFlags, leafVertexCount, vertexOffset))
                             vertexOffset += leafVertexCount
 
                             if state.logRsLeaves:
-                                print(f"===== Leaf { n + 1 }     =============================")
-                                print(f"Material ID:    { materialID }")
-                                print(f"Draw Flags:     { drawFlags }")
-                                print(f"Vertex Count:   { leafVertexCount }")
-                                print(f"Vertex Offset:  { vertexOffset }")
+                                print(f"===== Leaf { l + 1 }     =============================")
+                                print(f"Material ID:        { leafMatID }")
+                                print(f"Draw Flags:         { drawFlags }")
+                                print(f"Vertex Count:       { leafVertexCount }")
+                                print(f"Vertex Offset:      { vertexOffset }")
                                 print()
+
+                            l += 1
 
                     openRS3BspNode()
 
                     trees.append(RsTree(matCount, lightmapID, treeVertexCount))
-                    totalVertices += vertexOffset
+                    state.lmVertexCount += vertexOffset
 
                     if state.logRsTrees:
                         print(f"===== Tree { t + 1 }     =============================")
-                        print(f"Material Count: { matCount }")
-                        print(f"Lightmap ID:    { lightmapID }")
-                        print(f"Vertex Count:   { treeVertexCount }")
-                        print(f"Vertex Offset:  { vertexOffset }")
+                        print(f"Material Count:     { matCount }")
+                        print(f"Lightmap ID:        { lightmapID }")
+                        print(f"Vertex Count:       { treeVertexCount }")
+                        print(f"Vertex Offset:      { vertexOffset }")
                         print()
 
                 geometry.append(RsGeometry(geoVertexCount, indexCount, trees))
 
                 if state.logRsGeometry:
                     print(f"===== Geometry { g + 1 } =============================")
-                    print(f"Vertex Count:   { geoVertexCount }")
-                    print(f"Index Count:    { indexCount }")
-                    print(f"Trees:          { len(trees) }")
+                    print(f"Vertex Count:       { geoVertexCount }")
+                    print(f"Index Count:        { indexCount }")
+                    print(f"Trees:              { len(trees) }")
                     print()
 
             state.smrCells.append(RsCell(name, planes, faces, geometry))
 
             if state.logRsCells:
                 print(f"===== Cell { c + 1 }     =============================")
-                print(f"Name:           { name }")
-                print(f"Planes:         { len(planes) }")
-                print(f"Faces:          { len(faces) }")
-                print(f"Geometry:       { len(geometry) }")
+                print(f"Name:               { name }")
+                print(f"Planes:             { len(planes) }")
+                print(f"Faces:              { len(faces) }")
+                print(f"Geometry:           { len(geometry) }")
                 print()
 
     file.close()

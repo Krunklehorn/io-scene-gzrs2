@@ -3,135 +3,131 @@ import xml.dom.minidom as minidom
 from collections import defaultdict
 from mathutils import Vector
 
-from . import constants_gzrs2
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
+from .lib_gzrs2 import *
 
-def parseRsXML(self, xmlRs, tagName, state: GZRS2State):
+'''
+from constants_gzrs2 import *
+from dataclasses import dataclass, field
+from lib_gzrs2 import *
+import re as regex
+
+@dataclass
+class GZRS2State:
+    convertUnits:       bool = False
+
+    logSceneNodes:      bool = True
+    logEluMats:         bool = True
+'''
+
+def filterNodes(childNodes):
+    for child in filter(lambda x: x.nodeType == x.ELEMENT_NODE, childNodes):
+        yield (child, child.nodeName.strip(), child.firstChild and child.firstChild.nodeValue)
+
+def parseDistance(data, convertUnits):
+    value = float(data)
+    if convertUnits: value *= 0.01
+
+    return value
+
+def parseVec3(data, nodeName, convertUnits, flipY):
+    vec = Vector((float(s) for s in data.split(' ')))
+    if nodeName in ['POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT'] and convertUnits: vec *= 0.01
+    if flipY and nodeName in ['POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT']: vec.y = -vec.y
+
+    '''
+    vec = [float(s) for s in data.split(' ')]
+    if nodeName in ['POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT'] and convertUnits:
+        vec[0] *= 0.01
+        vec[1] *= 0.01
+        vec[2] *= 0.01
+    if flipY and nodeName in ['POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT']:
+        vec[1] = -vec[1]
+    '''
+
+    return vec
+
+def parseXYZ(node, nodeName, convertUnits, flipY):
+    vec = Vector((float(node.getAttribute('x')), float(node.getAttribute('y')), float(node.getAttribute('z'))))
+    if nodeName in ['POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT'] and convertUnits: vec *= 0.01
+    if flipY and nodeName in ['POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT']: vec.y = -vec.y
+
+    '''
+    vec = [float(node.getAttribute('x')), float(node.getAttribute('y')), float(node.getAttribute('z'))]
+    if nodeName in ['POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT'] and convertUnits:
+        vec[0] *= 0.01
+        vec[1] *= 0.01
+        vec[2] *= 0.01
+    if flipY and nodeName in ['POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT']:
+        vec[1] = -vec[1]
+    '''
+
+    return vec
+
+def parseUnknown(self, data, nodeName, xmlName, tagName):
+    if data is not None:
+        self.report({ 'INFO' }, f"GZRS2: No rule yet for { tagName } tag found in { xmlName }, it may contain useful data: { nodeName }, { data }")
+
+    return True
+
+def parseRsXML(self, xmlRs, tagName, state):
     elements = xmlRs.getElementsByTagName(tagName)
-    list = []
+    nodeEntries = []
 
     for element in elements:
-        entry = defaultdict(lambda: False)
+        nodeEntry = defaultdict(lambda: False)
 
         if element.hasAttribute('name'):
-            entry['name'] = element.getAttribute('name')
+            nodeEntry['name'] = element.getAttribute('name')
         elif element.hasAttribute('ObjName'):
-            entry['ObjName'] = element.getAttribute('ObjName')
-            entry['type'] = element.getAttribute('type')
-            entry['filename'] = element.getAttribute('filename')
+            nodeEntry['ObjName'] = element.getAttribute('ObjName')
+            nodeEntry['type'] = element.getAttribute('type')
+            nodeEntry['filename'] = element.getAttribute('filename')
         elif element.hasAttribute('min') or element.hasAttribute('max'):
-            entry['min'] = int(element.getAttribute('min'))
-            entry['max'] = int(element.getAttribute('max'))
+            nodeEntry['min'] = int(element.getAttribute('min'))
+            nodeEntry['max'] = int(element.getAttribute('max'))
         else:
             self.report({ 'ERROR' }, f"GZRS2: No rule for .rs.xml element: { element }")
             break
 
-        for node in filter(lambda x: x.nodeType == x.ELEMENT_NODE, element.childNodes):
-            name = node.nodeName
-            data = node.firstChild and node.firstChild.nodeValue
-
-            if name in ['DIFFUSEMAP']:
+        for node, nodeName, data in filterNodes(element.childNodes):
+            if nodeName in ['DIFFUSEMAP']:
                 if data is not None:
                     data = data.strip()
 
-                    if data != '':
+                    if data:
                         data = os.path.normpath(data)
 
-                entry[name] = data
-            elif name in ['R', 'G', 'B']:
-                entry[name] = int(data)
-            elif name in ['INTENSITY']:
-                entry[name] = float(data)
-            elif name in ['ATTENUATIONSTART', 'ATTENUATIONEND', 'RADIUS']:
-                if state.convertUnits: entry[name] = float(data) * 0.01
-                else: entry[name] = float(data)
-            elif name in ['DIFFUSE', 'AMBIENT', 'SPECULAR', 'COLOR']:
-                entry[name] = tuple(float(s) for s in data.split(' '))
-            elif name in ['POSITION', 'DIRECTION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION']:
-                vec = Vector((float(s) for s in data.split(' ')))
-                if state.convertUnits: vec *= 0.01
-                vec.y = -vec.y
+                nodeEntry[nodeName] = data
+            elif nodeName in ['R', 'G', 'B']:
+                nodeEntry[nodeName] = int(data)
+            elif nodeName in ['INTENSITY']:
+                nodeEntry[nodeName] = float(data)
+            elif nodeName in ['ATTENUATIONSTART', 'ATTENUATIONEND', 'RADIUS']:
+                nodeEntry[nodeName] = parseDistance(data, state.convertUnits)
+            elif nodeName in ['DIFFUSE', 'AMBIENT', 'SPECULAR', 'COLOR']:
+                nodeEntry[nodeName] = tuple(float(s) for s in data.split(' '))
+            elif nodeName in ['POSITION', 'DIRECTION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION']:
+                vec = parseVec3(data, nodeName, state.convertUnits, True)
 
                 if tagName == 'OCCLUSION':
-                    if entry[name] is False:
-                        entry[name] = []
+                    if nodeEntry[nodeName] is False:
+                        nodeEntry[nodeName] = []
 
-                    entry[name].append(vec)
+                    nodeEntry[nodeName].append(vec)
                 else:
-                    entry[name] = vec
+                    nodeEntry[nodeName] = vec
             else:
-                entry[name] = True
-                if data: self.report({ 'INFO' }, f"GZRS2: No rule yet for tag found in .rs.xml, it may contain useful data: { name }, { data }")
+                nodeEntry[nodeName] = parseUnknown(self, data, nodeName, '.rs.xml', tagName)
 
-        list.append(entry)
+        nodeEntries.append(nodeEntry)
 
-    return list
+    return nodeEntries
 
-def parseEluXML(self, xmlElu, state: GZRS2State):
-    materials = xmlElu.getElementsByTagName('MATERIAL')
-    list = []
-
-    if state.logEluMats:
-        print()
-        print("=========  Elu Xml Materials  =========")
-        print()
-
-    for material in materials:
-        materialEntry = { 'name': material.getAttribute('name'), 'textures': [] }
-
-        for node in filter(lambda x: x.nodeType == x.ELEMENT_NODE, material.childNodes):
-            name = node.nodeName
-            data = node.firstChild and node.firstChild.nodeValue
-
-            if name in ['SPECULAR_LEVEL', 'GLOSSINESS', 'SELFILLUSIONSCALE']:
-                materialEntry[name] = float(data)
-            elif name in ['DIFFUSE', 'AMBIENT', 'SPECULAR']:
-                materialEntry[name] = tuple(float(s) for s in data.split(' '))
-            elif name in ['TEXTURELIST']:
-                for layer in filter(lambda x: x.nodeType == x.ELEMENT_NODE, node.childNodes):
-                    for map in filter(lambda x: x.nodeType == x.ELEMENT_NODE, layer.childNodes):
-                        if map.nodeName in ['DIFFUSEMAP', 'SPECULARMAP', 'SELFILLUMINATIONMAP', 'OPACITYMAP', 'NORMALMAP']:
-                            data = map.firstChild and map.firstChild.nodeValue
-
-                            if data is not None:
-                                data = data.strip()
-
-                                if data != '':
-                                    data = os.path.normpath(data)
-
-                            materialEntry['textures'].append({ 'type':map.nodeName, 'name':data })
-            elif name in ['USEALPHATEST']:
-                for value in node.childNodes:
-                    if value.nodeType == value.ELEMENT_NODE and value.nodeName == 'ALPHATESTVALUE':
-                        data = value.firstChild and value.firstChild.nodeValue
-                        materialEntry['ALPHATESTVALUE'] = float(data)
-            else:
-                materialEntry[name] = True
-                if data: self.report({ 'INFO' }, f"GZRS2: No rule yet for tag found in .elu.xml, it may contain useful data: { name }, { data }")
-
-        list.append(materialEntry)
-
-        if state.logEluMats:
-            print(f"Material: { materialEntry['name'] }")
-            print(f"        Diffuse: { materialEntry['DIFFUSE'] }")
-            print(f"        Ambient: { materialEntry['AMBIENT'] }")
-            print(f"        Specular: { materialEntry['SPECULAR'] } { materialEntry['SPECULAR_LEVEL'] if 'SPECULAR_LEVEL' in materialEntry else '' }")
-            if 'GLOSSINESS' in materialEntry: print(f"        Glossiness: { materialEntry['GLOSSINESS'] }")
-            if 'SELFILLUSIONSCALE' in materialEntry: print(f"        Emission: { materialEntry['SELFILLUSIONSCALE'] }")
-
-            for texture in materialEntry['textures']:
-                print(f"        { texture['type'] }: { texture['name'] }")
-
-            if 'ALPHATESTVALUE' in materialEntry:
-                print(f"        ALPHATESTVALUE: { materialEntry['ALPHATESTVALUE'] }")
-            print()
-
-    return list
-
-def parseSpawnXML(self, xmlSpawn, state: GZRS2State):
+def parseSpawnXML(self, xmlSpawn, state):
     gametypes = xmlSpawn.getElementsByTagName('GAMETYPE')
-    list = []
+    gametypeEntries = []
 
     for gametype in gametypes:
         id = gametype.getAttribute('id')
@@ -143,74 +139,399 @@ def parseSpawnXML(self, xmlSpawn, state: GZRS2State):
             spawnEntry['item'] = spawn.getAttribute('item')
             spawnEntry['timesec'] = int(spawn.getAttribute('timesec'))
 
-            for node in filter(lambda x: x.nodeType == x.ELEMENT_NODE, spawn.childNodes):
-                name = node.nodeName
-                data = node.firstChild and node.firstChild.nodeValue
-
-                if name in ['POSITION']:
-                    vec = Vector((float(s) for s in data.split(' ')))
-                    if state.convertUnits: vec *= 0.01
-                    vec.y = -vec.y
-
-                    spawnEntry[name] = vec
+            for node, nodeName, data in filterNodes(spawn.childNodes):
+                if nodeName in ['POSITION']:
+                    spawnEntry[nodeName] = parseVec3(data, nodeName, state.convertUnits, True)
                 else:
-                    spawnEntry[name] = True
-                    if data: self.report({ 'INFO' }, f"GZRS2: No rule yet for tag found in spawn.xml, it may contain useful data: { name }, { data }")
+                    spawnEntry[nodeName] = parseUnknown(self, data, nodeName, 'spawn.xml', 'SPAWN')
 
             gametypeEntry['spawns'].append(spawnEntry)
 
-        list.append(gametypeEntry)
+        gametypeEntries.append(gametypeEntry)
 
-    return list
+    return gametypeEntries
+
+def parseSceneXML(self, xmlScene, xmlName, state):
+    instances = xmlScene.getElementsByTagName('SCENEINSTANCE')
+    actors = xmlScene.getElementsByTagName('ACTOR')
+    dirlights = xmlScene.getElementsByTagName('DIRLIGHT')
+    spotlights = xmlScene.getElementsByTagName('SPOTLIGHT')
+    pointlights = xmlScene.getElementsByTagName('LIGHT')
+    effects = xmlScene.getElementsByTagName('EFFECTINSTANCE')
+    occluders = xmlScene.getElementsByTagName('OCCLUDER')
+    nodeEntries = []
+
+    if state.logSceneNodes and instances:
+        print()
+        print("=========  Scene.xml Nodes  =========")
+        print()
+
+    for instance in instances:
+        instanceEntry = { 'type': 'SCENEINSTANCE', 'name': None, 'resourcename': None }
+
+        for node, nodeName, data in filterNodes(instance.childNodes):
+            if nodeName in ['COMMON']:
+                instanceEntry['name'] = node.getAttribute('name')
+
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['POSITION', 'DIRECTION', 'UP', 'SCALE']:
+                        instanceEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
+                    else:
+                        instanceEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SCENEINSTANCE')
+            elif nodeName in ['PROPERTY']:
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['FILENAME']:
+                        if data is not None:
+                            data = data.strip()
+
+                        instanceEntry['resourcename'] = data
+                    elif not childName in ['UMBRAID', 'USESELECTUPDATE_HAVEVISIBLE', 'USESELECTUPDATE_HAVEANI']:
+                        instanceEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SCENEINSTANCE')
+            elif not nodeName in ['SCENE', 'USER_PROPERTY']:
+                instanceEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'SCENEINSTANCE')
+
+        if state.logSceneNodes:
+            print(f"Instance: { instanceEntry['name'] }")
+            print(f"Filename: { instanceEntry['resourcename'] }")
+            print("         Position:           ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*instanceEntry['POSITION']))
+            print("         Direction:          ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*instanceEntry['DIRECTION']))
+            print("         Up:                 ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*instanceEntry['UP']))
+            print("         Scale:              ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*instanceEntry['SCALE']))
+            for k, v in instanceEntry.items():
+                if not k in ['type', 'name', 'resourcename', 'POSITION', 'DIRECTION', 'UP', 'SCALE']:
+                    print(f"        { k }: { v }")
+            print()
+
+        nodeEntries.append(instanceEntry)
+
+    for actor in actors:
+        actorEntry = { 'type': 'ACTOR', 'name': None, 'resourcename': None }
+
+        for node, nodeName, data in filterNodes(actor.childNodes):
+            if nodeName in ['COMMON']:
+                actorEntry['name'] = node.getAttribute('name')
+            elif nodeName in ['PROPERTY']:
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['FILENAME']:
+                        if data is not None:
+                            data = data.strip()
+
+                        actorEntry['resourcename'] = data
+                    else:
+                        actorEntry[childName] = parseUnknown(self, data, childName, xmlName, 'ACTOR')
+            else:
+                actorEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'ACTOR')
+
+        nodeEntries.append(actorEntry)
+
+    for dirlight in dirlights:
+        state.rs3DirLightCount = state.rs3DirLightCount + 1
+        dirlightEntry = { 'type': 'DIRLIGHT', 'name': state.rs3DirLightCount }
+
+        for node, nodeName, data in filterNodes(dirlight.childNodes):
+            if nodeName in ['COMMON']:
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['POSITION', 'DIRECTION', 'UP', 'SCALE']:
+                        dirlightEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
+                    else:
+                        dirlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'DIRLIGHT')
+            elif nodeName in ['PROPERTY']:
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['SHADOWLUMINOSITY', 'POWER', 'SKYSPECULAR']:
+                        dirlightEntry[childName] = float(data)
+                    elif childName in ['AMBIENT', 'DIFFUSE', 'SPECULAR']:
+                        dirlightEntry[childName] = tuple(float(s) for s in data.split(' '))
+                    else:
+                        dirlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'DIRLIGHT')
+            else:
+                dirlightEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'DIRLIGHT')
+
+        nodeEntries.append(dirlightEntry)
+
+    for spotlight in spotlights:
+        state.rs3SpotLightCount = state.rs3SpotLightCount + 1
+        spotlightEntry = { 'type': 'SPOTLIGHT', 'name': state.rs3SpotLightCount }
+
+        for node, nodeName, data in filterNodes(spotlight.childNodes):
+            if nodeName in ['COMMON']:
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['POSITION', 'DIRECTION', 'UP', 'SCALE']:
+                        spotlightEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
+                    else:
+                        spotlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SPOTLIGHT')
+            elif nodeName in ['PROPERTY']:
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['USERENDERMINAREA']:
+                        spotlightEntry[childName] = bool(data)
+                    elif childName in ['FOV']:
+                        spotlightEntry[childName] = float(data)
+                    elif childName in ['ATTENUATIONEND', 'ATTENUATIONSTART', 'INTENSITY', 'RENDERMINAREA']:
+                        spotlightEntry[childName] = parseDistance(data, state.convertUnits)
+                    elif childName in ['COLOR']:
+                        spotlightEntry[childName] = tuple(float(s) for s in data.split(' '))
+                    else:
+                        spotlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SPOTLIGHT')
+            else:
+                spotlightEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'SPOTLIGHT')
+
+        nodeEntries.append(spotlightEntry)
+
+    for pointlight in pointlights:
+        state.rs3PointLightCount = state.rs3PointLightCount + 1
+        pointlightEntry = { 'type': 'POINTLIGHT', 'name': state.rs3PointLightCount }
+
+        for node, nodeName, data in filterNodes(pointlight.childNodes):
+            if nodeName in ['COMMON']:
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['POSITION', 'SCALE']:
+                        pointlightEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
+                    elif not childName in ['DIRECTION', 'UP']:
+                        pointlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'POINTLIGHT')
+            elif nodeName in ['PROPERTY']:
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['INTENSITY']:
+                        pointlightEntry[childName] = float(data)
+                    elif childName in ['ATTENUATIONEND', 'ATTENUATIONSTART']:
+                        pointlightEntry[childName] = parseDistance(data, state.convertUnits)
+                    elif childName in ['COLOR', 'AREARANGE']:
+                        pointlightEntry[childName] = tuple(float(s) for s in data.split(' '))
+                    elif not childName in ['FOV']:
+                        pointlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'POINTLIGHT')
+            else:
+                pointlightEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'POINTLIGHT')
+
+        nodeEntries.append(pointlightEntry)
+
+    for effect in effects:
+        state.rs3EffectCount = state.rs3EffectCount + 1
+        effectEntry = { 'type': 'EFFECTINSTANCE', 'name': state.rs3EffectCount }
+
+        for node, nodeName, data in filterNodes(effect.childNodes):
+            if nodeName in ['COMMON']:
+                effectEntry['name'] = node.getAttribute('name')
+
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['POSITION', 'DIRECTION', 'UP', 'SCALE']:
+                        effectEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
+                    else:
+                        effectEntry[childName] = parseUnknown(self, data, childName, xmlName, 'EFFECTINSTANCE')
+            elif nodeName in ['PROPERTY']:
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['FILENAME']:
+                        if data is not None:
+                            data = data.strip()
+
+                        effectEntry['resourcename'] = data
+                    else:
+                        effectEntry[childName] = parseUnknown(self, data, childName, xmlName, 'EFFECTINSTANCE')
+            elif not nodeName in ['SCENE', 'USER_PROPERTY']:
+                effectEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'EFFECTINSTANCE')
+
+        nodeEntries.append(effectEntry)
+
+    for occluder in occluders:
+        state.rs3OccluderCount = state.rs3OccluderCount + 1
+        occluderEntry = { 'type': 'OCCLUDER', 'name': state.rs3OccluderCount }
+
+        for node, nodeName, data in filterNodes(effect.childNodes):
+            if nodeName in ['COMMON']:
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['POSITION', 'SCALE']:
+                        occluderEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
+                    else:
+                        occluderEntry[childName] = parseUnknown(self, data, childName, xmlName, 'OCCLUDER')
+            elif nodeName in ['PROPERTY']:
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['LOCALSCALE']:
+                        occluderEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
+                    elif childName in ['OCCLUDERPOINT']:
+                        occluderEntry[childName] = []
+
+                        for _, dataType, data in filterNodes(child.childNodes):
+                            if dataType in ['P']:
+                                occluderEntry[childName].append(parseVec3(data, childName, state.convertUnits, False))
+                    else:
+                        occluderEntry[childName] = parseUnknown(self, data, childName, xmlName, 'OCCLUDER')
+            else:
+                occluderEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'OCCLUDER')
+
+        nodeEntries.append(occluderEntry)
+
+    return nodeEntries
+
+def parsePropXML(self, xmlProp, xmlName, state):
+    objects = xmlProp.getElementsByTagName('SCENEOBJECT')
+    objectEntries = []
+
+    if state.logSceneNodes and objects:
+        print()
+        print("=========  Prop.xml Nodes  =========")
+        print()
+
+    for object in objects:
+        objectEntry = { 'type': 'SCENEOBJECT', 'name': None, 'resourcename': None }
+
+        for node, nodeName, data in filterNodes(object.childNodes):
+            if nodeName in ['COMMON']:
+                objectEntry['id'] = node.getAttribute('id')
+
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['POSITION', 'DIRECTION', 'UP']:
+                        if child.hasAttribute('x') and child.hasAttribute('y') and child.hasAttribute('z'):
+                            objectEntry[childName] = parseXYZ(child, childName, state.convertUnits, False)
+                    else:
+                        objectEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SCENEOBJECT')
+            elif nodeName in ['PROPERTY']:
+                for child, childName, data in filterNodes(node.childNodes):
+                    if childName in ['NAME', 'SceneFileName']:
+                        if data is not None:
+                            data = data.strip()
+
+                        if childName in ['NAME']: objectEntry['name'] = data
+                        else: objectEntry['resourcename'] = data
+                    elif not childName in ['Show', 'PartsColor', 'CameraCollision', 'UMBRAID']:
+                        objectEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SCENEOBJECT')
+            elif not nodeName in ['TOOL']:
+                objectEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'SCENEOBJECT')
+
+        if state.logSceneNodes:
+            print(f"Object: { objectEntry['id'] } { objectEntry['name'] }")
+            print(f"Filename: { objectEntry['resourcename'] }")
+            print("         Position:           ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*objectEntry['POSITION']))
+            print("         Direction:          ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*objectEntry['DIRECTION']))
+            print("         Up:                 ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*objectEntry['UP']))
+            for k, v in objectEntry.items():
+                if not k in ['type', 'id', 'name', 'resourcename', 'POSITION', 'DIRECTION', 'UP']:
+                    print(f"        { k }: { v }")
+            print()
+
+        objectEntries.append(objectEntry)
+
+    return objectEntries
+
+def parseEluXML(self, xmlElu, state):
+    materials = xmlElu.getElementsByTagName('MATERIAL')
+    materialEntries = []
+
+    if state.logEluMats:
+        print()
+        print("=========  Elu.xml Materials  =========")
+        print()
+
+    for material in materials:
+        materialEntry = {
+            'name': material.getAttribute('name'),
+            'textures': [],
+            'SPECULAR_LEVEL': 0.0,
+            'GLOSSINESS': 0.0,
+            'SELFILLUSIONSCALE': 1.0,
+            'ALPHATESTVALUE': 128.0,
+            'TWOSIDED': False,
+            'ADDITIVE': False
+        }
+
+        for node, nodeName, data in filterNodes(material.childNodes):
+            if nodeName in ['SPECULAR_LEVEL', 'GLOSSINESS', 'SELFILLUSIONSCALE']:
+                materialEntry[nodeName] = float(data)
+            elif nodeName in ['DIFFUSE', 'AMBIENT', 'SPECULAR']:
+                materialEntry[nodeName] = tuple(float(s) for s in data.split(' '))
+            elif nodeName in ['TEXTURELIST']:
+                for layer, _, __ in filterNodes(node.childNodes):
+                    for _, dataType, data in filterNodes(layer.childNodes):
+                        if dataType in XMLELU_TEXTYPES:
+                            if data is not None:
+                                data = data.strip()
+
+                                if data: data = os.path.normpath(data)
+                            else:
+                                data = ''
+
+                            materialEntry['textures'].append({ 'type': dataType, 'name': data })
+            elif nodeName in ['USEALPHATEST']:
+                for value in node.childNodes:
+                    if value.nodeType == value.ELEMENT_NODE and value.nodeName.strip() == 'ALPHATESTVALUE':
+                        materialEntry['ALPHATESTVALUE'] = float(value.firstChild and value.firstChild.nodeValue)
+            else:
+                materialEntry[nodeName] = parseUnknown(self, data, nodeName, '.elu.xml', 'MATERIAL')
+
+        if state.logEluMats:
+            print(f"Material: { materialEntry['name'] }")
+            print(f"        Diffuse:        { materialEntry['DIFFUSE'] }")
+            print(f"        Ambient:        { materialEntry['AMBIENT'] }")
+            if 'SPECULAR_LEVEL' in materialEntry:
+                print(f"        Specular:       { materialEntry['SPECULAR'] } { materialEntry['SPECULAR_LEVEL'] }")
+            else:
+                print(f"        Specular:       { materialEntry['SPECULAR'] }")
+            if 'GLOSSINESS' in materialEntry:
+                print(f"        Glossiness:     { materialEntry['GLOSSINESS'] }")
+            if 'SELFILLUSIONSCALE' in materialEntry:
+                print(f"        Emission:       { materialEntry['SELFILLUSIONSCALE'] }")
+
+            for texture in materialEntry['textures']:
+                print(f"        { texture['type'] }: { texture['name'] }")
+
+            if 'ALPHATESTVALUE' in materialEntry:
+                print(f"        ALPHATESTVALUE: { materialEntry['ALPHATESTVALUE'] }")
+
+            for k, v in materialEntry.items():
+                if not k in ['type', 'name', 'textures', 'DIFFUSE', 'AMBIENT', 'SPECULAR', 'SPECULAR_LEVEL', 'GLOSSINESS', 'SELFILLUSIONSCALE', 'ALPHATESTVALUE']:
+                    print(f"        { k }: { v }")
+            print()
+
+        materialEntries.append(materialEntry)
+
+    return materialEntries
 
 '''
-class testSelf:
-    convertUnits = False
-    logEluHeaders = True
-    logEluMats = True
-    logEluMeshNodes = True
-
+class TestSelf:
     def report(self, t, s):
         print(s)
 
-testPaths = {
-    # 'ELU_0': "..\\..\\GunZ\\clean\\Model\\weapon\\blade\\blade_2011_4lv.elu.xml"
-    # 'ELU_5004': "..\\..\\GunZ\\clean\\Model\\weapon\\rocketlauncher\\rocket.elu.xml"
-    # 'ELU_5005': "..\\..\\GunZ\\clean\\Model\\weapon\\dagger\\dagger04.elu.xml"
-    # 'ELU_5006': "..\\..\\GunZ\\clean\\Model\\weapon\\katana\\katana10.elu.xml"
-    # 'ELU_5007': "..\\..\\GunZ\\clean\\Model\\weapon\\blade\\blade07.elu.xml"
+testpaths = [
+    "..\\..\\GunZ2\\Changzu\\Data\\Maps\\pvp_mansion2\\pvp_mansion2.scene.xml",
+    "..\\..\\GunZ2\\Changzu\\Data\\Maps\\pvp_mansion2\\pvp_mansion2.prop.xml",
+    "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Maps\\PvP_maps\\pvp_market_town\\pvp_market_town.prop.xml",
+    "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Model\\MapObject\\S_01\\pvp_market_town\\pvp_market_town_final.scene.xml"
+]
 
-    'ELU_5008': "..\\..\\Gunz2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\sky_daytime_cloudy.elu.xml",
-    'ELU_5009': "..\\..\\Gunz2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\sky_night_nebula.elu.xml",
-    'ELU_500A': "..\\..\\Gunz2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\weather_rainy.elu.xml",
-    'ELU_500B': "..\\..\\Gunz2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\weather_heavy_rainy.elu.xml",
-    'ELU_500C': "..\\..\\Gunz2\\Trinityent\\Gunz2\\Develop\\mdk\\RealSpace3\\Runtime\\TestRS3\\Data\\Model\\MapObject\\login_water_p_01.elu.xml",
-    'ELU_500D': "..\\..\\Gunz2\\Trinityent\\Gunz2\\Develop\\mdk\\RealSpace3\\Runtime\\Mesh\\goblin_commander\\goblin_commander.elu.xml",
-    'ELU_500E': "..\\..\\Gunz2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\colony_machinegun01.elu.xml",
-    'ELU_500F': "..\\..\\Gunz2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\healcross.elu.xml",
-    'ELU_5010': "..\\..\\Gunz2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\weapon\\eq_ws_smg_06.elu.xml",
+for testpath in testpaths:
+    splitname = os.path.basename(testpath).split(os.extsep)
+    filename = splitname[0]
+    xmltype = splitname[-2].lower()
 
-    'ELU_5011': "..\\..\\Gunz2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Assassin\Male\\Assassin_Male_01.elu.xml",
-    'ELU_5012': "..\\..\\Gunz2\\z3ResEx\\datadump\\Data\\Model\\MapObject\\Props\\Box\\Wood_Box\\prop_box_wood_01a.elu.xml",
-    'ELU_5013': "..\\..\\Gunz2\\z3ResEx\\datadump\\Data\\Model\\weapon\\character_weapon\\Knife\\Wpn_knife_0001.elu.xml",
-    'ELU_5014': "..\\..\\Gunz2\\z3ResEx\\datadump\\Data\\Model\\weapon\\character_weapon\\Katana\\Wpn_katana_0002.elu.xml"
+    print(f"{ filename } { testpath }")
+
+    with open(path) as file:
+        string = file.read()
+        string = regex.sub(r"(<Umbra Synchronization[^>]+\/>)", '', string)
+
+    if xmltype == 'scene': parseSceneXML(TestSelf(), minidom.parseString(string), filename, GZRS2State())
+    elif xmltype == 'prop': parsePropXML(TestSelf(), minidom.parseString(string), filename, GZRS2State())
+
+testElupaths = {
+'ELU_0': "..\\..\\GunZ\\clean\\Model\\weapon\\blade\\blade_2011_4lv.elu.xml",
+'ELU_5004': "..\\..\\GunZ\\clean\\Model\\weapon\\rocketlauncher\\rocket.elu.xml",
+'ELU_5005': "..\\..\\GunZ\\clean\\Model\\weapon\\dagger\\dagger04.elu.xml",
+'ELU_5006': "..\\..\\GunZ\\clean\\Model\\weapon\\katana\\katana10.elu.xml",
+'ELU_5007': "..\\..\\GunZ\\clean\\Model\\weapon\\blade\\blade07.elu.xml",
+
+'ELU_5008': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\sky_daytime_cloudy.elu.xml",
+'ELU_5009': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\sky_night_nebula.elu.xml",
+'ELU_500A': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\weather_rainy.elu.xml",
+'ELU_500B': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\weather_heavy_rainy.elu.xml",
+'ELU_500C': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\mdk\\RealSpace3\\Runtime\\TestRS3\\Data\\Model\\MapObject\\login_water_p_01.elu.xml",
+'ELU_500D': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\mdk\\RealSpace3\\Runtime\\Mesh\\goblin_commander\\goblin_commander.elu.xml",
+'ELU_500E': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\colony_machinegun01.elu.xml",
+'ELU_500F': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\healcross.elu.xml",
+'ELU_5010': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\weapon\\eq_ws_smg_06.elu.xml",
+
+'ELU_5011': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Assassin\Male\\Assassin_Male_01.elu.xml",
+'ELU_5012': "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Model\\MapObject\\Props\\Box\\Wood_Box\\prop_box_wood_01a.elu.xml",
+'ELU_5013': "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Model\\weapon\\character_weapon\\Knife\\Wpn_knife_0001.elu.xml",
+'ELU_5014': "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Model\\weapon\\character_weapon\\Katana\\Wpn_katana_0002.elu.xml"
 }
 
-for version, path in testPaths.items():
-    print(f"{ version } { path }")
-
-    for m, material in enumerate(parseEluXML(testSelf(), minidom.parse(path))):
-        print(f"Name: { material['name'] }")
-        print(f"    Diffuse: { material['DIFFUSE'] }")
-        print(f"    Ambient: { material['AMBIENT'] }")
-        print(f"    Specular: { material['SPECULAR'] } { material['SPECULAR_LEVEL'] if 'SPECULAR_LEVEL' in material else '' }")
-        if 'GLOSSINESS' in material: print(f"    Glossiness: { material['GLOSSINESS'] }")
-        if 'SELFILLUSIONSCALE' in material: print(f"    Emission: { material['SELFILLUSIONSCALE'] }")
-
-        for m, map in enumerate(material['textures']):
-            print(f"    { map['type'] }: { map['name'] }")
-
-        if 'ALPHATESTVALUE' in material:
-            print(f"    ALPHATESTVALUE: { material['ALPHATESTVALUE'] }")
-        print()
+for version, testpath in testElupaths.items():
+print(f"{ version } { testpath }")
+parseEluXML(TestSelf(), minidom.parse(testpath), GZRS2State())
 '''

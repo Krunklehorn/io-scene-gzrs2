@@ -1,14 +1,21 @@
 from dataclasses import dataclass, field
 
-import bpy, mathutils
+import bpy, io, mathutils
+from io import StringIO
 from bpy.types import Material, ShaderNode, Mesh, Object, Armature, Bone
 from mathutils import Vector, Matrix
 
 @dataclass
 class GZRS2State:
+    silence:            StringIO = field(default_factory = StringIO)
+    filename:           str = ""
+    directory:          str = ""
+
     convertUnits:       bool = False
+    meshMode:           str = False
     doCleanup:          bool = False
     doCollision:        bool = False
+    doLightmap:         bool = False
     doLights:           bool = False
     doProps:            bool = False
     doDummies:          bool = False
@@ -28,12 +35,34 @@ class GZRS2State:
     logRsTrees:         bool = False
     logRsLeaves:        bool = False
     logRsVerts:         bool = False
+    logSceneNodes:      bool = False
+    logColHeaders:      bool = False
+    logColNodes:        bool = False
+    logColTris:         bool = False
+    logLmHeaders:       bool = False
+    logLmImages:        bool = False
     logEluHeaders:      bool = False
     logEluMats:         bool = False
     logEluMeshNodes:    bool = False
     logVerboseIndices:  bool = False
     logVerboseWeights:  bool = False
     logCleanup:         bool = False
+
+    gzrsTexDir:         str = ""
+    gzrsTexDict:        dict = field(default_factory = dict)
+    gzrsValidBones:     set = field(default_factory = set)
+    blTexImages:        dict = field(default_factory = dict)
+    blMatNodes:         dict = field(default_factory = dict)
+
+    rs3DataDir:         str = ""
+    rs3DataDict:        dict = field(default_factory = dict)
+
+    rs3Graph:           list = field(default_factory = list)
+    rs3DirLightCount:   int = 0
+    rs3SpotLightCount:  int = 0
+    rs3PointLightCount: int = 0
+    rs3EffectCount:     int = 0
+    rs3OccluderCount:   int = 0
 
     xmlRsMats:          list = field(default_factory = list)
     xmlEluMats:         dict = field(default_factory = dict)
@@ -53,16 +82,28 @@ class GZRS2State:
     colVerts:           list = field(default_factory = list)
     eluMats:            list = field(default_factory = list)
     eluMeshes:          list = field(default_factory = list)
+    lmPolygonCount:     int = 0
+    lmVertexCount:      int = 0
+    lmImages:           list = field(default_factory = list)
+    lmIndices:          tuple = field(default_factory = tuple)
+    lmUVs:              tuple = field(default_factory = tuple)
+    lmMixGroup:         Object      = None
 
+    blErrorMat:         Material    = None
     blXmlRsMats:        list = field(default_factory = list)
-    blXmlEluMats:       dict = field(default_factory = dict)
     blEluMats:          dict = field(default_factory = dict)
+    blXmlEluMats:       dict = field(default_factory = dict)
     blMeshes:           list = field(default_factory = list)
     blProps:            list = field(default_factory = list)
+
+    blActors:           list = field(default_factory = list)
+    blActorRoots:       dict = field(default_factory = dict)
 
     blColMat:           Material    = None
     blColGeo:           Mesh        = None
     blColObj:           Object      = None
+
+    blLmImage:          list = field(default_factory = list)
 
     blOccMat:           Material    = None
     blOccMGeo:          Mesh        = None
@@ -77,6 +118,11 @@ class GZRS2State:
     blItemObjs:         list = field(default_factory = list)
     blBBoxObjs:         list = field(default_factory = list)
 
+    blActorObjs:        list = field(default_factory = list)
+    blNodeObjs:         list = field(default_factory = list)
+
+    blEluMatPairs:      list = field(default_factory = list)
+    blXmlEluMatPairs:   list = field(default_factory = list)
     blObjPairs:         list = field(default_factory = list)
     blBonePairs:        list = field(default_factory = list)
 
@@ -118,14 +164,14 @@ class RsPortal:
 class RsCell:
     name:               str = ""
     planes:             tuple = field(default_factory = tuple)
-    faces:              list = None
-    geometry:           list = None
+    faces:              list = field(default_factory = list)
+    geometry:           list = field(default_factory = list)
 
 @dataclass
 class RsGeometry:
     vertexCount:        int = 0
     indexCount:         int = 0
-    trees:              list = None
+    trees:              list = field(default_factory = list)
 
 @dataclass
 class RsTree:
@@ -136,6 +182,7 @@ class RsTree:
 
 @dataclass
 class EluMaterial:
+    elupath:            str = ""
     matID:              int = 0
     subMatID:           int = 0
     ambient:            Vector = (0, 0, 0, 0)
@@ -143,8 +190,8 @@ class EluMaterial:
     specular:           Vector = (0, 0, 0, 0)
     power:              float = 0.0
     subMatCount:        int = 0
-    texPath:            str = ""
-    alphaPath:          str = ""
+    texpath:            str = ""
+    alphapath:          str = ""
     twosided:           bool = False
     additive:           bool = False
     alphatest:          int = 0
@@ -160,17 +207,21 @@ class EluMaterial:
 
 @dataclass
 class EluMeshNode:
+    elupath:            str = ""
     version:            int = 0
     meshName:           str = ""
     parentName:         str = ""
+    drawFlags:          int = 0
     transform:          Matrix = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-    vertices:           list = None
-    normals:            list = None
-    uv1s:               list = None
-    uv2s:               list = None
-    colors:             list = None
-    faces:              list = None
-    weights:            list = None
+    vertices:           list = field(default_factory = list)
+    normals:            list = field(default_factory = list)
+    uv1s:               list = field(default_factory = list)
+    uv2s:               list = field(default_factory = list)
+    colors:             list = field(default_factory = list)
+    faces:              list = field(default_factory = list)
+    weights:            list = field(default_factory = list)
+    slots:              list = field(default_factory = list)
+    slotIDs:            list = field(default_factory = list)
     isDummy:            bool = False
     matID:              int = 0
 
@@ -184,18 +235,18 @@ class EluIndex:
 @dataclass
 class EluFace:
     degree:             int = 0
-    ipos:               list = None
-    inor:               list = None
-    iuv1:               list = None
-    iuv2:               list = None
-    matID:              int = 0
+    ipos:               list = field(default_factory = list)
+    inor:               list = field(default_factory = list)
+    iuv1:               list = field(default_factory = list)
+    iuv2:               list = field(default_factory = list)
+    slotID:             int = 0
 
 @dataclass
 class EluWeight:
     degree:             int = 0
-    meshName:           list = None
-    meshID:             list = None
-    value:              list = None
+    meshName:           list = field(default_factory = list)
+    meshID:             list = field(default_factory = list)
+    value:              list = field(default_factory = list)
 
 @dataclass
 class EluPhysInfo:
@@ -204,3 +255,15 @@ class EluPhysInfo:
     weight:             tuple = field(default_factory = tuple)
     offset:             tuple = field(default_factory = tuple)
     num:                int = 0
+
+@dataclass
+class EluSlot:
+    slotID:             int = 0
+    indexOffset:        int = 0
+    faceCount:          int = 0
+    maskID:             int = 0
+
+@dataclass
+class LmImage:
+    size:               int = 0
+    data:               tuple = field(default_factory = tuple)

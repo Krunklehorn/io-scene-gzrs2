@@ -1,47 +1,57 @@
 # ***io_scene_gzrs2***
 
-GunZ: The Duel RealSpace2.0/3.0 map and model importer for Blender 3.3.0.  
-Intended for users wishing to visualize GunZ content and prepare the data for a modern game engine.
+GunZ: The Duel RealSpace2/3 content importer for Blender 3.6.1 and up.  
+Intended for users wishing to visualize GunZ content, prepare the data for a modern game engine or bake and export a lightmap.
 
 Please report bugs and unimplemented features to: ***Krunk#6051***
 
 RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-map-1204327/***
 
-[***DOWNLOAD v0.9.0***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.9.0/io_scene_gzrs2_v0.9.0.zip)
+[***DOWNLOAD v0.9.1***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.9.1/io_scene_gzrs2_v0.9.1.zip)
 
 
 # Latest Update
-
-* NEW: major elu support, versions 0x5004 - 0x5011 may be loaded independently including skinned actor meshes
-* NEW: rs and elu support for GunZ 2 alpha content
-* NEW: smart texture search checks local, relative and upward paths and supports non-dds formats
-* rs UV layer 2 is now included
-* prop dummies are now skipped and all props are loaded whether they have a corresponding dummy or not
-* materials can now be both transparent and additive, clipped alpha testing is also supported
-* fixed broken prop orientations (Factory, Mansion, Halloween Town, etc.)
-* fixed operator switches overwriting each other on subsequent imports
-* fixed issues with file paths on posix systems thanks to Nayr
-* removed local copy of minidom
-* additional log switches have been setup
-* additional material flags are recognized
+* NEW: GunZ 2 scene.xml, prop.xml and .cl2 support
+* NEW: GunZ 1 .lm support, both import and export
+* NEW: Experimental .col cleanup recipe
+* Improved .col import discards non-hull geometry
+* Improved resource caching reduces load times
+* Improved material logic prevents unnecessary duplicates
+* Fixed issues with negative material IDs in GunZ 2 .elus
+* Fixed issues with white halos on alpha textures in render mode (Town)
 
 
-# Current Features
+# Current Import Features
 
-* displays world geometry, occlusion planes and collision data using meshes
-* displays BSP bounding boxes, sounds, spawns, powerups and other dummies using the appropriate empties
+* supported filetypes: .rs, .elu, .col, .lm, .scene.xml, .prop.xml, .cl2
+* displays world geometry, occlusion planes and collision data using mesh objects
+* displays BSP bounding boxes, sounds, spawns, powerups and other dummies using empties
+* approximates fog using a volume scatter or volume absorption shader
 * groups lights with similar properties, re-interprets the data to be useful in Blender
-* includes a driver object for quickly tuning lights and fog
+* displays lightmaps using a linked node group for quick toggling
+* creates a driver object for quickly tuning lights and fog
 * notifies the user of..
   * missing textures and empty texture paths
   * out-of-bounds and unused material slots
-  * unimplemented xml tags (please report these)
+  * unimplemented xml tags
+
+
+# Current Export Features
+
+* supported filetypes: .lm (overwrite only)
+* can export lightmap image data as well as UVs
+  * requires an active mesh object with valid UVs in channel 3
+  * requires a GunZ 1 .rs file for the same map in the same directory
+* includes experimental "version 4" for bugfixes and DXT1 support (thanks to DeffJay)
+  * version 4 lightmaps take less space and load faster, resolutions up to 8k are now viable
+  * they require client changes and do not work with vanilla GunZ
+  * contact Krunk#6051 for information on how to implement this
 
 
 # Planned Features
 
-* GunZ 1.5 elu support: 0x0, 0x11 and 0x5001, 0x5002 & 0x5003
-* GunZ 2 retail elu support: 0x5012, 0x5013 & 0x5014
+* GunZ 1.5 elu versions: 0x0, 0x11 and 0x5001, 0x5002 & 0x5003
+* GunZ 2 retail elu versions: 0x5012, 0x5013 & 0x5014
 * .ani support
 * nav mesh support
 
@@ -49,8 +59,10 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 # Known Issues
 
 * quest maps and community maps have not been tested at all yet
-* some alpha textures have white halos in render mode (Town)
-* collision mesh and occlusion planes appear black in render mode (just disable them)
+* handful of GunZ 1 elus with improper bone weights (woman-parts_eola)
+* GunZ 1 UV layer 2 comes out mangled (just import the lightmap and use layer 3 for now)
+* GunZ 2 some objects are not oriented correctly (spotlights)
+* GunZ 2 embedded scene hierarchies are not parsed yet (lighting_candlestick_y02, lighting_chandelier_g01, etc.)
 
 
 ![Preview](meta/preview_220327_1.jpg)

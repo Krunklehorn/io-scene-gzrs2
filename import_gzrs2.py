@@ -4,6 +4,7 @@
 ### GunZ 1
 # - RTypes.h
 # - RToken.h
+# - RealSpace2.h/.cpp
 # - RBspObject.h/.cpp
 # - RMaterialList.h/.cpp
 # - RMesh_Load.cpp
@@ -11,6 +12,7 @@
 # - MZFile.cpp
 # - R_Mtrl.cpp
 # - EluLoader.h/cpp
+# - LightmapGenerator.h/.cpp
 # - MCPlug2_Mesh.cpp
 #
 ### GunZ 2
@@ -30,7 +32,7 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import bpy, os, io, math, mathutils
+import bpy, os, math, mathutils
 import xml.dom.minidom as minidom
 from mathutils import Vector, Matrix
 from contextlib import redirect_stdout
@@ -40,24 +42,27 @@ from .classes_gzrs2 import *
 from .parse_gzrs2 import *
 from .readrs_gzrs2 import *
 from .readcol_gzrs2 import *
+from .readlm_gzrs2 import *
 from .readelu_gzrs2 import *
 from .lib_gzrs2 import *
 
-def importRs(self, context):
+def importRs2(self, context):
     state = GZRS2State()
-    silence = io.StringIO()
 
     state.convertUnits = self.convertUnits
+    state.meshMode = self.meshMode
     state.doCleanup = self.doCleanup
-    state.doCollision = self.doCollision
+    state.doCollision = self.doCollision and state.meshMode != 'BAKE'
+    state.doLightmap = self.doLightmap
     state.doLights = self.doLights
+    state.tweakLights = self.tweakLights and state.doLights
     state.doProps = self.doProps
-    state.doDummies = self.doDummies
-    state.doOcclusion = self.doOcclusion
+    state.doDummies = self.doDummies and state.meshMode != 'BAKE'
+    state.doOcclusion = self.doOcclusion and state.meshMode != 'BAKE'
     state.doFog = self.doFog
-    state.doSounds = self.doSounds
-    state.doItems = self.doItems
-    state.doBspBounds = self.doBspBounds
+    state.doSounds = self.doSounds and state.meshMode != 'BAKE'
+    state.doItems = self.doItems and state.meshMode != 'BAKE'
+    state.doBspBounds = self.doBspBounds and state.meshMode != 'BAKE'
     state.doLightDrivers = self.doLightDrivers
     state.doFogDriver = self.doFogDriver
 
@@ -76,6 +81,11 @@ def importRs(self, context):
         state.logRsTrees = self.logRsTrees
         state.logRsLeaves = self.logRsLeaves
         state.logRsVerts = self.logRsVerts
+        state.logColHeaders = self.logColHeaders
+        state.logColNodes = self.logColNodes
+        state.logColTris = self.logColTris
+        state.logLmHeaders = self.logLmHeaders
+        state.logLmImages = self.logLmImages
         state.logEluHeaders = self.logEluHeaders
         state.logEluMats = self.logEluMats
         state.logEluMeshNodes = self.logEluMeshNodes
@@ -84,46 +94,38 @@ def importRs(self, context):
         state.logCleanup = self.logCleanup
 
     rspath = self.filepath
-    directory = os.path.dirname(rspath)
-    filename = os.path.splitext(os.path.basename(rspath))[0]
-
-    xmlrspath = f"{ rspath }.xml"
-    spawnpath = os.path.join(directory, "spawn.xml")
-    colpath = f"{ rspath }.col"
+    state.directory = os.path.dirname(rspath)
+    state.filename = os.path.basename(rspath).split(os.extsep)[0]
 
     xmlRs = False
-    xmlRsExists = pathExists(xmlrspath, directory)
+    for ext in XML_EXTENSIONS:
+        rsxmlpath = pathExists(f"{ rspath }.{ ext }")
 
-    if xmlRsExists:
-        xmlrspath = xmlRsExists
-        xmlRs = minidom.parse(xmlrspath)
-    else:
-        xmlrspath = f"{ rspath }.XML"
-        xmlRsExists = pathExists(xmlrspath, directory)
+        if rsxmlpath:
+            xmlRs = minidom.parse(rsxmlpath)
+            break
 
-        if xmlRsExists:
-            xmlrspath = xmlRsExists
-            xmlRs = minidom.parse(xmlrspath)
-        else:
-            self.report({ 'ERROR' }, "Map xml not found, no materials or objects to generate!")
+    if not rsxmlpath:
+        state.doLights = False
+        state.doProps = False
+        state.doDummies = False
+        state.doOcclusion = False
+        state.doFog = False
+        state.doSounds = False
+        self.report({ 'ERROR' }, "Map xml not found, no materials or objects to generate!")
 
     xmlSpawn = False
+    spawnxmlpath = os.path.join(state.directory, "spawn.xml")
 
     if state.doItems:
-        xmlSpawnExists = pathExists(spawnpath, directory)
+        for ext in XML_EXTENSIONS:
+            spawnxmlpath = pathExists(os.path.join(state.directory, f"spawn.{ ext }"))
 
-        if xmlSpawnExists:
-            spawnpath = xmlSpawnExists
-            xmlSpawn = minidom.parse(spawnpath)
-        else:
-            spawnpath = os.path.join(directory, "spawn.XML")
-            xmlSpawnExists = pathExists(spawnpath, directory)
+            if spawnxmlpath:
+                xmlSpawn = minidom.parse(spawnxmlpath)
+                break
 
-            if xmlSpawnExists:
-                spawnpath = xmlSpawnExists
-                xmlSpawn = minidom.parse(spawnpath)
-            else:
-                self.report({ 'INFO' }, "Items requested but spawn.xml not found, no items to generate.")
+        if not spawnxmlpath: self.report({ 'INFO' }, "Items requested but spawn.xml not found, no items to generate.")
 
     if xmlRs:
         state.xmlRsMats = parseRsXML(self, xmlRs, 'MATERIAL', state)
@@ -148,44 +150,38 @@ def importRs(self, context):
     readRs(self, rspath, state)
 
     if state.doCollision:
-        colExists = pathExists(colpath, directory)
+        for ext in COL_EXTENSIONS:
+            colpath = pathExists(f"{ rspath }.{ ext }")
 
-        if colExists:
-            colpath = colExists
-            readCol(self, colpath, state)
+            if colpath:
+                colpath = readCol(self, colpath, state)
+                break
+
+        if not colpath:
+            state.doCollision = False
+            self.report({ 'INFO' }, "Collision mesh requested but .col file not found, no collision mesh to generate.")
+
+    if state.doLightmap:
+        lmpath = pathExists(f"{ rspath }.lm")
+
+        if lmpath:
+            readLm(self, lmpath, state)
+            unpackLmImages(state)
+            setupLmMixGroup(state)
         else:
-            colpath = f"{ rspath }.COL"
-            colExists = pathExists(colpath, directory)
-
-            if colExists:
-                colpath = colExists
-                readCol(self, colpath, state)
-            else:
-                state.doCollision = False
-                self.report({ 'INFO' }, "Collision mesh requested but .col file not found, no collision mesh to generate.")
+            state.doLightmap = False
+            self.report({ 'INFO' }, "Lightmaps requested but .lm file not found, no lightmaps to generate.")
 
     if state.doProps:
-        doXmlElu = False
-
         for p, prop in enumerate(state.xmlObjs):
-            elupath = os.path.join(directory, prop['name'])
-            xmlelupath = f"{ elupath }.xml"
-            xmlEluExists = pathExists(xmlelupath, directory)
+            elupath = os.path.join(state.directory, prop['name'])
 
-            if xmlEluExists:
-                xmlelupath = xmlEluExists
-                xmlElu = minidom.parse(xmlelupath)
-                state.xmlEluMats[p] = parseEluXML(self, xmlElu, state)
-                doXmlElu = True
-            else:
-                xmlelupath = f"{ elupath }.XML"
-                xmlEluExists = pathExists(xmlelupath, directory)
+            for ext in XML_EXTENSIONS:
+                eluxmlpath = pathExists(f"{ elupath }.{ ext }")
 
-                if xmlEluExists:
-                    xmlelupath = xmlEluExists
-                    xmlElu = minidom.parse(xmlelupath)
-                    state.xmlEluMats[p] = parseEluXML(self, xmlElu, state)
-                    doXmlElu = True
+                if eluxmlpath:
+                    state.xmlEluMats[p] = parseEluXML(self, minidom.parse(eluxmlpath), state)
+                    break
 
             readElu(self, elupath, state)
 
@@ -201,23 +197,23 @@ def importRs(self, context):
     bpy.ops.ed.undo_push()
     collections = bpy.data.collections
 
-    rootMap =                   collections.new(filename)
-    rootMeshes =                collections.new(f"{ filename }_Meshes")
+    rootMap =                   collections.new(state.filename)
+    rootMeshes =                collections.new(f"{ state.filename }_Meshes")
 
-    rootLightsMain =            collections.new(f"{ filename }_Lights_Main")            if state.doLights else False
-    rootLightsSoft =            collections.new(f"{ filename }_Lights_Soft")            if state.doLights else False
-    rootLightsHard =            collections.new(f"{ filename }_Lights_Hard")            if state.doLights else False
-    rootLightsSoftAmbient =     collections.new(f"{ filename }_Lights_SoftAmbient")     if state.doLights else False
-    rootLightsSoftCasters =     collections.new(f"{ filename }_Lights_SoftCasters")     if state.doLights else False
-    rootLightsHardAmbient =     collections.new(f"{ filename }_Lights_HardAmbient")     if state.doLights else False
-    rootLightsHardCasters =     collections.new(f"{ filename }_Lights_HardCasters")     if state.doLights else False
+    rootLightsMain =            collections.new(f"{ state.filename }_Lights_Main")            if state.doLights else False
+    rootLightsSoft =            collections.new(f"{ state.filename }_Lights_Soft")            if state.doLights else False
+    rootLightsHard =            collections.new(f"{ state.filename }_Lights_Hard")            if state.doLights else False
+    rootLightsSoftAmbient =     collections.new(f"{ state.filename }_Lights_SoftAmbient")     if state.doLights else False
+    rootLightsSoftCasters =     collections.new(f"{ state.filename }_Lights_SoftCasters")     if state.doLights else False
+    rootLightsHardAmbient =     collections.new(f"{ state.filename }_Lights_HardAmbient")     if state.doLights else False
+    rootLightsHardCasters =     collections.new(f"{ state.filename }_Lights_HardCasters")     if state.doLights else False
 
-    rootProps =                 collections.new(f"{ filename }_Props")                  if state.doProps else False
-    rootDummies =               collections.new(f"{ filename }_Dummies")                if state.doDummies else False
-    rootSounds =                collections.new(f"{ filename }_Sounds")                 if state.doSounds else False
-    rootItems =                 collections.new(f"{ filename }_Items")                  if state.doItems else False
-    rootExtras =                collections.new(f"{ filename }_Extras")                 if doExtras else False
-    rootBspBounds =             collections.new(f"{ filename }_BspBounds")              if state.doBspBounds else False
+    rootProps =                 collections.new(f"{ state.filename }_Props")                  if state.doProps else False
+    rootDummies =               collections.new(f"{ state.filename }_Dummies")                if state.doDummies else False
+    rootSounds =                collections.new(f"{ state.filename }_Sounds")                 if state.doSounds else False
+    rootItems =                 collections.new(f"{ state.filename }_Items")                  if state.doItems else False
+    rootExtras =                collections.new(f"{ state.filename }_Extras")                 if doExtras else False
+    rootBspBounds =             collections.new(f"{ state.filename }_BspBounds")              if state.doBspBounds else False
 
     context.collection.children.link(rootMap)
     rootMap.children.link(rootMeshes)
@@ -239,21 +235,11 @@ def importRs(self, context):
     if state.doBspBounds:
         rootExtras.children.link(rootBspBounds)
 
-        def lcFindRoot(lc):
-            if lc.collection is rootMap: return lc
-            elif len(lc.children) == 0: return None
-
-            for child in lc.children:
-                next = lcFindRoot(child)
-
-                if next is not None:
-                    return next
-
         for viewLayer in context.scene.view_layers:
-            lcRootMap = lcFindRoot(viewLayer.layer_collection)
+            lcRoot = lcFindRoot(viewLayer.layer_collection, rootMap)
 
-            if lcRootMap is not None:
-                for lcExtras in lcRootMap.children:
+            if lcRoot is not None:
+                for lcExtras in lcRoot.children:
                         if lcExtras.collection is rootExtras:
                             for lcBspBounds in lcExtras.children:
                                 if lcBspBounds.collection is rootBspBounds:
@@ -261,8 +247,19 @@ def importRs(self, context):
             else:
                 self.report({ 'INFO' }, f"GZRS2: Unable to find root collection in view layer: { viewLayer }")
 
-    for m, material in enumerate(state.xmlRsMats):
-        name = f"{ filename }_{ material['name'] }"
+    setupErrorMat(state)
+
+    if state.meshMode == 'BAKE':
+        name = f"{ state.filename }_Bake"
+
+        blMesh = bpy.data.meshes.new(name)
+        blMeshObj = bpy.data.objects.new(name, blMesh)
+
+        state.blMeshes.append(blMesh)
+        state.blMeshObjs.append(blMeshObj)
+
+    for m, xmlRsMat in enumerate(state.xmlRsMats):
+        name = xmlRsMat.get('name', f"Material_{ m }")
 
         blMat = bpy.data.materials.new(name)
         blMat.use_nodes = True
@@ -271,22 +268,53 @@ def importRs(self, context):
         nodes = tree.nodes
 
         shader = nodes.get('Principled BSDF')
+        shader.location = (20, 300)
+        shader.select = False
         shader.inputs[7].default_value = 0.0
-        texname = material.get('DIFFUSEMAP')
+
+        nodes.active = shader
+        nodes.get('Material Output').select = False
+
+        texname = xmlRsMat.get('DIFFUSEMAP')
 
         if texname:
-            texpath = textureSearch(self, directory, texname, '')
+            texpath = textureSearch(self, texname, '', state)
 
             if texpath is not None:
-                texture = nodes.new(type = 'ShaderNodeTexImage')
-                texture.image = bpy.data.images.load(texpath)
-                texture.location = (-280, 300)
+                texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
 
-                tree.links.new(texture.outputs[0], shader.inputs[0])
+                if state.doLightmap:
+                    lightmap = nodes.new(type = 'ShaderNodeTexImage')
+                    uvmap = nodes.new(type = 'ShaderNodeUVMap')
+                    mix = nodes.new(type = 'ShaderNodeGroup')
 
-                blMat.use_backface_culling = not material['TWOSIDED']
+                    lightmap.image = state.blLmImage
+                    uvmap.uv_map = 'UVMap.002'
+                    mix.node_tree = state.lmMixGroup
 
-                if material['USEALPHATEST']:
+                    texture.location = (-440, 300)
+                    lightmap.location = (-440, -20)
+                    uvmap.location = (-640, -20)
+                    mix.location = (-160, 300)
+
+                    texture.select = False
+                    lightmap.select = True
+                    uvmap.select = False
+                    mix.select = False
+
+                    tree.links.new(texture.outputs[0], mix.inputs[0])
+                    tree.links.new(lightmap.outputs[0], mix.inputs[1])
+                    tree.links.new(uvmap.outputs[0], lightmap.inputs[0])
+                    tree.links.new(mix.outputs[0], shader.inputs[0])
+
+                    nodes.active = lightmap
+                else:
+                    tree.links.new(texture.outputs[0], shader.inputs[0])
+                    nodes.active = texture
+
+                blMat.use_backface_culling = not xmlRsMat.get('TWOSIDED', False)
+
+                if xmlRsMat.get('USEALPHATEST'):
                     blMat.blend_method = 'CLIP'
                     blMat.shadow_method = 'CLIP'
                     blMat.show_transparent_back = True
@@ -294,7 +322,7 @@ def importRs(self, context):
                     blMat.alpha_threshold = 0.5
 
                     tree.links.new(texture.outputs[1], shader.inputs[21])
-                elif material['USEOPACITY']:
+                elif xmlRsMat.get('USEOPACITY'):
                     blMat.blend_method = 'HASHED'
                     blMat.shadow_method = 'HASHED'
                     blMat.show_transparent_back = True
@@ -302,18 +330,23 @@ def importRs(self, context):
 
                     tree.links.new(texture.outputs[1], shader.inputs[21])
 
-                if material['ADDITIVE']:
+                if xmlRsMat.get('ADDITIVE'):
                     blMat.blend_method = 'BLEND'
                     blMat.show_transparent_back = True
                     blMat.use_backface_culling = False
 
                     add = nodes.new(type = 'ShaderNodeAddShader')
-                    add.location = (300, 140)
-
                     transparent = nodes.new(type = 'ShaderNodeBsdfTransparent')
+
+                    add.location = (300, 140)
                     transparent.location = (300, 20)
 
-                    tree.links.new(texture.outputs[0], shader.inputs[19])
+                    add.select = False
+                    transparent.select = False
+
+                    if state.doLightmap:    tree.links.new(mix.outputs[0], shader.inputs[19])
+                    else:                   tree.links.new(texture.outputs[0], shader.inputs[19])
+
                     tree.links.new(shader.outputs[0], add.inputs[0])
                     tree.links.new(transparent.outputs[0], add.inputs[1])
                     tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
@@ -322,97 +355,87 @@ def importRs(self, context):
         else:
             self.report({ 'INFO' }, f"GZRS2: Bsp material with empty texture name: { m }")
 
-        blMesh = bpy.data.meshes.new(name)
-        blMeshObj = bpy.data.objects.new(name, blMesh)
-
         state.blXmlRsMats.append(blMat)
-        state.blMeshes.append(blMesh)
-        state.blMeshObjs.append(blMeshObj)
 
-    if state.doCleanup and state.logCleanup:
-        print()
-        print("=== RS Mesh Cleanup ===")
-        print()
+        if state.meshMode == 'STANDARD':
+            blMesh = bpy.data.meshes.new(name)
+            blMeshObj = bpy.data.objects.new(name, blMesh)
 
-    for m, blMesh in enumerate(state.blMeshes):
-        meshVerts = []
-        meshFaces = []
-        meshNorms = []
-        meshUV1 = []
-        meshUV2 = []
-        found = False
-        index = 0
+            state.blMeshes.append(blMesh)
+            state.blMeshObjs.append(blMeshObj)
 
-        for leaf in state.rsLeaves:
-            if leaf.materialID == m:
-                found = True
+    if state.meshMode == 'STANDARD':
+        if state.doCleanup and state.logCleanup:
+            print()
+            print("=== RS Mesh Cleanup ===")
+            print()
 
-                for v in range(leaf.vertexOffset, leaf.vertexOffset + leaf.vertexCount):
-                    meshVerts.append(state.rsVerts[v].pos)
-                    meshNorms.append(state.rsVerts[v].nor)
-                    meshUV1.append(state.rsVerts[v].uv1)
-                    meshUV2.append(state.rsVerts[v].uv2)
-                    # TODO: import color as well
+        for m, blMesh in enumerate(state.blMeshes):
+            if not setupRsMesh(self, m, blMesh, state):
+                continue
 
-                meshFaces.append(tuple(range(index, index + leaf.vertexCount)))
-                index += leaf.vertexCount
+            blMesh.materials.append(state.blXmlRsMats[m])
 
-        if not found:
-            self.report({ 'INFO' }, f"GZRS2: Unused rs material slot: { m }, { state.xmlRsMats[m]['name'] }")
-            continue
+            rootMeshes.objects.link(state.blMeshObjs[m])
 
-        blMesh.from_pydata(meshVerts, [], meshFaces)
+            for viewLayer in context.scene.view_layers:
+                viewLayer.objects.active = state.blMeshObjs[m]
 
-        blMesh.use_auto_smooth = True
-        blMesh.normals_split_custom_set_from_vertices(meshNorms)
+            if state.doCleanup:
+                if state.logCleanup: print(blMesh.name)
 
-        uvLayer1 = blMesh.uv_layers.new()
-        for u, uv in enumerate(meshUV1): uvLayer1.data[u].uv = uv
+                def cleanupFunc():
+                    bpy.ops.object.select_all(action = 'DESELECT')
+                    state.blMeshObjs[m].select_set(True)
+                    bpy.ops.object.shade_smooth(use_auto_smooth = True)
+                    bpy.ops.object.select_all(action = 'DESELECT')
 
-        uvLayer2 = blMesh.uv_layers.new()
-        for u, uv in enumerate(meshUV2): uvLayer2.data[u].uv = uv
+                    bpy.ops.object.mode_set(mode = 'EDIT')
 
-        blMesh.update()
+                    bpy.ops.mesh.select_mode(type = 'VERT')
+                    bpy.ops.mesh.select_all(action = 'SELECT')
+                    bpy.ops.mesh.delete_loose()
+                    bpy.ops.mesh.select_all(action = 'SELECT')
+                    bpy.ops.mesh.remove_doubles(use_sharp_edge_from_normals = True)
+                    bpy.ops.mesh.select_all(action = 'DESELECT')
 
-        blMesh.materials.append(state.blXmlRsMats[m])
+                    bpy.ops.object.mode_set(mode = 'OBJECT')
 
-        rootMeshes.objects.link(state.blMeshObjs[m])
+                if state.logCleanup:
+                    cleanupFunc()
+                    print()
+                else:
+                    with redirect_stdout(state.silence):
+                        cleanupFunc()
+    elif state.meshMode == 'BAKE':
+        blMesh = state.blMeshes[0]
+        blMeshObj = state.blMeshObjs[0]
+
+        meshMatIDs = setupRsMesh(self, 0, blMesh, state)
+
+        for blXmlRsMat in state.blXmlRsMats:
+            blMesh.materials.append(blXmlRsMat)
+
+        for p, polygon in blMesh.polygons.items():
+            polygon.material_index = meshMatIDs[p]
+
+        rootMeshes.objects.link(blMeshObj)
 
         for viewLayer in context.scene.view_layers:
-            viewLayer.objects.active = state.blMeshObjs[m]
+            viewLayer.objects.active = blMeshObj
 
-        if state.doCleanup:
-            if state.logCleanup: print(blMesh.name)
-
+        with redirect_stdout(state.silence):
             bpy.ops.object.select_all(action = 'DESELECT')
-            state.blMeshObjs[m].select_set(True)
-            bpy.ops.object.shade_smooth(use_auto_smooth = True)
+            blMeshObj.select_set(True)
+            bpy.ops.object.material_slot_remove_unused()
             bpy.ops.object.select_all(action = 'DESELECT')
 
             bpy.ops.object.mode_set(mode = 'EDIT')
 
             bpy.ops.mesh.select_mode(type = 'VERT')
-            bpy.ops.mesh.select_all(action = 'SELECT')
-
-            if state.logCleanup:
-                bpy.ops.mesh.delete_loose()
-            else:
-                with redirect_stdout(silence):
-                    bpy.ops.mesh.delete_loose()
-
-            bpy.ops.mesh.select_all(action = 'SELECT')
-
-            if state.logCleanup:
-                bpy.ops.mesh.remove_doubles(use_sharp_edge_from_normals = True)
-            else:
-                with redirect_stdout(silence):
-                    bpy.ops.mesh.remove_doubles(use_sharp_edge_from_normals = True)
-
             bpy.ops.mesh.select_all(action = 'DESELECT')
 
-            if state.logCleanup: print()
-
-        bpy.ops.object.mode_set(mode = 'OBJECT')
+            bpy.ops.object.mode_set(mode = 'OBJECT')
 
     if state.doLights:
         for l, light in enumerate(state.xmlLits):
@@ -420,13 +443,13 @@ def importRs(self, context):
             softness = (light['ATTENUATIONEND'] - light['ATTENUATIONSTART']) / light['ATTENUATIONEND']
             hardness = 0.001 / (1 - min(softness, 0.9999))
 
-            lit = bpy.data.lights.new(f"{ filename }_Light_{ name }", 'POINT')
+            lit = bpy.data.lights.new(f"{ state.filename }_Light_{ name }", 'POINT')
             lit.color = light['COLOR']
             lit.energy = light['INTENSITY'] * pow(light['ATTENUATIONEND'], 2) * 2
             lit.shadow_soft_size = hardness * light['ATTENUATIONEND']
             lit.cycles.cast_shadow = light['CASTSHADOW']
 
-            litObj = bpy.data.objects.new(f"{ filename }_Light_{ name }", lit)
+            litObj = bpy.data.objects.new(f"{ state.filename }_Light_{ name }", lit)
             litObj.location = light['POSITION']
 
             state.blLights.append(lit)
@@ -459,270 +482,34 @@ def importRs(self, context):
 
     if state.doProps:
         if state.doDummies:
-            for p, prop in enumerate(state.xmlObjs):
+            for prop in state.xmlObjs:
                 propName = prop['name'].split('_', 1)[1].rsplit('.', 1)[0]
 
                 for d, dummy in enumerate(state.xmlDums):
                     if dummy['name'] == propName:
                         propDums.append(d)
 
-        for material in state.eluMats:
-            name = material.texName or f"{ material.matID }[{ material.subMatID }]"
-            blMat = bpy.data.materials.new(f"{ filename }_{ name }")
-            blMat.use_nodes = True
+        for eluMat in state.eluMats:
+            setupEluMat(self, eluMat, state)
 
-            tree = blMat.node_tree
-            nodes = tree.nodes
-
-            shader = nodes.get('Principled BSDF')
-            shader.location = (0, 300)
-            shader.inputs[7].default_value = material.power / 100.0
-
-            if material.texBase != '':
-                texpath = textureSearch(self, directory, material.texBase, material.texDir)
-
-                if texpath is not None:
-                    texture = nodes.new(type = 'ShaderNodeTexImage')
-                    texture.image = bpy.data.images.load(texpath)
-                    texture.location = (-280, 300)
-
-                    tree.links.new(texture.outputs[0], shader.inputs[0])
-
-                    blMat.use_backface_culling = not material.twosided
-
-                    if material.alphatest:
-                        blMat.blend_method = 'CLIP'
-                        blMat.shadow_method = 'CLIP'
-                        blMat.show_transparent_back = True
-                        blMat.use_backface_culling = False
-                        blMat.alpha_threshold = 1.0 - (material.alphatest / 100.0)
-
-                        tree.links.new(texture.outputs[1], shader.inputs[21])
-                    elif material.useopacity:
-                        blMat.blend_method = 'HASHED'
-                        blMat.shadow_method = 'HASHED'
-                        blMat.show_transparent_back = True
-                        blMat.use_backface_culling = False
-
-                        tree.links.new(texture.outputs[1], shader.inputs[21])
-
-                    if material.additive:
-                        blMat.blend_method = 'BLEND'
-                        blMat.show_transparent_back = True
-                        blMat.use_backface_culling = False
-
-                        add = nodes.new(type = 'ShaderNodeAddShader')
-                        add.location = (300, 140)
-
-                        transparent = nodes.new(type = 'ShaderNodeBsdfTransparent')
-                        transparent.location = (300, 20)
-
-                        tree.links.new(texture.outputs[0], shader.inputs[19])
-                        tree.links.new(shader.outputs[0], add.inputs[0])
-                        tree.links.new(transparent.outputs[0], add.inputs[1])
-                        tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
-                else:
-                    self.report({ 'INFO' }, f"GZRS2: Texture not found for .elu material: { material.texPath }")
-
-            if not material.matID in state.blEluMats:
-                state.blEluMats[material.matID] = {}
-
-            state.blEluMats[material.matID][material.subMatID] = blMat
-
-        if doXmlElu:
-            for e, xmlEluMats in enumerate(state.xmlEluMats):
-                state.blXmlEluMats[e] = []
-
-                for m, material in enumerate(xmlEluMats):
-                    blMat = bpy.data.materials.new(f"{ filename }_{ material['name'] }")
-                    blMat.use_nodes = True
-
-                    tree = blMat.node_tree
-                    nodes = tree.nodes
-
-                    shader = nodes.get('Principled BSDF')
-                    shader.location = (0, 300)
-                    shader.inputs[6].default_value = material['GLOSSINESS'] / 100.0 if 'GLOSSINESS' in material else 0.0
-                    shader.inputs[7].default_value = 0.0
-
-                    diffuse = None
-                    opacity = None
-
-                    for texture in material['textures']:
-                        textype = texture['type']
-                        texname = texture['name']
-
-                        if textype in ['DIFFUSEMAP', 'SPECULARMAP', 'SELFILLUMINATIONMAP', 'OPACITYMAP', 'NORMALMAP']:
-                            if texname:
-                                texpath = textureSearch(self, directory, texname, '')
-
-                                if texpath is not None:
-                                    if textype == 'DIFFUSEMAP':
-                                        if opacity is None:
-                                            texture = nodes.new(type = 'ShaderNodeTexImage')
-                                            texture.image = bpy.data.images.load(texpath)
-                                            texture.location = (-560, 300)
-                                        else:
-                                            texture = opacity
-
-                                        tree.links.new(texture.outputs[0], shader.inputs[0])
-                                        diffuse = texture
-                                    elif textype == 'SPECULARMAP':
-                                        texture = nodes.new(type = 'ShaderNodeTexImage')
-                                        texture.image = bpy.data.images.load(texpath)
-                                        texture.location = (-560, 0)
-                                        tree.links.new(texture.outputs[0], shader.inputs[7])
-                                    elif textype == 'SELFILLUMINATIONMAP':
-                                        texture = nodes.new(type = 'ShaderNodeTexImage')
-                                        texture.image = bpy.data.images.load(texpath)
-                                        texture.location = (-560, -300)
-                                        tree.links.new(texture.outputs[0], shader.inputs[19])
-                                    elif textype == 'OPACITYMAP':
-                                        if diffuse is None:
-                                            texture = nodes.new(type = 'ShaderNodeTexImage')
-                                            texture.image = bpy.data.images.load(texpath)
-                                            texture.location = (-560, 300)
-                                        else:
-                                            texture = diffuse
-
-                                        tree.links.new(texture.outputs[1], shader.inputs[21])
-                                        opacity = texture
-
-                                        blMat.blend_method = 'CLIP'
-                                        blMat.shadow_method = 'CLIP'
-                                        blMat.alpha_threshold = material['ALPHATESTVALUE'] / 255.0 if 'ALPHATESTVALUE' in material else 0.5
-                                    elif textype == 'NORMALMAP':
-                                        texture = nodes.new(type = 'ShaderNodeTexImage')
-                                        normal = nodes.new(type = 'ShaderNodeNormalMap')
-                                        texture.image = bpy.data.images.load(texpath)
-                                        texture.image.colorspace_settings.name = 'Non-Color'
-                                        texture.location = (-560, -600)
-                                        normal.location = (-280, -600)
-                                        tree.links.new(texture.outputs[0], normal.inputs[1])
-                                        tree.links.new(normal.outputs[0], shader.inputs[22])
-                                else:
-                                    self.report({ 'INFO' }, f"GZRS2: Texture not found for .elu.xml material: { textype }, { texname }")
-                            else:
-                                self.report({ 'INFO' }, f"GZRS2: .elu.xml material with empty texture name: { m }, { textype }")
-                        else:
-                            self.report({ 'INFO' }, f"GZRS2: Unsupported texture type for .elu.xml material: { textype }, { texname }")
-
-                    state.blXmlEluMats[e].append(blMat)
+        if state.xmlEluMats:
+            for elupath, materials in state.xmlEluMats.items():
+                for xmlEluMat in materials:
+                    setupXmlEluMat(self, elupath, xmlEluMat, state)
 
         if state.doCleanup and state.logCleanup:
             print()
             print("=== Elu Mesh Cleanup ===")
             print()
 
-        for m, eluMesh in enumerate(state.eluMeshes):
-            name = f"{ filename }_Prop_{ eluMesh.meshName }"
-
+        for eluMesh in state.eluMeshes:
             if eluMesh.isDummy:
                 self.report({ 'INFO' }, f"GZRS2: Skipping dummy prop: { eluMesh.meshName }")
                 continue
-            else:
-                doNorms = len(eluMesh.normals) > 0
-                doUV1 = len(eluMesh.uv1s) > 0
-                doUV2 = len(eluMesh.uv2s) > 0
 
-                propVerts = []
-                propFaces = []
-                propNorms = [] if doNorms else None
-                propUV1 = [] if doUV1 else None
-                propUV2 = [] if doUV2 else None
-                index = 0
+            setupElu(self, f"{ state.filename }_Prop_{ eluMesh.meshName }", eluMesh, True, rootProps, context, state)
 
-                blProp = bpy.data.meshes.new(name)
-                blPropObj = bpy.data.objects.new(name, blProp)
-
-                for face in eluMesh.faces:
-                    degree = face.degree
-
-                    # Reverses the winding order for GunZ 1 elus
-                    for v in range(degree - 1, -1, -1) if eluMesh.version <= ELU_5007 else range(degree):
-                        propVerts.append(eluMesh.vertices[face.ipos[v]])
-                        if doNorms: propNorms.append(eluMesh.normals[face.inor[v]])
-                        if doUV1: propUV1.append(eluMesh.uv1s[face.iuv1[v]])
-                        if doUV2: propUV2.append(eluMesh.uv2s[face.iuv2[v]])
-
-                    propFaces.append(tuple(range(index, index + degree)))
-                    index += degree
-
-                blProp.from_pydata(propVerts, [], propFaces)
-
-                if doNorms:
-                    blProp.use_auto_smooth = True
-                    blProp.normals_split_custom_set_from_vertices(propNorms)
-
-                if doUV1:
-                    uvLayer1 = blProp.uv_layers.new()
-                    for u, uv in enumerate(propUV1): uvLayer1.data[u].uv = uv
-
-                if doUV2:
-                    uvLayer2 = blProp.uv_layers.new()
-                    for u, uv in enumerate(propUV2): uvLayer2.data[u].uv = uv
-
-                blProp.validate()
-                blProp.update()
-
-                if eluMesh.version <= ELU_5007:
-                    if eluMesh.matID in state.blEluMats:
-                        blProp.materials.append(state.blEluMats[eluMesh.matID][-1])
-                    else:
-                        self.report({ 'INFO' }, f"GZRS2: Missing .elu material: { eluMesh.meshName }, { eluMesh.matID }")
-                elif doXmlElu:
-                    if state.blXmlEluMats[m][eluMesh.matID]:
-                        blProp.materials.append(state.blXmlEluMats[m][eluMesh.matID])
-                    else:
-                        self.report({ 'INFO' }, f"GZRS2: Missing .elu.xml material: { eluMesh.meshName }, { eluMesh.matID }")
-                else:
-                    self.report({ 'INFO' }, f"GZRS2: .elu.xml material requested where none was parsed, skipping: { eluMesh.meshName }, { eluMesh.matID }")
-
-                if eluMesh.version <= ELU_5007:
-                    blPropObj.matrix_world = Matrix.Rotation(math.radians(-180.0), 4, 'Z') @ eluMesh.transform
-                else:
-                    blPropObj.matrix_world = eluMesh.transform
-
-                rootProps.objects.link(blPropObj)
-
-                for viewLayer in context.scene.view_layers:
-                    viewLayer.objects.active = blPropObj
-
-                if state.doCleanup:
-                    if state.logCleanup: print(eluMesh.meshName)
-
-                    bpy.ops.object.select_all(action = 'DESELECT')
-                    blPropObj.select_set(True)
-                    bpy.ops.object.shade_smooth(use_auto_smooth = doNorms)
-                    bpy.ops.object.select_all(action = 'DESELECT')
-
-                    bpy.ops.object.mode_set(mode = 'EDIT')
-
-                    bpy.ops.mesh.select_mode(type = 'VERT')
-                    bpy.ops.mesh.select_all(action = 'SELECT')
-
-                    if state.logCleanup:
-                        bpy.ops.mesh.delete_loose()
-                    else:
-                        with redirect_stdout(silence):
-                            bpy.ops.mesh.delete_loose()
-
-                    bpy.ops.mesh.select_all(action = 'SELECT')
-
-                    if state.logCleanup:
-                        bpy.ops.mesh.remove_doubles(use_sharp_edge_from_normals = True)
-                    else:
-                        with redirect_stdout(silence):
-                            bpy.ops.mesh.remove_doubles(use_sharp_edge_from_normals = True)
-
-                    bpy.ops.mesh.select_all(action = 'DESELECT')
-
-                    if state.logCleanup: print()
-
-                bpy.ops.object.mode_set(mode = 'OBJECT')
-
-                state.blProps.append(blProp)
-                state.blPropObjs.append(blPropObj)
+    processEluHeirarchy(self, state)
 
     if state.doDummies:
         for d, dummy in enumerate(state.xmlDums):
@@ -735,13 +522,12 @@ def importRs(self, context):
                 continue
 
             dir = dummy['DIRECTION']
-            dir.y = -dir.y
             up = Vector((0, 0, 1))
             right = dir.cross(up)
             up = right.cross(dir)
             rot = Matrix((right, dir, up)).to_euler()
 
-            blDummyObj = bpy.data.objects.new(f"{ filename }_Dummy_{ name }", None)
+            blDummyObj = bpy.data.objects.new(f"{ state.filename }_Dummy_{ name }", None)
             blDummyObj.empty_display_type = 'ARROWS'
             blDummyObj.location = dummy['POSITION']
             blDummyObj.rotation_euler = rot
@@ -757,7 +543,7 @@ def importRs(self, context):
             space = '2D' if type[0] == 'a' else '3D'
             shape = 'AABB' if type[1] == '0' else 'SPHERE'
 
-            blSoundObj = bpy.data.objects.new(f"{ filename }_Sound_{ name }", None)
+            blSoundObj = bpy.data.objects.new(f"{ state.filename }_Sound_{ name }", None)
 
             if shape == 'AABB':
                 p1 = sound['MIN_POSITION']
@@ -788,7 +574,7 @@ def importRs(self, context):
             for s, spawn in enumerate(gametype['spawns']):
                 item = spawn['item']
 
-                blItemObj = bpy.data.objects.new(f"{ filename }_Item_{ id }{ s }_{ item }", None)
+                blItemObj = bpy.data.objects.new(f"{ state.filename }_Item_{ id }{ s }_{ item }", None)
                 blItemObj.empty_display_type = 'SPHERE'
                 blItemObj.location = spawn['POSITION']
                 blItemObj['gzrs2_item_item'] = item
@@ -802,17 +588,18 @@ def importRs(self, context):
         # The goal here was to create a material that would be semi-transparent when viewed in solid and
         # material preview modes, but would only show up as wireframe during render. This works fine on
         # a default cube, but a complex mesh will still render a bunch of opaque black. Idk why ._.
-        # For now you'll just have to  disable the collision and occlusion meshes during render.
+        # For now, we just have to disable the collision and occlusion meshes during render.
         #####
 
         if state.doCollision:
-            name = f"{ filename }_Collision"
+            name = f"{ state.filename }_Collision"
 
             blColMat = bpy.data.materials.new(name)
             blColMat.use_nodes = True
             blColMat.diffuse_color = (1.0, 0.0, 1.0, 0.25)
             blColMat.roughness = 1.0
-            blColMat.blend_method = 'HASHED'
+            blColMat.blend_method = 'BLEND'
+            blColMat.shadow_method = 'NONE'
 
             tree = blColMat.node_tree
             nodes = tree.nodes
@@ -829,8 +616,13 @@ def importRs(self, context):
             blColGeo.from_pydata(state.colVerts, [], [tuple(range(i, i + 3)) for i in range(0, len(state.colVerts), 3)])
             blColGeo.update()
 
+            blColObj.visible_camera = False
+            blColObj.visible_diffuse = False
+            blColObj.visible_glossy = False
             blColObj.visible_volume_scatter = False
+            blColObj.visible_transmission = False
             blColObj.visible_shadow = False
+            blColObj.display.show_shadows = False
             blColObj.show_wire = True
 
             state.blColMat = blColMat
@@ -844,13 +636,14 @@ def importRs(self, context):
                 blColObj.hide_set(True, view_layer = viewLayer)
 
         if state.doOcclusion:
-            name = f"{ filename }_Occlusion"
+            name = f"{ state.filename }_Occlusion"
 
             blOccMat = bpy.data.materials.new(name)
             blOccMat.use_nodes = True
             blOccMat.diffuse_color = (0.0, 1.0, 1.0, 0.25)
             blOccMat.roughness = 1.0
-            blOccMat.blend_method = 'HASHED'
+            blOccMat.blend_method = 'BLEND'
+            blOccMat.shadow_method = 'NONE'
 
             tree = blOccMat.node_tree
             nodes = tree.nodes
@@ -881,8 +674,13 @@ def importRs(self, context):
             blOccGeo.from_pydata(occVerts, [], occFaces)
             blOccGeo.update()
 
+            blOccObj.visible_camera = False
+            blOccObj.visible_diffuse = False
+            blOccObj.visible_glossy = False
             blOccObj.visible_volume_scatter = False
+            blOccObj.visible_transmission = False
             blOccObj.visible_shadow = False
+            blOccObj.display.show_shadows = False
             blOccObj.show_wire = True
 
             state.blOccMat = blOccMat
@@ -901,7 +699,7 @@ def importRs(self, context):
                 hdims = (p2 - p1) / 2
                 center = p1 + hdims
 
-                blBBoxObj = bpy.data.objects.new(f"{ filename }_BspBBox{ b }", None)
+                blBBoxObj = bpy.data.objects.new(f"{ state.filename }_BspBBox{ b }", None)
                 blBBoxObj.empty_display_type = 'CUBE'
                 blBBoxObj.location = center
                 blBBoxObj.scale = hdims
@@ -927,32 +725,34 @@ def importRs(self, context):
             hdims = (p2 - p1) / 2
             center = p1 + hdims
 
-            blFogMat = bpy.data.materials.new(name = f"{ filename }_Fog")
+            blFogMat = bpy.data.materials.new(name = f"{ state.filename }_Fog")
             blFogMat.use_nodes = True
             tree = blFogMat.node_tree
             nodes = tree.nodes
 
             nodes.remove(nodes.get('Principled BSDF'))
 
-            shader = None
-
             if min(color[:3]) > 0.5:
                 shader = nodes.new(type = 'ShaderNodeVolumeScatter')
                 shader.inputs[0].default_value = color
-                shader.inputs[1].default_value = 0.00001
+                shader.inputs[1].default_value = 0.0001
             else:
                 shader = nodes.new(type = 'ShaderNodeVolumeAbsorption')
                 shader.inputs[0].default_value = color
                 shader.inputs[1].default_value = 0.1
 
             shader.location = (120, 300)
+            shader.select = False
 
             tree.links.new(shader.outputs[0], nodes.get('Material Output').inputs[1])
+
+            nodes.active = shader
+            nodes.get('Material Output').select = False
 
             bpy.ops.mesh.primitive_cube_add(location = center, scale = hdims)
             blFogObj = context.active_object
             blFogMesh = blFogObj.data
-            blFogObj.name = blFogMesh.name = f"{ filename }_Fog"
+            blFogObj.name = blFogMesh.name = f"{ state.filename }_Fog"
             blFogObj.display_type = 'WIRE'
 
             state.blFogMat = blFogMat
@@ -966,38 +766,38 @@ def importRs(self, context):
                 collection.objects.unlink(blFogObj)
             rootExtras.objects.link(blFogObj)
 
-            bpy.ops.object.select_all(action = 'DESELECT')
+    if doDrivers:
+        driverObj = bpy.data.objects.new(f"{ state.filename }_Drivers", None)
+        driverObj.empty_display_type = 'CUBE'
 
-        if doDrivers:
-            driverObj = bpy.data.objects.new(f"{ filename }_Drivers", None)
-            driverObj.empty_display_type = 'CUBE'
+        if state.doLightDrivers:
+            for g, group in enumerate(groupLights(state.blLights)):
+                property = f"GZRS2 Lightgroup { g }"
+                colorProp = f"{ property } Color"
+                energyProp = f"{ property } Energy"
+                softnessProp = f"{ property } Softness"
 
-            if state.doLightDrivers:
-                for g, group in enumerate(groupLights(state.blLights)):
-                    property = f"GZRS2 Lightgroup { g }"
-                    colorProp = f"{ property } Color"
-                    energyProp = f"{ property } Energy"
-                    softnessProp = f"{ property } Softness"
+                for light in group:
+                    state.blDrivers.append((createArrayDriver(driverObj, colorProp, light, 'color'),
+                                            createDriver(driverObj, energyProp, light, 'energy'),
+                                            createDriver(driverObj, softnessProp, light, 'shadow_soft_size')))
 
-                    for light in group:
-                        state.blDrivers.append((createArrayDriver(driverObj, colorProp, light, 'color'),
-                                                createDriver(driverObj, energyProp, light, 'energy'),
-                                                createDriver(driverObj, softnessProp, light, 'shadow_soft_size')))
+                driverObj.id_properties_ui(colorProp).update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
+                driverObj.id_properties_ui(energyProp).update(subtype = 'POWER', min = 0.0, max = math.inf, soft_min = 0.0, soft_max = math.inf, precision = 1, step = 100)
+                driverObj.id_properties_ui(softnessProp).update(subtype = 'DISTANCE', min = 0.0, max = math.inf, soft_min = 0.0, soft_max = math.inf, precision = 2, step = 3)
 
-                    driverObj.id_properties_ui(colorProp).update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
-                    driverObj.id_properties_ui(energyProp).update(subtype = 'POWER', min = 0.0, max = math.inf, soft_min = 0.0, soft_max = math.inf, precision = 1, step = 100)
-                    driverObj.id_properties_ui(softnessProp).update(subtype = 'DISTANCE', min = 0.0, max = math.inf, soft_min = 0.0, soft_max = math.inf, precision = 2, step = 3)
+        if state.doFogDriver:
+            shader = state.blFogShader
 
-            if state.doFogDriver:
-                shader = state.blFogShader
+            state.blDrivers.append(createArrayDriver(driverObj, 'GZRS2 Fog Color', shader.inputs[0], 'default_value'))
+            driverObj.id_properties_ui('GZRS2 Fog Color').update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
 
-                state.blDrivers.append(createArrayDriver(driverObj, 'GZRS2 Fog Color', shader.inputs[0], 'default_value'))
-                driverObj.id_properties_ui('GZRS2 Fog Color').update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
+            state.blDrivers.append(createDriver(driverObj, 'GZRS2 Fog Density', shader.inputs[1], 'default_value'))
+            driverObj.id_properties_ui('GZRS2 Fog Density').update(subtype = 'NONE', min = 0.000001, max = 1.0, soft_min = 0.000001, soft_max = 1.0, precision = 5, step = 0.001)
 
-                state.blDrivers.append(createDriver(driverObj, 'GZRS2 Fog Density', shader.inputs[1], 'default_value'))
-                driverObj.id_properties_ui('GZRS2 Fog Density').update(subtype = 'NONE', min = 0.000001, max = 1.0, soft_min = 0.000001, soft_max = 1.0, precision = 5, step = 0.001)
+        state.blDriverObj = driverObj
+        rootExtras.objects.link(driverObj)
 
-            state.blDriverObj = driverObj
-            rootExtras.objects.link(driverObj)
+    bpy.ops.object.select_all(action = 'DESELECT')
 
     return { 'FINISHED' }

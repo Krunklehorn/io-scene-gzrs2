@@ -1,4 +1,14 @@
-MAX_UPWARD_DIRECTORY_SEARCH =   10
+import os
+
+MAX_UPWARD_DIRECTORY_SEARCH =   4
+XMLELU_TEXTYPES =               ['DIFFUSEMAP', 'SPECULARMAP', 'SELFILLUMINATIONMAP', 'OPACITYMAP', 'NORMALMAP']
+
+if os.name == 'nt':
+    XML_EXTENSIONS =            ['xml']
+    COL_EXTENSIONS =            ['col', 'cl2']
+else:
+    XML_EXTENSIONS =            ['xml', 'XML']
+    COL_EXTENSIONS =            ['col', 'COL', 'cl2', 'CL2']
 
 RS2_ID =                        0x12345678
 RS2_VERSION =                   7
@@ -18,43 +28,44 @@ R_PAT_VERSION =                 0
 
 R_LM_ID =                       0x30671804
 R_LM_VERSION =                  3
+R_LM_VERSION_EXT =              4
 
-R_COL1_ID =                     0x5050178f
+R_COL1_ID =                     0x05050178f
 R_COL1_VERSION =                0
 R_COL2_ID =                     0x59249834
 R_COL2_VERSION =                1
 
-R_NAV_ID =                      0x8888888f
+R_NAV_ID =                      0x08888888f
 R_NAV_VERSION =                 2
 
-RM_FLAG_ADDITIVE =              0x000001
-RM_FLAG_USEOPACITY =            0x000002
-RM_FLAG_TWOSIDED =              0x000004
-RM_FLAG_NOTWALKABLE =           0x000008
-RM_FLAG_CASTSHADOW =            0x000010
-RM_FLAG_RECEIVESHADOW =         0x000020
-RM_FLAG_PASSTHROUGH =           0x000040
-RM_FLAG_HIDE =                  0x000080
-RM_FLAG_PASSBULLET =            0x000100
-RM_FLAG_PASSROCKET =            0x000200
-RM_FLAG_USEALPHATEST =          0x000400
-RM_FLAG_NOSHADE =               0x000800
-RM_FLAG_AI_NAVIGATION =         0x001000
-RM_FLAG_COLLISION_MESH =        0x002000
-RM_FLAG_DUMMY_MESH =            0x004000
-RM_FLAG_CLOTH_MESH =            0x008000
-RM_FLAG_BONE_MESH =             0x010000
-RM_FLAG_COLLISION_CLOTH_MESH =  0x020000
-RM_FLAG_COLLISION_MESHONLY =    0x040000
-RM_FLAG_USEPARTSCOLOR =         0x080000
-RM_FLAG_TEXTURE_TRANSFORM =     0x0100000
-RM_FLAG_EXTRA_UV =              0x0200000
-RM_FLAG_UNKNOWN1 =              0x0400000
-RM_FLAG_UNKNOWN2 =              0x0800000
-RM_FLAG_OCCLUDER =              0x1000000
-RM_FLAG_UNKNOWN3 =              0x2000000
-RM_FLAG_UNKNOWN4 =              0x4000000
-RM_FLAG_UNKNOWN5 =              0x8000000
+RM_FLAG_ADDITIVE =              0x00000001
+RM_FLAG_USEOPACITY =            0x00000002
+RM_FLAG_TWOSIDED =              0x00000004
+RM_FLAG_NOTWALKABLE =           0x00000008
+RM_FLAG_CASTSHADOW =            0x00000010
+RM_FLAG_RECEIVESHADOW =         0x00000020
+RM_FLAG_PASSTHROUGH =           0x00000040
+RM_FLAG_HIDE =                  0x00000080
+RM_FLAG_PASSBULLET =            0x00000100
+RM_FLAG_PASSROCKET =            0x00000200
+RM_FLAG_USEALPHATEST =          0x00000400
+RM_FLAG_NOSHADE =               0x00000800
+RM_FLAG_AI_NAVIGATION =         0x00001000
+RM_FLAG_COLLISION_MESH =        0x00002000
+RM_FLAG_DUMMY_MESH =            0x00004000
+RM_FLAG_CLOTH_MESH =            0x00008000
+RM_FLAG_BONE_MESH =             0x00010000
+RM_FLAG_COLLISION_CLOTH_MESH =  0x00020000
+RM_FLAG_COLLISION_MESHONLY =    0x00040000
+RM_FLAG_USEPARTSCOLOR =         0x00080000
+RM_FLAG_TEXTURE_TRANSFORM =     0x00100000
+RM_FLAG_EXTRA_UV =              0x00200000
+RM_FLAG_UNKNOWN1 =              0x00400000
+RM_FLAG_UNKNOWN2 =              0x00800000
+RM_FLAG_OCCLUDER =              0x01000000
+RM_FLAG_UNKNOWN3 =              0x02000000
+RM_FLAG_UNKNOWN4 =              0x04000000
+RM_FLAG_UNKNOWN5 =              0x08000000
 
 AS_AABB =                       0x01
 AS_SPHERE =                     0x02
@@ -95,3 +106,23 @@ ELU_SUPPORTED_VERSIONS =        [ ELU_5004, ELU_5005, ELU_5006, ELU_5007, ELU_50
 ELU_NAME_LENGTH =               40
 ELU_PATH_LENGTH =               256
 ELU_PHYS_KEYS =                 4
+
+DDSD_CAPS =                     0x00000001
+DDSD_HEIGHT =                   0x00000002
+DDSD_WIDTH =                    0x00000004
+DDSD_PITCH =                    0x00000008
+DDSD_PIXELFORMAT =              0x00001000
+DDSD_MIPMAPCOUNT =              0x00020000
+DDSD_LINEARSIZE =               0x00080000
+DDSD_DEPTH =                    0x00800000
+
+DDPF_ALPHAPIXELS =              0x00000001
+DDPF_ALPHA =                    0x00000002
+DDPF_FOURCC =                   0x00000004
+DDPF_RGB =                      0x00000040
+DDPF_YUV =                      0x00000200
+DDPF_LUMINANCE =                0x00020000
+
+DDSCAPS_COMPLEX =               0x00000008
+DDSCAPS_TEXTURE =               0x00001000
+DDSCAPS_MIPMAP =                0x00400000
