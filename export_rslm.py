@@ -45,7 +45,8 @@ def exportLm(self, context):
     lmpath = self.filepath
     directory = os.path.dirname(lmpath)
     basename = os.path.basename(lmpath)
-    filename = basename.split(os.extsep)[0]
+    splitname = basename.split(os.extsep)
+    filename = splitname[0]
 
     if self.doUVs:
         blMeshObj = context.active_object
@@ -184,7 +185,7 @@ def exportLm(self, context):
         newIndexInts.release()
         newUVFloats.release()
 
-    shutil.copy2(lmpath, lmpath.replace(filename, filename + "_backup"))
+    shutil.copy2(lmpath, os.path.join(directory, filename + "_backup") + '.' + splitname[1] + '.' + splitname[2])
 
     file = open(lmpath, 'r+b')
 

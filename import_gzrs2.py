@@ -191,8 +191,8 @@ def importRs2(self, context):
 
     state.doLightDrivers =   state.doLightDrivers and state.doLights
     state.doFogDriver =      state.doFogDriver and state.doFog
-    doExtras =              state.doCollision or state.doOcclusion or state.doFog or state.doBspBounds
     doDrivers =             self.panelDrivers and (state.doLightDrivers or state.doFogDriver)
+    doExtras =              state.doCollision or state.doOcclusion or state.doFog or state.doBspBounds or doDrivers
 
     bpy.ops.ed.undo_push()
     collections = bpy.data.collections
@@ -535,13 +535,23 @@ def importRs2(self, context):
             state.blDummyObjs.append(blDummyObj)
             rootDummies.objects.link(blDummyObj)
 
+    skippedSounds = []
+
     if state.doSounds:
-        for sound in state.xmlAmbs:
+        for s, sound in enumerate(state.xmlAmbs):
+            if not all(key in sound for key in ['ObjName', 'RADIUS', 'type', 'filename']):
+                skippedSounds.append(s)
+                continue
+
             name = sound['ObjName']
             radius = sound['RADIUS']
             type = sound['type']
             space = '2D' if type[0] == 'a' else '3D'
             shape = 'AABB' if type[1] == '0' else 'SPHERE'
+
+            if (shape == 'AABB' and not ('MIN_POSITION' in sound and 'MAX_POSITION' in sound)) or (shape == 'SPHERE' and not 'CENTER' in sound):
+                skippedSounds.append(s)
+                continue
 
             blSoundObj = bpy.data.objects.new(f"{ state.filename }_Sound_{ name }", None)
 
@@ -566,6 +576,9 @@ def importRs2(self, context):
 
             state.blSoundObjs.append(blSoundObj)
             rootSounds.objects.link(blSoundObj)
+
+    if len(skippedSounds) > 0:
+        self.report({ 'INFO' }, f"GZRS2: Skipped sounds with missing attributes: { skippedSounds }")
 
     if state.doItems:
         for gametype in state.xmlItms:
@@ -766,37 +779,37 @@ def importRs2(self, context):
                 collection.objects.unlink(blFogObj)
             rootExtras.objects.link(blFogObj)
 
-    if doDrivers:
-        driverObj = bpy.data.objects.new(f"{ state.filename }_Drivers", None)
-        driverObj.empty_display_type = 'CUBE'
+        if doDrivers:
+            driverObj = bpy.data.objects.new(f"{ state.filename }_Drivers", None)
+            driverObj.empty_display_type = 'CUBE'
 
-        if state.doLightDrivers:
-            for g, group in enumerate(groupLights(state.blLights)):
-                property = f"GZRS2 Lightgroup { g }"
-                colorProp = f"{ property } Color"
-                energyProp = f"{ property } Energy"
-                softnessProp = f"{ property } Softness"
+            if state.doLightDrivers:
+                for g, group in enumerate(groupLights(state.blLights)):
+                    property = f"GZRS2 Lightgroup { g }"
+                    colorProp = f"{ property } Color"
+                    energyProp = f"{ property } Energy"
+                    softnessProp = f"{ property } Softness"
 
-                for light in group:
-                    state.blDrivers.append((createArrayDriver(driverObj, colorProp, light, 'color'),
-                                            createDriver(driverObj, energyProp, light, 'energy'),
-                                            createDriver(driverObj, softnessProp, light, 'shadow_soft_size')))
+                    for light in group:
+                        state.blDrivers.append((createArrayDriver(driverObj, colorProp, light, 'color'),
+                                                createDriver(driverObj, energyProp, light, 'energy'),
+                                                createDriver(driverObj, softnessProp, light, 'shadow_soft_size')))
 
-                driverObj.id_properties_ui(colorProp).update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
-                driverObj.id_properties_ui(energyProp).update(subtype = 'POWER', min = 0.0, max = math.inf, soft_min = 0.0, soft_max = math.inf, precision = 1, step = 100)
-                driverObj.id_properties_ui(softnessProp).update(subtype = 'DISTANCE', min = 0.0, max = math.inf, soft_min = 0.0, soft_max = math.inf, precision = 2, step = 3)
+                    driverObj.id_properties_ui(colorProp).update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
+                    driverObj.id_properties_ui(energyProp).update(subtype = 'POWER', min = 0.0, max = math.inf, soft_min = 0.0, soft_max = math.inf, precision = 1, step = 100)
+                    driverObj.id_properties_ui(softnessProp).update(subtype = 'DISTANCE', min = 0.0, max = math.inf, soft_min = 0.0, soft_max = math.inf, precision = 2, step = 3)
 
-        if state.doFogDriver:
-            shader = state.blFogShader
+            if state.doFogDriver:
+                shader = state.blFogShader
 
-            state.blDrivers.append(createArrayDriver(driverObj, 'GZRS2 Fog Color', shader.inputs[0], 'default_value'))
-            driverObj.id_properties_ui('GZRS2 Fog Color').update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
+                state.blDrivers.append(createArrayDriver(driverObj, 'GZRS2 Fog Color', shader.inputs[0], 'default_value'))
+                driverObj.id_properties_ui('GZRS2 Fog Color').update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
 
-            state.blDrivers.append(createDriver(driverObj, 'GZRS2 Fog Density', shader.inputs[1], 'default_value'))
-            driverObj.id_properties_ui('GZRS2 Fog Density').update(subtype = 'NONE', min = 0.000001, max = 1.0, soft_min = 0.000001, soft_max = 1.0, precision = 5, step = 0.001)
+                state.blDrivers.append(createDriver(driverObj, 'GZRS2 Fog Density', shader.inputs[1], 'default_value'))
+                driverObj.id_properties_ui('GZRS2 Fog Density').update(subtype = 'NONE', min = 0.000001, max = 1.0, soft_min = 0.000001, soft_max = 1.0, precision = 5, step = 0.001)
 
-        state.blDriverObj = driverObj
-        rootExtras.objects.link(driverObj)
+            state.blDriverObj = driverObj
+            rootExtras.objects.link(driverObj)
 
     bpy.ops.object.select_all(action = 'DESELECT')
 

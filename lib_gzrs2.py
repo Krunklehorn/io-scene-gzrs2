@@ -427,7 +427,7 @@ def setupRsMesh(self, m, blMesh, state):
             found = True
 
             if meshUV3 is not None and numCells > 1:
-                c = state.lmImageIndices[l]
+                c = state.lmIndices[l]
                 cx = c % cellSpan
                 cy = c // cellSpan
 

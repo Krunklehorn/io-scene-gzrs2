@@ -106,8 +106,11 @@ def parseRsXML(self, xmlRs, tagName, state):
                 nodeEntry[nodeName] = float(data)
             elif nodeName in ['ATTENUATIONSTART', 'ATTENUATIONEND', 'RADIUS']:
                 nodeEntry[nodeName] = parseDistance(data, state.convertUnits)
-            elif nodeName in ['DIFFUSE', 'AMBIENT', 'SPECULAR', 'COLOR']:
-                nodeEntry[nodeName] = tuple(float(s) for s in data.split(' '))
+            elif nodeName in ['DIFFUSE', 'AMBIENT', 'SPECULAR', 'COLOR']: # Haven.RS
+                try:
+                    nodeEntry[nodeName] = tuple(float(s) for s in data.split(' '))
+                except ValueError:
+                    nodeEntry[nodeName] = bool(data)
             elif nodeName in ['POSITION', 'DIRECTION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION']:
                 vec = parseVec3(data, nodeName, state.convertUnits, True)
 

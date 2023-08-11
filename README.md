@@ -77,3 +77,4 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 [rahulshekhawat](https://github.com/rahulshekhawat/blender-elu-ani-importer)  
 [x1nixmzeng](https://github.com/x1nixmzeng/z3ResEx)  
 [Nayr438](https://github.com/Nayr438)  
+[DeffJay](https://github.com/Jetman823)  
