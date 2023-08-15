@@ -128,7 +128,7 @@ def exportLm(self, context):
             imageSize = image.size[0]
             floats = tuple(image.pixels)
 
-            imageDatas.append(packLmImageData(self.lmVersion4, imageSize, floats))
+            imageDatas.append(packLmImageData(self, imageSize, floats))
 
             found = True
             break
@@ -152,7 +152,7 @@ def exportLm(self, context):
                 cx = c % cellSpan
                 cy = cellSpan - 1 - c // cellSpan # OpenGL -> DirectX
 
-                imageDatas.append(packLmImageData(self.lmVersion4, imageSize, floats, True, atlasSize, cx, cy))
+                imageDatas.append(packLmImageData(self, imageSize, floats, True, atlasSize, cx, cy))
 
             found = True
             break

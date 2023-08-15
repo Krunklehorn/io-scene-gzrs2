@@ -73,7 +73,7 @@ def readCol(self, path, state):
         self.report({ 'ERROR' }, f"GZRS2: Col header invalid! { hex(id) }, { version }")
         file.close()
 
-        return { 'CANCELLED' }
+        return False
 
     trisRead = 0
 

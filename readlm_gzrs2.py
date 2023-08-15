@@ -80,7 +80,7 @@ def readLm(self, path, state):
                 self.report({ 'ERROR' }, f"GZRS2: Lm BMP header is not supported yet! Lightmap will not load properly! Please submit to Krunk#6051 for testing! { bmpHeaderSize }")
                 file.close()
 
-                return
+                return { 'CANCELLED' }
 
             width = readInt(file)
             height = readInt(file)
@@ -89,13 +89,13 @@ def readLm(self, path, state):
                 self.report({ 'ERROR' }, f"GZRS2: Lm BMP dimensions are not equal! Lightmap will not load properly! Please submit to Krunk#6051 for testing! { width }, { height }")
                 file.close()
 
-                return
+                return { 'CANCELLED' }
 
             if not math.log2(width).is_integer():
                 self.report({ 'ERROR' }, f"GZRS2: Lm BMP dimensions are not a power of two! Lightmap will not load properly! Please submit to Krunk#6051 for testing! { width }, { height }")
                 file.close()
 
-                return
+                return { 'CANCELLED' }
 
             skipBytes(file, 2 * 2 + 4 * 6) # skip color plane count, bit depth and compression info
 
@@ -106,7 +106,7 @@ def readLm(self, path, state):
                 print(f"Dimensions:         { width } x { height }")
                 print()
 
-            state.lmImages.append(LmImage(width, tuple(readUChar(file) / 255.0 * 4.0 for _ in range(width * height * 3))))
+            state.lmImages.append(LmImage(width, tuple(readUChar(file) / 255.0 for _ in range(width * height * 3))))
         elif type == 'DD':
             skipBytes(file, 2)
             ddsSize = readUInt(file)
@@ -128,13 +128,13 @@ def readLm(self, path, state):
                 self.report({ 'ERROR' }, f"GZRS2: Lm DDS unsupported pixel format! Currently, FourCC is the only supported format. { ddspfFlags }")
                 file.close()
 
-                return
+                return { 'CANCELLED' }
 
             if ddspfFourCC != 'DXT1':
                 self.report({ 'ERROR' }, f"GZRS2: Lm DDS unsupported compression type! Currently, DXT1 is the only supported type. { ddspfFourCC }")
                 file.close()
 
-                return
+                return { 'CANCELLED' }
 
             ddsCaps = readUInt(file)
             for _ in range(4):
@@ -207,7 +207,7 @@ def readLm(self, path, state):
             self.report({ 'ERROR' }, f"GZRS2: Lm data type is not supported yet! Lightmap will not load properly! Please submit to Krunk#6051 for testing! { type }")
             file.close()
 
-            return
+            return { 'CANCELLED' }
 
     skipBytes(file, 4 * state.lmPolygonCount) # skip unused polygon ids
     state.lmIndices = readUIntArray(file, state.lmPolygonCount)

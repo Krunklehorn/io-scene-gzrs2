@@ -67,7 +67,8 @@ def importCol(self, context):
     state.filename = splitname[0]
     extension = splitname[-1].lower()
 
-    colpath = readCol(self, colpath, state)
+    if readCol(self, colpath, state):
+        return { 'CANCELLED' }
 
     if state.doCleanup and state.logCleanup:
         print()
@@ -87,7 +88,7 @@ def importCol(self, context):
     nodes = tree.nodes
     nodes.remove(nodes.get('Principled BSDF'))
 
-    transparent = nodes.new(type = 'ShaderNodeBsdfTransparent')
+    transparent = nodes.new('ShaderNodeBsdfTransparent')
     transparent.location = (120, 300)
 
     tree.links.new(transparent.outputs[0], nodes.get('Material Output').inputs[0])

@@ -68,7 +68,7 @@ def readElu(self, path, state):
         self.report({ 'ERROR' }, f"GZRS2: ELU version is not supported yet! Model will not load properly! { path }, { hex(version) }")
         file.close()
 
-        return
+        return { 'CANCELLED' }
 
     if version == ELU_0: # GunZ 1 Alpha?
         matCount = 0 # always -1
@@ -173,7 +173,7 @@ def readElu(self, path, state):
                         self.report({ 'ERROR' }, f"GZRS2: Unable to split animated texture name! { texName }, { texParams } ")
                         file.close()
 
-                        return
+                        return { 'CANCELLED' }
 
                     try:
                         frameCount, frameSpeed = int(texParams[1]), int(texParams[2])
@@ -181,7 +181,7 @@ def readElu(self, path, state):
                         self.report({ 'ERROR' }, f"GZRS2: Animated texture name must use integers for frame count and speed! { texName } ")
                         file.close()
 
-                        return
+                        return { 'CANCELLED' }
                     else:
                         frameGap = frameSpeed / frameCount
 
@@ -468,10 +468,10 @@ def readElu(self, path, state):
                         nor = readShort(file)
                         skipBytes(file, 2 * 2) # skip bitangent and tangent indices
 
-                        if len(vertices) > 0 and pos >= len(vertices): self.report({ 'ERROR' }, f"GZRS2: Vertex index out of bounds! { pos } { len(vertices) }"); file.close(); return
-                        if len(normals) > 0 and nor >= len(normals): self.report({ 'ERROR' }, f"GZRS2: Normal index out of bounds! { nor } { len(normals) }"); file.close(); return
-                        if len(uv1s) > 0 and uv1 >= len(uv1s): self.report({ 'ERROR' }, f"GZRS2: UV1 index out of bounds! { uv1 } { len(uv1s) }"); file.close(); return
-                        if version >= ELU_5011 and len(uv2s) > 0 and uv2 >= len(uv2s): self.report({ 'ERROR' }, f"GZRS2: UV2 index out of bounds! { uv2 } { len(uv2s) }"); file.close(); return
+                        if len(vertices) > 0 and pos >= len(vertices): self.report({ 'ERROR' }, f"GZRS2: Vertex index out of bounds! { pos } { len(vertices) }"); file.close(); return { 'CANCELLED' }
+                        if len(normals) > 0 and nor >= len(normals): self.report({ 'ERROR' }, f"GZRS2: Normal index out of bounds! { nor } { len(normals) }"); file.close(); return { 'CANCELLED' }
+                        if len(uv1s) > 0 and uv1 >= len(uv1s): self.report({ 'ERROR' }, f"GZRS2: UV1 index out of bounds! { uv1 } { len(uv1s) }"); file.close(); return { 'CANCELLED' }
+                        if version >= ELU_5011 and len(uv2s) > 0 and uv2 >= len(uv2s): self.report({ 'ERROR' }, f"GZRS2: UV2 index out of bounds! { uv2 } { len(uv2s) }"); file.close(); return { 'CANCELLED' }
 
                         vindices[d] = pos
                         nindices[d] = nor
@@ -544,10 +544,10 @@ def readElu(self, path, state):
                 uv2 = readUShort(file) if version >= ELU_500E else -1 # stored, but not valid until ELU_5011
                 skipBytes(file, 2 + 2) # skip bitangent and tangent indices
 
-                if len(vertices) > 0 and pos >= len(vertices): self.report({ 'ERROR' }, f"GZRS2: Vertex index out of bounds! { pos } { len(vertices) }"); file.close(); return
-                if len(normals) > 0 and nor >= len(normals): self.report({ 'ERROR' }, f"GZRS2: Normal index out of bounds! { nor } { len(normals) }"); file.close(); return
-                if len(uv1s) > 0 and uv1 >= len(uv1s): self.report({ 'ERROR' }, f"GZRS2: UV1 index out of bounds! { uv1 } { len(uv1s) }"); file.close(); return
-                if version >= ELU_500E and len(uv2s) > 0 and uv2 >= len(uv2s): self.report({ 'ERROR' }, f"GZRS2: UV2 index out of bounds! { uv2 } { len(uv2s) }"); file.close(); return
+                if len(vertices) > 0 and pos >= len(vertices): self.report({ 'ERROR' }, f"GZRS2: Vertex index out of bounds! { pos } { len(vertices) }"); file.close(); return { 'CANCELLED' }
+                if len(normals) > 0 and nor >= len(normals): self.report({ 'ERROR' }, f"GZRS2: Normal index out of bounds! { nor } { len(normals) }"); file.close(); return { 'CANCELLED' }
+                if len(uv1s) > 0 and uv1 >= len(uv1s): self.report({ 'ERROR' }, f"GZRS2: UV1 index out of bounds! { uv1 } { len(uv1s) }"); file.close(); return { 'CANCELLED' }
+                if version >= ELU_500E and len(uv2s) > 0 and uv2 >= len(uv2s): self.report({ 'ERROR' }, f"GZRS2: UV2 index out of bounds! { uv2 } { len(uv2s) }"); file.close(); return { 'CANCELLED' }
 
                 if state.logEluMeshNodes and state.logVerboseIndices:
                     print("                     {:>4}, {:>4}, {:>4}, {:>4}".format(pos, nor, uv1, uv2))

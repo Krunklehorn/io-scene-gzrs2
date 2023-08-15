@@ -183,7 +183,7 @@ def getMatNode(bpy, blMat, nodes, texpath, alphamode, x, y, state):
     haveAlphaMode = haveTexture and alphamode in matNodes[texpath]
 
     if not haveTexture or not haveAlphaMode:
-        texture = nodes.new(type = 'ShaderNodeTexImage')
+        texture = nodes.new('ShaderNodeTexImage')
         texture.image = getTexImage(bpy, texpath, alphamode, state)
         texture.location = (x, y)
         texture.select = True
@@ -271,8 +271,8 @@ def setupEluMat(self, eluMat, state):
                 blMat.show_transparent_back = True
                 blMat.use_backface_culling = False
 
-                add = nodes.new(type = 'ShaderNodeAddShader')
-                transparent = nodes.new(type = 'ShaderNodeBsdfTransparent')
+                add = nodes.new('ShaderNodeAddShader')
+                transparent = nodes.new('ShaderNodeBsdfTransparent')
 
                 add.location = (300, 140)
                 transparent.location = (300, 20)
@@ -355,7 +355,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
                     elif textype == 'SPECULARMAP':
                         texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 0, state)
 
-                        invert = nodes.new(type = 'ShaderNodeInvert')
+                        invert = nodes.new('ShaderNodeInvert')
                         invert.location = (texture.location.x + 280, texture.location.y)
 
                         tree.links.new(texture.outputs[1], invert.inputs[1])
@@ -374,7 +374,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
                     elif textype == 'NORMALMAP':
                         texture = getMatNode(bpy, blMat, nodes, texpath, 'NONE', -540, -600, state)
                         texture.image.colorspace_settings.name = 'Non-Color'
-                        normal = nodes.new(type = 'ShaderNodeNormalMap')
+                        normal = nodes.new('ShaderNodeNormalMap')
                         normal.location = (-260, -600)
                         tree.links.new(texture.outputs[0], normal.inputs[1])
                         tree.links.new(normal.outputs[0], shader.inputs[22])
@@ -392,10 +392,10 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
         blMat.show_transparent_back = True
         blMat.use_backface_culling = False
 
-        add = nodes.new(type = 'ShaderNodeAddShader')
+        add = nodes.new('ShaderNodeAddShader')
         add.location = (300, 140)
 
-        transparent = nodes.new(type = 'ShaderNodeBsdfTransparent')
+        transparent = nodes.new('ShaderNodeBsdfTransparent')
         transparent.location = (300, 20)
 
         tree.links.new(shader.outputs[0], add.inputs[0])
@@ -723,11 +723,15 @@ def unpackLmImages(state):
 
     state.blLmImage = blLmImage
 
-def packLmImageData(lmVersion4, imageSize, floats, fromAtlas = False, atlasSize = 0, cx = 0, cy = 0):
+def packLmImageData(self, imageSize, floats, fromAtlas = False, atlasSize = 0, cx = 0, cy = 0):
     pixelCount = imageSize ** 2
 
-    if not lmVersion4:
+    if not self.lmVersion4:
         imageData = bytearray(pixelCount * 3)
+        exportRange = 255
+
+        if self.mod4Fix:
+            exportRange /= 4
 
         for p in range(pixelCount):
             if not fromAtlas:
@@ -740,9 +744,9 @@ def packLmImageData(lmVersion4, imageSize, floats, fromAtlas = False, atlasSize 
                 f += cy * atlasSize * imageSize
                 f += px + py * atlasSize
 
-            imageData[p * 3 + 0] = int(floats[f * 4 + 2] * 64)
-            imageData[p * 3 + 1] = int(floats[f * 4 + 1] * 64)
-            imageData[p * 3 + 2] = int(floats[f * 4 + 0] * 64)
+            imageData[p * 3 + 0] = int(floats[f * 4 + 2] * exportRange)
+            imageData[p * 3 + 1] = int(floats[f * 4 + 1] * exportRange)
+            imageData[p * 3 + 2] = int(floats[f * 4 + 0] * exportRange)
     else:
         imageData = bytearray(pixelCount // 2)
         imageShorts = memoryview(imageData).cast('H')
@@ -879,23 +883,44 @@ def setupLmMixGroup(state):
 
         groupIn = group.nodes.new('NodeGroupInput')
         groupOut = group.nodes.new('NodeGroupOutput')
+        groupToLinear = group.nodes.new('ShaderNodeGamma')
+        groupMod4x = group.nodes.new('ShaderNodeMixRGB')
+        groupTosRGB = group.nodes.new('ShaderNodeGamma')
+        groupMix = group.nodes.new('ShaderNodeMixRGB')
 
-        groupMix = group.nodes.new(type = 'ShaderNodeMixRGB')
+        groupMod4x.blend_type = 'MULTIPLY'
         groupMix.blend_type = 'MULTIPLY'
+
+        groupMod4x.inputs[0].default_value = 1.0
         groupMix.inputs[0].default_value = 1.0
+
+        groupToLinear.inputs[1].default_value = 1 / 2.2
+        groupMod4x.inputs[1].default_value = (1.0, 1.0, 1.0, 1.0)
+        groupTosRGB.inputs[1].default_value = 2.2
         groupMix.inputs[1].default_value = (1.0, 1.0, 1.0, 1.0)
+
+        groupMod4x.inputs[2].default_value = (4.0, 4.0, 4.0, 1.0)
         groupMix.inputs[2].default_value = (1.0, 1.0, 1.0, 1.0)
 
-        groupIn.location = (-360, 0)
+        groupIn.location = (-540, 0)
         groupOut.location = (0, 0)
+        groupToLinear.location = (-360, 120)
+        groupMod4x.location = (-360, 0)
+        groupTosRGB.location = (-360, -200)
         groupMix.location = (-180, 0)
 
         group.links.new(groupIn.outputs['A'], groupMix.inputs[1])
-        group.links.new(groupIn.outputs['B'], groupMix.inputs[2])
+        group.links.new(groupIn.outputs['B'], groupToLinear.inputs[0])
+        group.links.new(groupToLinear.outputs[0], groupMod4x.inputs[1])
+        group.links.new(groupMod4x.outputs[0], groupTosRGB.inputs[0])
+        group.links.new(groupTosRGB.outputs[0], groupMix.inputs[2])
         group.links.new(groupMix.outputs[0], groupOut.inputs[0])
 
         groupIn.select = False
         groupOut.select = False
+        groupToLinear.select = False
+        groupMod4x.select = False
+        groupTosRGB.select = False
         groupMix.select = True
 
         group.nodes.active = groupMix

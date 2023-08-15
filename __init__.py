@@ -861,6 +861,12 @@ class ExportRSLM(Operator, ExportHelper):
         default = False
     )
 
+    mod4Fix: BoolProperty(
+        name = "MOD4 Fix",
+        description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag. Disable if re-exporting an existing lightmap",
+        default = True
+    )
+
     def draw(self, context):
         pass
 
@@ -887,6 +893,10 @@ class RSLM_PT_Export_Main(Panel):
 
         layout.prop(operator, "doUVs")
         layout.prop(operator, "lmVersion4")
+
+        column = layout.column()
+        column.prop(operator, "mod4Fix")
+        column.enabled = not operator.lmVersion4
 
 classes = (
     ImportGZRS2,

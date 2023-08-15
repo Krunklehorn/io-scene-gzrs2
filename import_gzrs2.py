@@ -154,7 +154,7 @@ def importRs2(self, context):
             colpath = pathExists(f"{ rspath }.{ ext }")
 
             if colpath:
-                colpath = readCol(self, colpath, state)
+                readCol(self, colpath, state)
                 break
 
         if not colpath:
@@ -284,9 +284,9 @@ def importRs2(self, context):
                 texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
 
                 if state.doLightmap:
-                    lightmap = nodes.new(type = 'ShaderNodeTexImage')
-                    uvmap = nodes.new(type = 'ShaderNodeUVMap')
-                    mix = nodes.new(type = 'ShaderNodeGroup')
+                    lightmap = nodes.new('ShaderNodeTexImage')
+                    uvmap = nodes.new('ShaderNodeUVMap')
+                    mix = nodes.new('ShaderNodeGroup')
 
                     lightmap.image = state.blLmImage
                     uvmap.uv_map = 'UVMap.002'
@@ -335,8 +335,8 @@ def importRs2(self, context):
                     blMat.show_transparent_back = True
                     blMat.use_backface_culling = False
 
-                    add = nodes.new(type = 'ShaderNodeAddShader')
-                    transparent = nodes.new(type = 'ShaderNodeBsdfTransparent')
+                    add = nodes.new('ShaderNodeAddShader')
+                    transparent = nodes.new('ShaderNodeBsdfTransparent')
 
                     add.location = (300, 140)
                     transparent.location = (300, 20)
@@ -618,7 +618,7 @@ def importRs2(self, context):
             nodes = tree.nodes
             nodes.remove(nodes.get('Principled BSDF'))
 
-            transparent = nodes.new(type = 'ShaderNodeBsdfTransparent')
+            transparent = nodes.new('ShaderNodeBsdfTransparent')
             transparent.location = (120, 300)
 
             tree.links.new(transparent.outputs[0], nodes.get('Material Output').inputs[0])
@@ -662,7 +662,7 @@ def importRs2(self, context):
             nodes = tree.nodes
             nodes.remove(nodes.get('Principled BSDF'))
 
-            transparent = nodes.new(type = 'ShaderNodeBsdfTransparent')
+            transparent = nodes.new('ShaderNodeBsdfTransparent')
             transparent.location = (120, 300)
 
             tree.links.new(transparent.outputs[0], nodes.get('Material Output').inputs[0])
@@ -746,11 +746,11 @@ def importRs2(self, context):
             nodes.remove(nodes.get('Principled BSDF'))
 
             if min(color[:3]) > 0.5:
-                shader = nodes.new(type = 'ShaderNodeVolumeScatter')
+                shader = nodes.new('ShaderNodeVolumeScatter')
                 shader.inputs[0].default_value = color
                 shader.inputs[1].default_value = 0.0001
             else:
-                shader = nodes.new(type = 'ShaderNodeVolumeAbsorption')
+                shader = nodes.new('ShaderNodeVolumeAbsorption')
                 shader.inputs[0].default_value = color
                 shader.inputs[1].default_value = 0.1
 

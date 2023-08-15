@@ -66,7 +66,7 @@ def readRs(self, path, state):
             self.report({ 'ERROR' }, f"GZRS2: RS material count did not match the XML parse! { matCount }, { len(state.xmlRsMats) }")
             file.close()
 
-            return
+            return { 'CANCELLED' }
 
         for _ in range(matCount): # skip packed material strings
             for __ in range(256):
@@ -155,7 +155,7 @@ def readRs(self, path, state):
             self.report({ 'ERROR' }, f"GZRS2: RS3 version is not supported yet! Model will not load properly! Please submit to Krunk#6051 for testing! { path }, { hex(version) }")
             file.close()
 
-            return
+            return { 'CANCELLED' }
 
         for p in range(readUInt(file)):
             name = readString(file, readInt(file))
