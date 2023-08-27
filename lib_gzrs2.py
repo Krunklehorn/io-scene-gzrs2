@@ -1,9 +1,29 @@
-import bpy, os, math
-from mathutils import Vector, Matrix
+import bpy, os, math, time
+
 from contextlib import redirect_stdout
 
+from mathutils import Vector, Matrix
+
 from .constants_gzrs2 import *
-# from constants_gzrs2 import *
+
+def vecArrayMinMax(vectors, size):
+    minLen2 = float('inf')
+    maxLen2 = float('-inf')
+    minVector = tuple(minLen2 for _ in range(size))
+    maxVector = tuple(maxLen2 for _ in range(size))
+
+    for vector in vectors:
+        len2 = sum(vector[s] ** 2 for s in range(size))
+
+        if len2 < minLen2:
+            minLen2 = len2
+            minVector = vector
+
+        if len2 > maxLen2:
+            maxLen2 = len2
+            maxVector = vector
+
+    return *minVector, *maxVector
 
 def pathExists(path):
     if os.path.exists(path): return path
@@ -38,7 +58,7 @@ def pathExists(path):
 
         return current
 
-def textureSearch(self, texBase, targetpath, state):
+def textureSearch(self, texBase, targetpath, isRS3, state):
     ddsBase = f"{ texBase }.dds".replace('.dds.dds', '.dds')
     ddspath = os.path.join(state.directory, ddsBase)
     texpath = os.path.join(state.directory, texBase)
@@ -88,7 +108,9 @@ def textureSearch(self, texBase, targetpath, state):
             if filename == ddsBase or filename == texBase:
                 return os.path.join(dirpath, filename)
 
-    if not state.gzrsTexDir:
+    if not isRS3: return None
+
+    if not state.rs3TexDir:
         parentDir = os.path.dirname(state.directory)
 
         for _ in range(MAX_UPWARD_DIRECTORY_SEARCH):
@@ -96,13 +118,13 @@ def textureSearch(self, texBase, targetpath, state):
 
             for dirname in dirnames:
                 if dirname.lower() == 'texture':
-                    state.gzrsTexDir = os.path.join(dirpath, dirname)
+                    state.rs3TexDir = os.path.join(dirpath, dirname)
 
-                    for dirpath, dirnames, filenames in os.walk(state.gzrsTexDir):
+                    for dirpath, dirnames, filenames in os.walk(state.rs3TexDir):
                         for filename in filenames:
                             filepath = pathExists(os.path.join(dirpath, filename))
 
-                            if filepath: state.gzrsTexDict[filename] = filepath
+                            if filepath: state.rs3TexDict[filename] = filepath
                             else:
                                 self.report({ 'INFO' }, f"GZRS2: Texture found but pathExists() failed, potential case sensitivity issue: { filename }")
                                 return None
@@ -111,8 +133,8 @@ def textureSearch(self, texBase, targetpath, state):
 
             parentDir = os.path.dirname(parentDir)
 
-    if texBase in state.gzrsTexDict: return state.gzrsTexDict[texBase]
-    elif ddsBase in state.gzrsTexDict: return state.gzrsTexDict[ddsBase]
+    if texBase in state.rs3TexDict: return state.rs3TexDict[texBase]
+    elif ddsBase in state.rs3TexDict: return state.rs3TexDict[ddsBase]
     else: self.report({ 'INFO' }, f"GZRS2: Texture search failed: { texBase }")
 
 def resourceSearch(self, resourcename, state):
@@ -178,6 +200,13 @@ def getTexImage(bpy, texpath, alphamode, state):
     return texImages[alphamode]
 
 def getMatNode(bpy, blMat, nodes, texpath, alphamode, x, y, state):
+    if texpath is None:
+        texture = nodes.new('ShaderNodeTexImage')
+        texture.location = (x, y)
+        texture.select = True
+
+        return texture
+
     matNodes = state.blMatNodes.setdefault(blMat, {})
     haveTexture = texpath in matNodes
     haveAlphaMode = haveTexture and alphamode in matNodes[texpath]
@@ -207,6 +236,12 @@ def setupErrorMat(state):
     state.blErrorMat = blErrorMat
 
 def setupEluMat(self, eluMat, state):
+    matID = eluMat.matID
+    subMatID = eluMat.subMatID
+    subMatCount = eluMat.subMatCount
+    ambient = eluMat.ambient
+    diffuse = eluMat.diffuse
+    specular = eluMat.specular
     power = eluMat.power
     alphatest = eluMat.alphatest
     useopacity = eluMat.useopacity
@@ -217,77 +252,115 @@ def setupEluMat(self, eluMat, state):
     texDir = eluMat.texDir
 
     for eluMat2, blMat2 in state.blEluMatPairs:
-        if (math.isclose(power, eluMat2.power, rel_tol = 0.01) and
-            math.isclose(alphatest, eluMat2.alphatest, rel_tol = 0.01) and
+        if (subMatID == eluMat2.subMatID and subMatCount == eluMat2.subMatCount and
+            compareColors(ambient, eluMat2.ambient) and compareColors(diffuse, eluMat2.diffuse) and compareColors(specular, eluMat2.specular) and
+            math.isclose(power, eluMat2.power, rel_tol = 0.01) and math.isclose(alphatest, eluMat2.alphatest, rel_tol = 0.01) and
             useopacity == eluMat2.useopacity and twosided == eluMat2.twosided and additive == eluMat2.additive and
             texName == eluMat2.texName and texBase == eluMat2.texBase and texDir == eluMat2.texDir):
-            state.blEluMats.setdefault(eluMat.elupath, {})[eluMat.matID] = blMat2
+            state.blEluMats.setdefault(eluMat.elupath, {})[matID] = blMat2
             return
 
-    blMat = bpy.data.materials.new(texName or f"Material_{ eluMat.matID }_{ eluMat.subMatID }")
+    blMat = bpy.data.materials.new(texName or f"Material_{ matID }_{ subMatID }")
     blMat.use_nodes = True
 
     tree = blMat.node_tree
     nodes = tree.nodes
 
+    matIDNode = nodes.new('ShaderNodeValue')
+    subMatIDNode = nodes.new('ShaderNodeValue')
+    subMatCountNode = nodes.new('ShaderNodeValue')
+    ambientNode = nodes.new('ShaderNodeRGB')
+    diffuseNode = nodes.new('ShaderNodeRGB')
+    specularNode = nodes.new('ShaderNodeRGB')
+
+    matIDNode.label = 'MatID'
+    subMatIDNode.label = 'SubMatID'
+    subMatCountNode.label = 'SubMatCount'
+    ambientNode.label = 'Ambient'
+    diffuseNode.label = 'Diffuse'
+    specularNode.label = 'Specular'
+
+    matIDNode.location = (480, 300)
+    subMatIDNode.location = (660, 300)
+    subMatCountNode.location = (840, 300)
+    ambientNode.location = (480, 180)
+    diffuseNode.location = (660, 180)
+    specularNode.location = (840, 180)
+
+    matIDNode.select = False
+    subMatIDNode.select = False
+    subMatCountNode.select = False
+    ambientNode.select = False
+    diffuseNode.select = False
+    specularNode.select = False
+
+    matIDNode.outputs[0].default_value = matID
+    subMatIDNode.outputs[0].default_value = subMatID
+    subMatCountNode.outputs[0].default_value = subMatCount
+    ambientNode.outputs[0].default_value = (ambient[0], ambient[1], ambient[2], 1.0)
+    diffuseNode.outputs[0].default_value = (diffuse[0], diffuse[1], diffuse[2], 1.0)
+    specularNode.outputs[0].default_value = (specular[0], specular[1], specular[2], 1.0)
+
     shader = nodes.get('Principled BSDF')
     shader.location = (20, 300)
     shader.select = False
-    shader.inputs[7].default_value = power / 100.0
+    shader.inputs[7].default_value = power / 100
 
     nodes.active = shader
     nodes.get('Material Output').select = False
 
     if texBase:
-        texpath = textureSearch(self, texBase, texDir, state)
+        texpath = textureSearch(self, texBase, texDir, False, state)
 
-        if texpath is not None:
-            texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
+        if texpath is None:
+            self.report({ 'INFO' }, f"GZRS2: Texture not found for .elu material: { texBase }")
 
-            tree.links.new(texture.outputs[0], shader.inputs[0])
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
+        texture.label = texBase if texDir == '' else ''
+        diffuseLink = tree.links.new(texture.outputs[0], shader.inputs[0])
+        diffuseLink.is_muted = texpath is None
+        nodes.active = texture
+        blMat.use_backface_culling = not twosided
 
-            nodes.active = texture
+        if alphatest > 0:
+            blMat.blend_method = 'CLIP'
+            blMat.shadow_method = 'CLIP'
+            blMat.show_transparent_back = True
+            blMat.use_backface_culling = False
+            blMat.alpha_threshold = 1.0 - (alphatest / 100.0)
 
-            blMat.use_backface_culling = not twosided
+            alphaLink = tree.links.new(texture.outputs[1], shader.inputs[21])
+            alphaLink.is_muted = texpath is None
+        elif useopacity:
+            blMat.blend_method = 'HASHED'
+            blMat.shadow_method = 'HASHED'
+            blMat.show_transparent_back = True
+            blMat.use_backface_culling = False
 
-            if alphatest > 0:
-                blMat.blend_method = 'CLIP'
-                blMat.shadow_method = 'CLIP'
-                blMat.show_transparent_back = True
-                blMat.use_backface_culling = False
-                blMat.alpha_threshold = 1.0 - (alphatest / 100.0)
+            alphaLink = tree.links.new(texture.outputs[1], shader.inputs[21])
+            alphaLink.is_muted = texpath is None
 
-                tree.links.new(texture.outputs[1], shader.inputs[21])
-            elif useopacity:
-                blMat.blend_method = 'HASHED'
-                blMat.shadow_method = 'HASHED'
-                blMat.show_transparent_back = True
-                blMat.use_backface_culling = False
+        if additive:
+            blMat.blend_method = 'BLEND'
+            blMat.show_transparent_back = True
+            blMat.use_backface_culling = False
 
-                tree.links.new(texture.outputs[1], shader.inputs[21])
+            add = nodes.new('ShaderNodeAddShader')
+            transparent = nodes.new('ShaderNodeBsdfTransparent')
 
-            if additive:
-                blMat.blend_method = 'BLEND'
-                blMat.show_transparent_back = True
-                blMat.use_backface_culling = False
+            add.location = (300, 140)
+            transparent.location = (300, 20)
 
-                add = nodes.new('ShaderNodeAddShader')
-                transparent = nodes.new('ShaderNodeBsdfTransparent')
+            add.select = False
+            transparent.select = False
 
-                add.location = (300, 140)
-                transparent.location = (300, 20)
+            emitLink = tree.links.new(texture.outputs[0], shader.inputs[19])
+            emitLink.is_muted = texpath is None
+            tree.links.new(shader.outputs[0], add.inputs[0])
+            tree.links.new(transparent.outputs[0], add.inputs[1])
+            tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
 
-                add.select = False
-                transparent.select = False
-
-                tree.links.new(texture.outputs[0], shader.inputs[19])
-                tree.links.new(shader.outputs[0], add.inputs[0])
-                tree.links.new(transparent.outputs[0], add.inputs[1])
-                tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
-        else:
-            self.report({ 'INFO' }, f"GZRS2: Texture not found for .elu material: { texpath }")
-
-    state.blEluMats.setdefault(eluMat.elupath, {})[eluMat.matID] = blMat
+    state.blEluMats.setdefault(eluMat.elupath, {})[matID] = blMat
     state.blEluMatPairs.append((eluMat, blMat))
 
 def setupXmlEluMat(self, elupath, xmlEluMat, state):
@@ -335,7 +408,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     shader.location = (20, 300)
     shader.select = False
     shader.inputs[6].default_value = glossiness / 100.0
-    shader.inputs[7].default_value = specular / 100.0
+    shader.inputs[7].default_value = specular / 100
 
     nodes.active = shader
     nodes.get('Material Output').select = False
@@ -346,7 +419,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
 
         if textype in XMLELU_TEXTYPES:
             if texname:
-                texpath = textureSearch(self, texname, '', state)
+                texpath = textureSearch(self, texname, '', True, state)
 
                 if texpath is not None:
                     if textype == 'DIFFUSEMAP':
@@ -479,63 +552,74 @@ def setupRsMesh(self, m, blMesh, state):
     if state.meshMode == 'STANDARD': return True
     elif state.meshMode == 'BAKE': return tuple(meshMatIDs)
 
-def setupElu(self, name, eluMesh, oneOfMany, collection, context, state):
+def setupElu(self, eluMesh, oneOfMany, collection, context, state):
+    meshName = eluMesh.meshName
+
     doNorms = len(eluMesh.normals) > 0
     doUV1 = len(eluMesh.uv1s) > 0
     doUV2 = len(eluMesh.uv2s) > 0
+    doSlots = len(eluMesh.slotIDs) > 0 # and not eluMesh.drawFlags & RM_FLAG_HIDE
+    doColors = len(eluMesh.colors) > 0
     doWeights = len(eluMesh.weights) > 0
-    doSlots = len(eluMesh.slots) > 0 and not eluMesh.drawFlags & RM_FLAG_HIDE
 
-    faces = []
-    faceVerts = []
-    faceNorms = [] if doNorms else None
-    faceUV1 = [] if doUV1 else None
-    faceUV2 = [] if doUV2 else None
-    faceSlot = [] if doSlots else None
-    groups = {} if doWeights else None
+    meshVerts = []
+    meshNorms = [] if doNorms else None
+    meshFaces = []
+    meshUV1 = [] if doUV1 else None
+    meshUV2 = [] if doUV2 else None
+    meshSlots = [] if doSlots else None
+    meshColors = [] if doColors else None
+    meshGroups = {} if doWeights else None
     index = 0
 
-    blMesh = bpy.data.meshes.new(name)
-    blMeshObj = bpy.data.objects.new(name, blMesh)
+    blMesh = bpy.data.meshes.new(meshName)
+    blMeshObj = bpy.data.objects.new(meshName, blMesh)
 
     for face in eluMesh.faces:
         degree = face.degree
 
         # Reverses the winding order for GunZ 1 elus
         for v in range(degree - 1, -1, -1) if eluMesh.version <= ELU_5007 else range(degree):
-            faceVerts.append(eluMesh.vertices[face.ipos[v]])
-            if doNorms: faceNorms.append(eluMesh.normals[face.inor[v]])
-            if doUV1: faceUV1.append(eluMesh.uv1s[face.iuv1[v]])
-            if doUV2: faceUV2.append(eluMesh.uv2s[face.iuv2[v]])
+            meshVerts.append(eluMesh.vertices[face.ipos[v]])
+            if doNorms: meshNorms.append(eluMesh.normals[face.inor[v]])
+            if doUV1: meshUV1.append(eluMesh.uv1s[face.iuv1[v]])
+            if doUV2: meshUV2.append(eluMesh.uv2s[face.iuv2[v]])
+            if doColors: meshColors.append(eluMesh.colors[face.ipos[v]])
 
-        faces.append(tuple(range(index, index + degree)))
-        if doSlots: faceSlot.append(face.slotID)
+        meshFaces.append(tuple(range(index, index + degree)))
+        if doSlots: meshSlots.append(face.slotID)
         index += degree
 
-    blMesh.from_pydata(faceVerts, [], faces)
+    blMesh.from_pydata(meshVerts, [], meshFaces)
 
     if doNorms:
         blMesh.use_auto_smooth = True
-        blMesh.normals_split_custom_set_from_vertices(faceNorms)
+        blMesh.normals_split_custom_set_from_vertices(meshNorms)
 
     if doUV1:
         uvLayer1 = blMesh.uv_layers.new()
-        for c, uv in enumerate(faceUV1): uvLayer1.data[c].uv = uv
+        for c, uv in enumerate(meshUV1): uvLayer1.data[c].uv = uv
 
     if doUV2:
         uvLayer2 = blMesh.uv_layers.new()
-        for c, uv in enumerate(faceUV2): uvLayer2.data[c].uv = uv
+        for c, uv in enumerate(meshUV2): uvLayer2.data[c].uv = uv
 
     if doSlots:
-        for p, id in enumerate(faceSlot): blMesh.polygons[p].material_index = id
+        for p, id in enumerate(meshSlots):
+            blMesh.polygons[p].material_index = id
+
+    if doColors:
+        color1 = blMesh.color_attributes.new('Color', 'FLOAT_COLOR', 'POINT')
+        for c, color in enumerate(meshColors):
+            color1.data[c].color = (color[0], color[1], color[2], 0.0)
 
     blMesh.validate()
     blMesh.update()
 
     if oneOfMany and eluMesh.version <= ELU_5007: # Rotates GunZ 1 elus to face forward when loading from a map
-        blMeshObj.matrix_local = Matrix.Rotation(math.radians(-180.0), 4, 'Z') @ eluMesh.transform
+        blMeshObj.matrix_world = Matrix.Rotation(math.radians(-180.0), 4, 'Z') @ eluMesh.transform
     else:
-        blMeshObj.matrix_local = eluMesh.transform
+        blMeshObj.matrix_world = eluMesh.transform
 
     if doWeights:
         modifier = blMeshObj.modifiers.new("Armature", 'ARMATURE')
@@ -552,63 +636,66 @@ def setupElu(self, name, eluMesh, oneOfMany, collection, context, state):
 
                 for d in range(weight.degree):
                     if eluMesh.version <= ELU_5007:
-                        parentName = weight.meshName[d]
+                        boneName = weight.meshNames[d]
                         found = False
 
-                        for p, parent in enumerate(state.eluMeshes):
-                            if parent.meshName == parentName:
+                        for p, parentMesh in enumerate(state.eluMeshes):
+                            if parentMesh.meshName == boneName:
                                 meshID = p
                                 found = True
                                 break
 
                         if not found:
-                            self.report({ 'ERROR' }, f"GZRS2: Named search failed to find mesh id for weight group: { eluMesh.meshName }, { parentName }")
+                            self.report({ 'ERROR' }, f"GZRS2: Named search failed to find mesh id for weight group: { meshName }, { parentName }")
                     else:
-                        meshID = weight.meshID[d]
+                        meshID = weight.meshIDs[d]
 
-                    if not meshID in groups:
+                    if not meshID in meshGroups:
                         boneName = state.eluMeshes[meshID].meshName
+                        meshGroups[meshID] = blMeshObj.vertex_groups.new(name = boneName)
                         state.gzrsValidBones.add(boneName)
-                        groups[meshID] = blMeshObj.vertex_groups.new(name = boneName)
 
-                    groups[meshID].add([index], weight.value[d], 'REPLACE')
+                    meshGroups[meshID].add((index,), weight.values[d], 'REPLACE')
 
                 index += 1
 
     elupath = eluMesh.elupath
     eluMatID = eluMesh.matID
+    slotIDs = eluMesh.slotIDs
+
+    slotCount = max(1, max(slotIDs) + 1) if doSlots else 1
 
     if eluMesh.version <= ELU_5007:
         if elupath in state.blEluMats:
             if eluMatID in state.blEluMats[elupath]:
-                blMesh.materials.append(state.blEluMats[elupath][eluMatID])
+                for _ in range(slotCount): blMesh.materials.append(state.blEluMats[elupath][eluMatID])
             else:
-                self.report({ 'INFO' }, f"GZRS2: Missing .elu material by index: { eluMesh.meshName }, { eluMatID }")
-                blMesh.materials.append(state.blErrorMat)
+                self.report({ 'INFO' }, f"GZRS2: Missing .elu material by index: { meshName }, { eluMatID }")
+                for _ in range(slotCount): blMesh.materials.append(state.blErrorMat)
         else:
-            self.report({ 'INFO' }, f"GZRS2: No .elu material available by path: { eluMesh.meshName }")
-            blMesh.materials.append(state.blErrorMat)
+            self.report({ 'INFO' }, f"GZRS2: No .elu materials available for mesh: { meshName }, { eluMatID }")
+            for _ in range(slotCount): blMesh.materials.append(state.blErrorMat)
     else:
         if eluMatID < 0:
-            if -1 in eluMesh.slotIDs:
+            if -1 in slotIDs:
                 if not eluMesh.drawFlags & RM_FLAG_HIDE:
-                    self.report({ 'INFO' }, f"GZRS2: Double negative material index: { eluMesh.meshName }, { eluMatID }, { eluMesh.slotIDs }")
+                    self.report({ 'INFO' }, f"GZRS2: Double negative material index: { meshName }, { eluMatID }, { slotIDs }")
                     blMesh.materials.append(state.blErrorMat)
             elif elupath in state.blXmlEluMats:
                 for blXmlEluMat in state.blXmlEluMats[elupath]:
                     blMesh.materials.append(blXmlEluMat)
             else:
-                self.report({ 'INFO' }, f"GZRS2: No .elu.xml material available after negative index: { eluMesh.meshName }, { eluMatID }")
+                self.report({ 'INFO' }, f"GZRS2: No .elu.xml material available after negative index: { meshName }, { eluMatID }")
                 blMesh.materials.append(state.blErrorMat)
         else:
             if elupath in state.blXmlEluMats:
                 if len(state.blXmlEluMats[elupath]) > eluMatID:
                     blMesh.materials.append(state.blXmlEluMats[elupath][eluMatID])
                 else:
-                    self.report({ 'INFO' }, f"GZRS2: Missing .elu.xml material by index: { eluMesh.meshName }, { eluMatID }")
+                    self.report({ 'INFO' }, f"GZRS2: Missing .elu.xml material by index: { meshName }, { eluMatID }")
                     blMesh.materials.append(state.blErrorMat)
             else:
-                self.report({ 'INFO' }, f"GZRS2: No .elu.xml material available by path: { eluMesh.meshName }")
+                self.report({ 'INFO' }, f"GZRS2: No .elu.xml materials available for mesh: { meshName }, { eluMatID }")
                 blMesh.materials.append(state.blErrorMat)
 
     collection.objects.link(blMeshObj)
@@ -617,7 +704,7 @@ def setupElu(self, name, eluMesh, oneOfMany, collection, context, state):
         viewLayer.objects.active = blMeshObj
 
     if state.doCleanup:
-        if state.logCleanup: print(eluMesh.meshName)
+        if state.logCleanup: print(meshName)
 
         def cleanupFunc():
             bpy.ops.object.select_all(action = 'DESELECT')
@@ -673,7 +760,63 @@ def processEluHeirarchy(self, state):
                 break
 
         if not found:
-            self.report({ 'INFO' }, f"GZRS2: Parent not found for elu child mesh: { child.meshName }, { child.parentName }")
+            self.report({ 'INFO' }, f"GZRS2: Parent not found for .elu child mesh: { child.meshName }, { child.parentName }")
+
+def isValidEluImageNode(node, muted):
+    if node is None: return False
+    if node.name != 'Image Texture': return False
+    if muted: return True
+    if node.image is None: return False
+    if node.image.source != 'FILE': return False
+    if node.image.filepath == '': return False
+
+    return True
+
+def makeRS2DataPath(path):
+    if path == '': return path
+    found = None
+
+    for token in RS2_VALID_DATA_SUBDIRS:
+        if token in path:
+            found = token + path.split(token, 1)[1]
+            break
+
+        lower = token.lower()
+        if lower in path:
+            found = lower + path.split(lower, 1)[1]
+            break
+
+        upper = token.upper()
+        if upper in path:
+            found = upper + path.split(upper, 1)[1]
+            break
+
+    if found is None: return False
+
+    dir = os.path.dirname(found)
+    base = os.path.basename(found)
+    name1, ext1 = os.path.splitext(base)
+    name2, ext2 = os.path.splitext(name1)
+
+    if ext2 == '': return found
+    else: return dir + '\\' + name1
+
+def calcEtcData(version, transform): # TODO
+    if version >= ELU_5001:
+        apScale = Vector((1, 1, 1))
+    else:
+        apScale = None
+
+    if version >= ELU_5003:
+        rotAA = Vector((0, 0, 0, 0))
+        scaleAA = Vector((0, 0, 0, 0))
+        etcMatrix = Matrix.Identity(4)
+    else:
+        rotAA = None
+        scaleAA = None
+        etcMatrix = None
+
+    return apScale, rotAA, scaleAA, etcMatrix
 
 def nextSquare(x):
     result = 1
@@ -728,15 +871,15 @@ def packLmImageData(self, imageSize, floats, fromAtlas = False, atlasSize = 0, c
 
     if not self.lmVersion4:
         imageData = bytearray(pixelCount * 3)
-        exportRange = 255
+        exportRange = (255 / 4) if self.mod4Fix else 255
 
-        if self.mod4Fix:
-            exportRange /= 4
-
-        for p in range(pixelCount):
-            if not fromAtlas:
-                f = p
-            else:
+        if not fromAtlas:
+            for p in range(pixelCount):
+                imageData[p * 3 + 0] = int(floats[p * 4 + 2] * exportRange)
+                imageData[p * 3 + 1] = int(floats[p * 4 + 1] * exportRange)
+                imageData[p * 3 + 2] = int(floats[p * 4 + 0] * exportRange)
+        else:
+            for p in range(pixelCount):
                 px = p % imageSize
                 py = p // imageSize
 
@@ -744,9 +887,10 @@ def packLmImageData(self, imageSize, floats, fromAtlas = False, atlasSize = 0, c
                 f += cy * atlasSize * imageSize
                 f += px + py * atlasSize
 
-            imageData[p * 3 + 0] = int(floats[f * 4 + 2] * exportRange)
-            imageData[p * 3 + 1] = int(floats[f * 4 + 1] * exportRange)
-            imageData[p * 3 + 2] = int(floats[f * 4 + 0] * exportRange)
+                imageData[p * 3 + 0] = int(floats[f * 4 + 2] * exportRange)
+                imageData[p * 3 + 1] = int(floats[f * 4 + 1] * exportRange)
+                imageData[p * 3 + 2] = int(floats[f * 4 + 0] * exportRange)
+
     else:
         imageData = bytearray(pixelCount // 2)
         imageShorts = memoryview(imageData).cast('H')
@@ -926,6 +1070,11 @@ def setupLmMixGroup(state):
         group.nodes.active = groupMix
 
         state.lmMixGroup = group
+
+def compareColors(color1, color2):
+    return all((math.isclose(color1[0], color2[0], rel_tol = 0.0001),
+                math.isclose(color1[1], color2[1], rel_tol = 0.0001),
+                math.isclose(color1[2], color2[2], rel_tol = 0.0001)))
 
 def compareLights(light1, light2):
     return all((math.isclose(light1.color[0],            light2.color[0],            rel_tol = 0.0001),

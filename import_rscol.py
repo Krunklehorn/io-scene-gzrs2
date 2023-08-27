@@ -32,7 +32,7 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import bpy, os, io, math, mathutils
+import bpy, os, io, math
 import xml.dom.minidom as minidom
 from contextlib import redirect_stdout
 

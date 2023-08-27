@@ -32,8 +32,9 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import bpy, os, io, math, mathutils
+import bpy, os, io, math
 import xml.dom.minidom as minidom
+
 from mathutils import Vector, Matrix
 
 from .constants_gzrs2 import *
@@ -62,8 +63,8 @@ def importElu(self, context):
         state.logEluHeaders = self.logEluHeaders
         state.logEluMats = self.logEluMats
         state.logEluMeshNodes = self.logEluMeshNodes
-        state.logVerboseIndices = self.logVerboseIndices
-        state.logVerboseWeights = self.logVerboseWeights
+        state.logVerboseIndices = self.logVerboseIndices and self.logEluMeshNodes
+        state.logVerboseWeights = self.logVerboseWeights and self.logEluMeshNodes
         state.logCleanup = self.logCleanup
 
     elupath = self.filepath
@@ -101,30 +102,30 @@ def importElu(self, context):
         print()
 
     for eluMesh in state.eluMeshes:
-        if eluMesh.meshName.startswith(("Bip01", "Bone")):
-            state.gzrsValidBones.add(eluMesh.meshName)
+        meshName = eluMesh.meshName
 
-        name = f"{ state.filename }_{ eluMesh.meshName }"
+        if meshName.startswith(("Bip01", "Bone")):
+            state.gzrsValidBones.add(meshName)
 
         if eluMesh.isDummy:
-            blDummyObj = bpy.data.objects.new(name, None)
+            blDummyObj = bpy.data.objects.new(meshName, None)
 
             blDummyObj.empty_display_type = 'ARROWS'
             blDummyObj.empty_display_size = 0.1
-            blDummyObj.matrix_local = eluMesh.transform
+            blDummyObj.matrix_world = eluMesh.transform
 
             rootMesh.objects.link(blDummyObj)
 
             state.blDummyObjs.append(blDummyObj)
             state.blObjPairs.append((eluMesh, blDummyObj))
         else:
-            setupElu(self, name, eluMesh, False, rootMesh, context, state)
+            setupElu(self, eluMesh, False, rootMesh, context, state)
 
     processEluHeirarchy(self, state)
 
     if len(state.gzrsValidBones) > 0:
         state.blArmature = bpy.data.armatures.new("Armature")
-        state.blArmatureObj = bpy.data.objects.new(f"{ state.filename }_Armature", state.blArmature)
+        state.blArmatureObj = bpy.data.objects.new(f"Armature", state.blArmature)
 
         state.blArmatureObj.display_type = 'WIRE'
         state.blArmatureObj.show_in_front = True
@@ -136,21 +137,21 @@ def importElu(self, context):
 
         bpy.ops.object.mode_set(mode = 'EDIT')
 
-        reorient = Matrix.Rotation(math.radians(-90.0), 4, 'Z') @ Matrix.Rotation(math.radians(-90.0), 4, 'Y')
+        reorientLocal = Matrix.Rotation(math.radians(-90.0), 4, 'Z') @ Matrix.Rotation(math.radians(-90.0), 4, 'Y')
 
         for eluMesh, blMeshOrDummyObj in state.blObjPairs:
             if not eluMesh.meshName in state.gzrsValidBones:
                 continue
 
-            blBone = state.blArmature.edit_bones.new(eluMesh.meshName)
-            blBone.tail = (0, 0.1, 0)
-            blBone.matrix = blMeshOrDummyObj.matrix_world @ reorient
+            editBone = state.blArmature.edit_bones.new(eluMesh.meshName)
+            editBone.tail = (0, 0.1, 0)
+            editBone.matrix = blMeshOrDummyObj.matrix_world @ reorientLocal
 
-            if eluMesh.isDummy:
+            if eluMesh.isDummy and 'Nub' in eluMesh.meshName:
                 for collection in blMeshOrDummyObj.users_collection:
                     collection.objects.unlink(blMeshOrDummyObj)
 
-            state.blBonePairs.append((eluMesh, blBone))
+            state.blBonePairs.append((eluMesh, editBone))
 
         for child, childBone in state.blBonePairs:
             if child.meshName == 'Bip01':
@@ -168,21 +169,21 @@ def importElu(self, context):
             if not found:
                 self.report({ 'INFO' }, f"GZRS2: Parent not found for elu child bone: { child.meshName }, { child.parentName }")
 
-        for eluMesh, blBone in state.blBonePairs:
-            if blBone.name == 'Bip01':
+        for eluMesh, editBone in state.blBonePairs:
+            if editBone.name == 'Bip01':
                 continue
-            elif len(blBone.children) > 0:
+            elif len(editBone.children) > 0:
                 length = 0
 
-                for child in blBone.children:
-                    length = max(length, (child.head - blBone.head).length)
+                for child in editBone.children:
+                    length = max(length, (child.head - editBone.head).length)
 
-                blBone.length = length
-            elif blBone.parent is not None:
-                blBone.length = blBone.parent.length / 2
+                editBone.length = length
+            elif editBone.parent is not None:
+                editBone.length = editBone.parent.length / 2
 
-            if blBone.parent is not None and (Vector(blBone.parent.tail) - Vector(blBone.head)).length < 0.0001:
-                blBone.use_connect = True
+            if editBone.parent is not None and (Vector(editBone.parent.tail) - Vector(editBone.head)).length < 0.0001:
+                editBone.use_connect = True
 
         if state.doBoneRolls:
             bpy.ops.armature.select_all(action = 'SELECT')
@@ -211,8 +212,11 @@ def importElu(self, context):
 
         for child, childObj in state.blObjPairs:
             isBone = child.meshName in state.gzrsValidBones
+            noParentBone = not child.parentName in state.gzrsValidBones
+            isNubDummy = isBone and child.isDummy and 'Nub' in child.meshName
+            isNotRoot = child.meshName != 'Bip01'
 
-            if not child.parentName in state.gzrsValidBones or (isBone and child.isDummy):
+            if isNubDummy or noParentBone and isNotRoot:
                 continue
 
             targetName = child.meshName if isBone else child.parentName
@@ -232,7 +236,7 @@ def importElu(self, context):
                     break
 
             if not found:
-                self.report({ 'INFO' }, f"GZRS2: Bone parent not found: { child.meshName }, { child.parentName }, { child.isDummy }")
+                self.report({ 'INFO' }, f"GZRS2: Bone parent not found for .elu child mesh or dummy: { child.meshName }, { child.parentName }, { child.isDummy }")
 
         for blMeshObj in state.blMeshObjs:
             modifier = blMeshObj.modifiers.get("Armature", None)

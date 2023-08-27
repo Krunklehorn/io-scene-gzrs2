@@ -32,10 +32,11 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import bpy, os, io, math, mathutils
+import bpy, os, io, math
 import xml.dom.minidom as minidom
-from mathutils import Vector, Matrix
 import re as regex
+
+from mathutils import Vector, Matrix
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
@@ -63,8 +64,8 @@ def importRs3(self, context):
         state.logEluHeaders = self.logEluHeaders
         state.logEluMats = self.logEluMats
         state.logEluMeshNodes = self.logEluMeshNodes
-        state.logVerboseIndices = self.logVerboseIndices
-        state.logVerboseWeights = self.logVerboseWeights
+        state.logVerboseIndices = self.logVerboseIndices and self.logEluMeshNodes
+        state.logVerboseWeights = self.logVerboseWeights and self.logEluMeshNodes
         state.logCleanup = self.logCleanup
 
     xmlpath = self.filepath
@@ -177,7 +178,7 @@ def importRs3(self, context):
 
     for m, eluMesh in enumerate(state.eluMeshes):
         if not eluMesh.elupath in state.blActorRoots:
-            blActorRoot = collections.new(f"{ state.filename }_Actor_{ eluMesh.meshName }")
+            blActorRoot = collections.new(f"{ eluMesh.meshName }_Actor")
             rootActors.children.link(blActorRoot)
             state.blActorRoots[eluMesh.elupath] = blActorRoot
 
@@ -193,13 +194,13 @@ def importRs3(self, context):
         else:
             blActorRoot = state.blActorRoots[eluMesh.elupath]
 
-        setupElu(self, f"{ state.filename }_{ eluMesh.meshName }", eluMesh, True, blActorRoot, context, state)
+        setupElu(self, eluMesh, True, blActorRoot, context, state)
 
     processEluHeirarchy(self, state)
 
     def processRs3Node(node):
         if node['type'] in ['SCENEINSTANCE', 'SCENEOBJECT', 'EFFECTINSTANCE', 'DIRLIGHT', 'SPOTLIGHT', 'POINTLIGHT', 'OCCLUDER']:
-            name = f"{ state.filename }_{ node['type'] }_{ node.get('name', node.get('resourcename', 'Node')) }"
+            name = f"{ node.get('name', node.get('resourcename', 'Node')) }_{ node['type'] }"
 
             if node['type'] in ['SCENEINSTANCE', 'SCENEOBJECT', 'EFFECTINSTANCE']:
                 blNodeObj = bpy.data.objects.new(name, None)

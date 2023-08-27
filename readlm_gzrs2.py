@@ -42,30 +42,31 @@ from .lib_gzrs2 import *
 def readLm(self, path, state):
     file = open(path, 'rb')
 
-    id = readUInt(file)
-    version = readUInt(file)
-
     if state.logLmHeaders or state.logLmImages:
         print("===================  Read Lm  ===================")
         print()
 
-    if state.logLmHeaders:
-        print(f"path:               { path }")
-        print(f"ID:                 { hex(id) }")
-        print(f"Version:            { hex(version) }")
+        file.seek(0, os.SEEK_END)
+        fileSize = file.tell()
+        file.seek(0, os.SEEK_SET)
 
-    if id != R_LM_ID or (version != R_LM_VERSION and version != R_LM_VERSION_EXT):
-        self.report({ 'ERROR' }, f"GZRS2: Lm header invalid! { hex(id) }, { version }")
-        file.close()
-
-        return { 'CANCELLED' }
-
+    id = readUInt(file)
+    version = readUInt(file)
     skipBytes(file, 4 + 4) # skip invalid polygon count and unused node count
     imageCount = readUInt(file)
 
     if state.logLmHeaders:
+        print(f"Path:               { path }")
+        print(f"ID:                 { hex(id) }")
+        print(f"Version:            { hex(version) }")
         print(f"Image Count:        { imageCount }")
         print()
+
+    if id != R_LM_ID or (version != R_LM_VERSION and version != R_LM_VERSION_EXT):
+        self.report({ 'ERROR' }, f"GZRS2: Lm header invalid! { hex(id) }, { hex(version) }")
+        file.close()
+
+        return { 'CANCELLED' }
 
     for i in range(imageCount):
         byteCount = readUInt(file)
@@ -212,5 +213,14 @@ def readLm(self, path, state):
     skipBytes(file, 4 * state.lmPolygonCount) # skip unused polygon ids
     state.lmIndices = readUIntArray(file, state.lmPolygonCount)
     state.lmUVs = readUV2Array(file, state.lmVertexCount)
+
+    if state.logLmHeaders or state.logLmImages:
+        bytesRemaining = fileSize - file.tell()
+
+        if bytesRemaining > 0:
+            self.report({ 'INFO' }, f"GZRS2: LM import finished with bytes remaining! { path }, { hex(id) }, { hex(version) }")
+
+        print(f"Bytes Remaining:    { bytesRemaining }")
+        print()
 
     file.close()

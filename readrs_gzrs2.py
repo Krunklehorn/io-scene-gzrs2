@@ -44,17 +44,25 @@ from .io_gzrs2 import *
 def readRs(self, path, state):
     file = open(path, 'rb')
 
+    if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsLeaves or state.logRsVerts:
+        print("===================  Read RS  ===================")
+        print()
+
+        file.seek(0, os.SEEK_END)
+        fileSize = file.tell()
+        file.seek(0, os.SEEK_SET)
+
     id = readUInt(file)
     version = readUInt(file)
 
     if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsLeaves or state.logRsVerts:
-        print("===================  Read RS  ===================")
+        print(f"Path:               { path }")
         print(f"ID:                 { hex(id) }")
         print(f"Version:            { hex(version) }")
         print()
 
     if not (id == RS2_ID or id == RS3_ID) or version < RS3_VERSION1:
-        self.report({ 'ERROR' }, f"GZRS2: RS header invalid! { hex(id) }, { version }")
+        self.report({ 'ERROR' }, f"GZRS2: RS header invalid! { hex(id) }, { hex(version) }")
         file.close()
 
         return { 'CANCELLED' }
@@ -111,6 +119,7 @@ def readRs(self, path, state):
                     uv1 = readUV2(file)
                     uv2 = readUV2(file)
 
+                    # Why does the second UV layer end up as garbage? I don't understand...
                     # file.seek(-8, os.SEEK_CUR)
                     # uv1x = file.read(4)
                     # uv1y = file.read(4)
@@ -176,7 +185,7 @@ def readRs(self, path, state):
         for c in range(readUInt(file)):
             name = readString(file, readInt(file))
             planes = tuple(readVec4(file) for _ in range(readUInt(file)))
-            faces = []
+            faces = ()
             geometryCount = 1
 
             if version >= RS3_VERSION4:
@@ -272,7 +281,7 @@ def readRs(self, path, state):
                         print(f"Vertex Offset:      { vertexOffset }")
                         print()
 
-                geometry.append(RsGeometry(geoVertexCount, indexCount, trees))
+                geometry.append(RsGeometry(geoVertexCount, indexCount, tuple(trees)))
 
                 if state.logRsGeometry:
                     print(f"===== Geometry { g + 1 } =============================")
@@ -281,7 +290,7 @@ def readRs(self, path, state):
                     print(f"Trees:              { len(trees) }")
                     print()
 
-            state.smrCells.append(RsCell(name, planes, faces, geometry))
+            state.smrCells.append(RsCell(name, planes, faces, tuple(geometry)))
 
             if state.logRsCells:
                 print(f"===== Cell { c + 1 }     =============================")
@@ -290,5 +299,14 @@ def readRs(self, path, state):
                 print(f"Faces:              { len(faces) }")
                 print(f"Geometry:           { len(geometry) }")
                 print()
+
+    if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsLeaves or state.logRsVerts:
+        bytesRemaining = fileSize - file.tell()
+
+        if bytesRemaining > 0:
+            self.report({ 'INFO' }, f"GZRS2: RS import finished with bytes remaining! { path }, { hex(id) }, { hex(version) }")
+
+        print(f"Bytes Remaining:    { bytesRemaining }")
+        print()
 
     file.close()

@@ -38,39 +38,27 @@ from .constants_gzrs2 import *
 from .classes_gzrs2 import *
 from .io_gzrs2 import *
 
-'''
-from constants_gzrs2 import *
-from dataclasses import dataclass, field
-from io_gzrs2 import *
-
-@dataclass
-class GZRS2State:
-    convertUnits:       bool = False
-
-    logColHeaders:      bool = True
-    logColNodes:        bool = False
-    logColTris:         bool = False
-
-    colVerts:           list = field(default_factory = list)
-'''
-
 def readCol(self, path, state):
     file = open(path, 'rb')
-
-    id = readUInt(file)
-    version = readUInt(file)
 
     if state.logColHeaders or state.logColNodes or state.logColTris:
         print("===================  Read Col  ===================")
         print()
 
+        file.seek(0, os.SEEK_END)
+        fileSize = file.tell()
+        file.seek(0, os.SEEK_SET)
+
+    id = readUInt(file)
+    version = readUInt(file)
+
     if state.logColHeaders:
-        print(f"path:               { path }")
+        print(f"Path:               { path }")
         print(f"ID:                 { hex(id) }")
         print(f"Version:            { hex(version) }")
 
     if (id != R_COL1_ID and id != R_COL2_ID) or (version != R_COL1_VERSION and version != R_COL2_VERSION):
-        self.report({ 'ERROR' }, f"GZRS2: Col header invalid! { hex(id) }, { version }")
+        self.report({ 'ERROR' }, f"GZRS2: Col header invalid! { hex(id) }, { hex(version) }")
         file.close()
 
         return False
@@ -188,13 +176,18 @@ def readCol(self, path, state):
     if trisRead != totalTris:
         self.report({ 'ERROR' }, f"GZRS2: The number of Col triangles read did not match the recorded count! { trisRead }, { totalTris }")
 
+    if state.logColHeaders or state.logColNodes or state.logColTris:
+        bytesRemaining = fileSize - file.tell()
+
+        if bytesRemaining > 0:
+            self.report({ 'INFO' }, f"GZRS2: COL import finished with bytes remaining! { path }, { hex(id) }, { hex(version) }")
+
+        print(f"Bytes Remaining:    { bytesRemaining }")
+        print()
+
     file.close()
 
 '''
-class TestSelf:
-    def report(self, t, s):
-        print(s)
-
 testpaths = [
     "..\\..\\GunZ\\clean\\Maps\\Battle Arena\\Battle Arena.RS.col",
     "..\\..\\GunZ\\clean\\Maps\\Castle\\Castle.RS.col",
@@ -226,7 +219,4 @@ testpaths = [
     "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Maps\\PvP_maps\\pvp_mansion_gt\\pvp_mansion_gt.cl2",
     "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Maps\\PvP_maps\\pvp_pier5\\pvp_pier5.cl2"
 ]
-
-for path in testpaths:
-    readCol(TestSelf(), path, GZRS2State())
 '''

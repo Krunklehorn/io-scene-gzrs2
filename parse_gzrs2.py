@@ -1,6 +1,8 @@
 import os
 import xml.dom.minidom as minidom
+
 from collections import defaultdict
+
 from mathutils import Vector
 
 from .constants_gzrs2 import *

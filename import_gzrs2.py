@@ -32,10 +32,12 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import bpy, os, math, mathutils
+import bpy, os, math
 import xml.dom.minidom as minidom
-from mathutils import Vector, Matrix
+
 from contextlib import redirect_stdout
+
+from mathutils import Vector, Matrix
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
@@ -52,17 +54,17 @@ def importRs2(self, context):
     state.convertUnits = self.convertUnits
     state.meshMode = self.meshMode
     state.doCleanup = self.doCleanup
-    state.doCollision = self.doCollision and state.meshMode != 'BAKE'
+    state.doCollision = self.doCollision and self.meshMode != 'BAKE'
     state.doLightmap = self.doLightmap
     state.doLights = self.doLights
-    state.tweakLights = self.tweakLights and state.doLights
+    state.tweakLights = self.tweakLights and self.doLights
     state.doProps = self.doProps
-    state.doDummies = self.doDummies and state.meshMode != 'BAKE'
-    state.doOcclusion = self.doOcclusion and state.meshMode != 'BAKE'
+    state.doDummies = self.doDummies and self.meshMode != 'BAKE'
+    state.doOcclusion = self.doOcclusion and self.meshMode != 'BAKE'
     state.doFog = self.doFog
-    state.doSounds = self.doSounds and state.meshMode != 'BAKE'
-    state.doItems = self.doItems and state.meshMode != 'BAKE'
-    state.doBspBounds = self.doBspBounds and state.meshMode != 'BAKE'
+    state.doSounds = self.doSounds and self.meshMode != 'BAKE'
+    state.doItems = self.doItems and self.meshMode != 'BAKE'
+    state.doBspBounds = self.doBspBounds and self.meshMode != 'BAKE'
     state.doLightDrivers = self.doLightDrivers
     state.doFogDriver = self.doFogDriver
 
@@ -89,8 +91,8 @@ def importRs2(self, context):
         state.logEluHeaders = self.logEluHeaders
         state.logEluMats = self.logEluMats
         state.logEluMeshNodes = self.logEluMeshNodes
-        state.logVerboseIndices = self.logVerboseIndices
-        state.logVerboseWeights = self.logVerboseWeights
+        state.logVerboseIndices = self.logVerboseIndices and self.logEluMeshNodes
+        state.logVerboseWeights = self.logVerboseWeights and self.logEluMeshNodes
         state.logCleanup = self.logCleanup
 
     rspath = self.filepath
@@ -278,7 +280,7 @@ def importRs2(self, context):
         texname = xmlRsMat.get('DIFFUSEMAP')
 
         if texname:
-            texpath = textureSearch(self, texname, '', state)
+            texpath = textureSearch(self, texname, '', False, state)
 
             if texpath is not None:
                 texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
@@ -503,13 +505,19 @@ def importRs2(self, context):
             print()
 
         for eluMesh in state.eluMeshes:
+            if eluMesh.meshName.startswith(("Bip01", "Bone")):
+                state.gzrsValidBones.add(eluMesh.meshName)
+
             if eluMesh.isDummy:
                 self.report({ 'INFO' }, f"GZRS2: Skipping dummy prop: { eluMesh.meshName }")
                 continue
 
-            setupElu(self, f"{ state.filename }_Prop_{ eluMesh.meshName }", eluMesh, True, rootProps, context, state)
+            setupElu(self, eluMesh, True, rootProps, context, state)
 
     processEluHeirarchy(self, state)
+
+    if len(state.gzrsValidBones) > 0:
+        self.report({ 'INFO' }, f"GZRS2: Valid bones were found in some props: { len(state.gzrsValidBones) }")
 
     if state.doDummies:
         for d, dummy in enumerate(state.xmlDums):

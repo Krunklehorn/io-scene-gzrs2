@@ -1,8 +1,8 @@
 bl_info = {
     "name": "GZRS2/3 Format",
     "author": "Krunklehorn",
-    "version": (0, 9, 1),
-    "blender": (3, 6, 1),
+    "version": (0, 9, 2),
+    "blender": (3, 6, 2),
     "location": "File > Import-Export",
     "description": "GunZ: The Duel RealSpace2/3 content importer.",
     "category": "Import-Export",
@@ -16,6 +16,7 @@ if "bpy" in locals():
     if "import_rselu" in locals(): importlib.reload(import_rselu)
     if "import_rscol" in locals(): importlib.reload(import_rscol)
     if "import_rslm" in locals(): importlib.reload(import_rslm)
+    if "export_rselu" in locals(): importlib.reload(export_rselu)
     if "export_rslm" in locals(): importlib.reload(export_rslm)
 
 import bpy
@@ -23,13 +24,16 @@ from bpy.types import Operator, Panel
 from bpy_extras.io_utils import ImportHelper, ExportHelper
 from bpy.props import BoolProperty, StringProperty, EnumProperty
 
-from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rslm, export_rslm
+from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rslm
+from . import export_rselu, export_rslm
+
+from .constants_gzrs2 import *
 
 def cleanse_modules():
     import sys
 
     all_modules = sys.modules
-    all_modules = dict(sorted(all_modules.items(), key = lambda x:x[0]))
+    all_modules = dict(sorted(all_modules.items(), key = lambda x: x[0]))
 
     for k,v in all_modules.items():
         if k.startswith(__name__):
@@ -383,8 +387,12 @@ class GZRS2_PT_Import_Logging(Panel):
         layout.prop(operator, "logEluHeaders")
         layout.prop(operator, "logEluMats")
         layout.prop(operator, "logEluMeshNodes")
-        layout.prop(operator, "logVerboseIndices")
-        layout.prop(operator, "logVerboseWeights")
+
+        column = layout.column()
+        column.prop(operator, "logVerboseIndices")
+        column.prop(operator, "logVerboseWeights")
+        column.enabled = operator.logEluMeshNodes
+
         layout.prop(operator, "logCleanup")
 
 class ImportGZRS3(Operator, ImportHelper):
@@ -516,8 +524,12 @@ class GZRS3_PT_Import_Logging(Panel):
         layout.prop(operator, "logEluHeaders")
         layout.prop(operator, "logEluMats")
         layout.prop(operator, "logEluMeshNodes")
-        layout.prop(operator, "logVerboseIndices")
-        layout.prop(operator, "logVerboseWeights")
+
+        column = layout.column()
+        column.prop(operator, "logVerboseIndices")
+        column.prop(operator, "logVerboseWeights")
+        column.enabled = operator.logEluMeshNodes
+
         layout.prop(operator, "logCleanup")
 
 class ImportRSELU(Operator, ImportHelper):
@@ -659,8 +671,12 @@ class RSELU_PT_Import_Logging(Panel):
         layout.prop(operator, "logEluHeaders")
         layout.prop(operator, "logEluMats")
         layout.prop(operator, "logEluMeshNodes")
-        layout.prop(operator, "logVerboseIndices")
-        layout.prop(operator, "logVerboseWeights")
+
+        column = layout.column()
+        column.prop(operator, "logVerboseIndices")
+        column.prop(operator, "logVerboseWeights")
+        column.enabled = operator.logEluMeshNodes
+
         layout.prop(operator, "logCleanup")
 
 class ImportRSCOL(Operator, ImportHelper):
@@ -831,6 +847,139 @@ class RSLM_PT_Import_Logging(Panel):
         layout.prop(operator, "logLmHeaders")
         layout.prop(operator, "logLmImages")
 
+class ExportRSELU(Operator, ExportHelper):
+    bl_idname = "export_scene.rselu"
+    bl_label = "Export ELU"
+    bl_options = { 'UNDO', 'PRESET' }
+    bl_description = "Save an ELU file"
+
+    filename_ext = ".elu"
+    filter_glob: StringProperty(
+        default = "*.elu",
+        options = { 'HIDDEN' }
+    )
+
+    panelMain: BoolProperty(
+        name = "Main",
+        description = "Main panel of options",
+        default = True
+    )
+
+    panelLogging: BoolProperty(
+        name = "Logging",
+        description = "Log details to the console",
+        default = False
+    )
+
+    convertUnits: BoolProperty(
+        name = "Convert Units",
+        description = "Convert measurements from meters to centimeters",
+        default = True
+    )
+
+    selectedOnly: BoolProperty(
+        name = "Selected Only",
+        description = "Limit export to selected objects only",
+        default = False
+    )
+
+    includeChildren: BoolProperty(
+        name = "Include Children",
+        description = "Include children of selected objects",
+        default = True
+    )
+
+    logEluHeaders: BoolProperty(
+        name = "Elu Headers",
+        description = "Log ELU header data",
+        default = True
+    )
+
+    logEluMats: BoolProperty(
+        name = "Elu Materials",
+        description = "Log ELU material data",
+        default = True
+    )
+
+    logEluMeshNodes: BoolProperty(
+        name = "Elu Mesh Nodes",
+        description = "Log ELU mesh node data",
+        default = True
+    )
+
+    logVerboseIndices: BoolProperty(
+        name = "Verbose Indices",
+        description = "Log ELU indices verbosely",
+        default = False
+    )
+
+    logVerboseWeights: BoolProperty(
+        name = "Verbose Weights",
+        description = "Log ELU weights verbosely",
+        default = False
+    )
+
+    def draw(self, context):
+        pass
+
+    def execute(self, context):
+        return export_rselu.exportElu(self, context)
+
+class RSELU_PT_Export_Main(Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Main"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_rselu"
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelMain
+
+        layout.prop(operator, "convertUnits")
+        layout.prop(operator, "selectedOnly")
+
+        column = layout.column()
+        column.prop(operator, "includeChildren")
+        column.enabled = operator.selectedOnly
+
+class RSELU_PT_Export_Logging(Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Logging"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_rselu"
+
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelLogging
+
+        layout.prop(operator, "logEluHeaders")
+        layout.prop(operator, "logEluMats")
+        layout.prop(operator, "logEluMeshNodes")
+
+        column = layout.column()
+        column.prop(operator, "logVerboseIndices")
+        column.prop(operator, "logVerboseWeights")
+        column.enabled = operator.logEluMeshNodes
+
 class ExportRSLM(Operator, ExportHelper):
     bl_idname = "export_scene.rslm"
     bl_label = "Export LM"
@@ -914,6 +1063,9 @@ classes = (
     RSCOL_PT_Import_Logging,
     ImportRSLM,
     RSLM_PT_Import_Logging,
+    ExportRSELU,
+    RSELU_PT_Export_Main,
+    RSELU_PT_Export_Logging,
     ExportRSLM,
     RSLM_PT_Export_Main
 )
@@ -926,6 +1078,7 @@ def menu_func_import(self, context):
     self.layout.operator(ImportRSLM.bl_idname, text = "GunZ LM (.lm)")
 
 def menu_func_export(self, context):
+    self.layout.operator(ExportRSELU.bl_idname, text = "GunZ ELU (.elu)")
     self.layout.operator(ExportRSLM.bl_idname, text = "GunZ LM (.lm)")
 
 def register():

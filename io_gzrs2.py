@@ -1,44 +1,40 @@
 import sys, os, math
-from struct import unpack
 
-import mathutils
+from struct import pack, unpack, iter_unpack
+from itertools import chain
+
 from mathutils import Vector, Matrix, Quaternion
 
-def skipBytes(file, length):            return file.seek(length, 1)
+def skipBytes(file, length):                return file.seek(length, 1)
 
-def readBytes(file, length):            return file.read(length)
-def decodeBytes(file, length):          return file.read(length).decode('utf-8')
-def readChar(file):                     return unpack('<b', file.read(1))[0]
-def readUChar(file):                    return unpack('<B', file.read(1))[0]
-def readBool(file):                     return unpack('<?', file.read(1))[0]
-def readBool32(file):                   return bool(readUInt(file))
-def readUShort(file):                   return unpack('<H', file.read(2))[0]
-def readShort(file):                    return unpack('<h', file.read(2))[0]
-def readUInt(file):                     return unpack('<I', file.read(4))[0]
-def readInt(file):                      return unpack('<i', file.read(4))[0]
-def readFloat(file):                    return unpack('<f', file.read(4))[0]
-def readVec2(file):                     return unpack('<2f', file.read(2 * 4))
-def readVec3(file):                     return unpack('<3f', file.read(3 * 4))
-def readVec4(file):                     return unpack('<4f', file.read(4 * 4))
+def readBytes(file, length):                return file.read(length)
+def decodeBytes(file, length):              return file.read(length).decode('utf-8')
+def readChar(file):                         return unpack('<b', file.read(1))[0]
+def readUChar(file):                        return unpack('<B', file.read(1))[0]
+def readCharBool(file):                     return False if readChar(file) < 0 else True
+def readBool(file):                         return unpack('<?', file.read(1))[0]
+def readBool32(file):                       return unpack('<xxx?', file.read(4))[0]
+def readUShort(file):                       return unpack('<H', file.read(2))[0]
+def readShort(file):                        return unpack('<h', file.read(2))[0]
+def readUInt(file):                         return unpack('<I', file.read(4))[0]
+def readInt(file):                          return unpack('<i', file.read(4))[0]
+def readFloat(file):                        return unpack('<f', file.read(4))[0]
+def readVec2(file):                         return unpack('<2f', file.read(2 * 4))
+def readVec3(file):                         return unpack('<3f', file.read(3 * 4))
+def readVec4(file):                         return unpack('<4f', file.read(4 * 4))
 
-def readBoolArray(file, length):        return tuple(readBool(file) for _ in range(length))
-def readBool32Array(file, length):      return tuple(readBool32(file) for _ in range(length))
-def readUShortArray(file, length):      return unpack(f'{ length }H', file.read(2 * length))
-def readShortArray(file, length):       return unpack(f'{ length }h', file.read(2 * length))
-def readUIntArray(file, length):        return tuple(readUInt(file) for _ in range(length))
-def readIntArray(file, length):         return tuple(readInt(file) for _ in range(length))
-def readFloatArray(file, length):       return tuple(readFloat(file) for _ in range(length))
-def readVec2Array(file, length):        return tuple(readVec2(file) for _ in range(length))
-def readVec3Array(file, length):        return tuple(readVec3(file) for _ in range(length))
-def readVec4Array(file, length):        return tuple(readVec4(file) for _ in range(length))
-def readString(file, length):           return (str(file.read(length), 'utf-8').split('\x00', 1)[0]).strip()
+def readBoolArray(file, length):            return unpack(f'<{ length }?', file.read(length))
+def readBool32Array(file, length):          return tuple(readBool32(file) for _ in range(length))
+def readUShortArray(file, length):          return unpack(f'<{ length }H', file.read(2 * length))
+def readShortArray(file, length):           return unpack(f'<{ length }h', file.read(2 * length))
+def readUIntArray(file, length):            return unpack(f'<{ length }I', file.read(4 * length))
+def readIntArray(file, length):             return unpack(f'<{ length }i', file.read(4 * length))
+def readFloatArray(file, length):           return unpack(f'<{ length }f', file.read(4 * length))
+def readVec2Array(file, length):            return tuple(iter_unpack(f'<2f', file.read(2 * 4 * length)))
+def readVec3Array(file, length):            return tuple(iter_unpack(f'<3f', file.read(3 * 4 * length)))
+def readVec4Array(file, length):            return tuple(iter_unpack(f'<4f', file.read(4 * 4 * length)))
+def readString(file, length):               return str(file.read(length), 'utf-8').split('\x00', 1)[0].strip()
 
-def writeBytes(file, data):             file.write(int.from_bytes(data, sys.byteorder).to_bytes(len(data), 'little'))
-def writeShort(file, data):             file.write(data.to_bytes(2, 'little'))
-def writeInt(file, data):               file.write(data.to_bytes(4, 'little'))
-
-'''
-'''
 def readUV2(file):
     x, y = readVec2(file)
 
@@ -53,28 +49,7 @@ def readUV3(file):
     y = -y
 
     return Vector((x, y))
-'''
-'''
 
-'''
-def readUV2(file):
-    x, y = readVec2(file)
-
-    y = -y
-
-    return tuple((x, y))
-
-def readUV3(file):
-    x, y = readVec2(file)
-    skipBytes(file, 4)
-
-    y = -y
-
-    return tuple((x, y))
-'''
-
-'''
-'''
 def readCoordinate(file, convertUnits, flipY):
     coord = Vector(readVec3(file))
 
@@ -96,14 +71,10 @@ def readPlane(file, flipY):
     if flipY: plane.y = -plane.y
 
     return plane.normalized()
-'''
-'''
 
 def readUV2Array(file, length): return tuple(readUV2(file) for _ in range(length))
 def readUV3Array(file, length): return tuple(readUV3(file) for _ in range(length))
 
-'''
-'''
 def readCoordinateArray(file, length, convertUnits, flipY):
     result = []
 
@@ -143,6 +114,7 @@ def readTransform(file, convertUnits, flipY):
     mat.transpose()
 
     loc, rot, sca = mat.decompose()
+
     if convertUnits: loc *= 0.01
     if flipY:
         loc.y = -loc.y
@@ -157,104 +129,6 @@ def readBounds(file, convertUnits, flipY):
     max = Vector(readCoordinate(file, convertUnits, flipY))
 
     return (min, max)
-'''
-'''
-
-'''
-def readCoordinate(file, convertUnits, flipY):
-    coord = [f for f in readVec3(file)]
-
-    if convertUnits:
-        coord[0] *= 0.01
-        coord[1] *= 0.01
-        coord[2] *= 0.01
-    if flipY: coord[1] = -coord[1]
-
-    return tuple(coord)
-
-def readDirection(file, flipY):
-    dir = [f for f in readVec3(file)]
-
-    if flipY: dir[1] = -dir[1]
-
-    length = math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2])
-    if length != 0:
-        dir[0] /= length
-        dir[1] /= length
-        dir[2] /= length
-
-    return tuple(dir)
-
-def readPlane(file, flipY):
-    plane = [f for f in readVec4(file)]
-
-    if flipY: plane[1] = -plane[1]
-
-    length = math.sqrt(plane[0] * plane[0] + plane[1] * plane[1] + plane[2] * plane[2])
-    if length != 0:
-        plane[0] /= length
-        plane[1] /= length
-        plane[2] /= length
-
-    return tuple(plane)
-
-def readCoordinateArray(file, length, convertUnits, flipY):
-    result = []
-
-    for coord in readVec3Array(file, length):
-        coord = [f for f in coord]
-        if convertUnits:
-            coord[0] *= 0.01
-            coord[1] *= 0.01
-            coord[2] *= 0.01
-        if flipY: coord[1] = -coord[1]
-
-        result.append(coord)
-
-    return tuple(result)
-
-def readDirectionArray(file, length, flipY):
-    result = []
-
-    for dir in readVec3Array(file, length):
-        dir = [f for f in dir]
-
-        if flipY: dir[1] = -dir[1]
-
-        length = math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2])
-        if length != 0:
-            dir[0] /= length
-            dir[1] /= length
-            dir[2] /= length
-
-        result.append(dir)
-
-    return tuple(result)
-
-def readPlaneArray(file, length, flipY):
-    result = []
-
-    for plane in readVec4Array(file, length):
-        plane = [f for f in plane]
-
-        if flipY: plane[1] = -plane[1]
-
-        length = math.sqrt(plane[0] * plane[0] + plane[1] * plane[1] + plane[2] * plane[2])
-        if length != 0:
-            plane[0] /= length
-            plane[1] /= length
-            plane[2] /= length
-
-        result.append(plane)
-
-    return tuple(result)
-
-def readBounds(file, convertUnits, flipY):
-    min = [c for c in readCoordinate(file, convertUnits, flipY)]
-    max = [c for c in readCoordinate(file, convertUnits, flipY)]
-
-    return (min, max)
-'''
 
 def readPath(file, length):
     path = readString(file, length)
@@ -263,3 +137,105 @@ def readPath(file, length):
         path = os.path.normpath(path)
 
     return path
+
+def writeBytes(file, data):                 file.write(int.from_bytes(data, sys.byteorder).to_bytes(len(data), 'little'))
+def writeChar(file, data):                  file.write(pack('<b', data))
+def writeUChar(file, data):                 file.write(pack('<B', data))
+def writeCharBool(file, data):              writeChar(file, -1 if not data else 1)
+def writeBool(file, data):                  file.write(pack('<?', data))
+def writeBool32(file, data):                writeUInt(file, int(data))
+def writeUShort(file, data):                file.write(pack('<H', data))
+def writeShort(file, data):                 file.write(pack('<h', data))
+def writeUInt(file, data):                  file.write(pack('<I', data))
+def writeInt(file, data):                   file.write(pack('<i', data))
+def writeFloat(file, data):                 file.write(pack('<f', data))
+def writeVec2(file, data):                  file.write(pack('<2f', *data))
+def writeVec3(file, data):                  file.write(pack('<3f', *data))
+def writeVec4(file, data):                  file.write(pack('<4f', *data))
+
+def writeBoolArray(file, data):             file.write(pack(f'<{ len(data) }?', *data))
+def writeBool32Array(file, data):           file.write(pack(f'<{ len(data) }I', *tuple(int(d) for d in data)))
+def writeUShortArray(file, data):           file.write(pack(f'<{ len(data) }H', *data))
+def writeShortArray(file, data):            file.write(pack(f'<{ len(data) }h', *data))
+def writeUIntArray(file, data):             file.write(pack(f'<{ len(data) }I', *data))
+def writeIntArray(file, data):              file.write(pack(f'<{ len(data) }i', *data))
+def writeFloatArray(file, data):            file.write(pack(f'<{ len(data) }f', *data))
+def writeVec2Array(file, data):             file.write(pack(f'<{ 2 * len(data) }f', *tuple(chain.from_iterable(data))))
+def writeVec3Array(file, data):             file.write(pack(f'<{ 3 * len(data) }f', *tuple(chain.from_iterable(data))))
+def writeVec4Array(file, data):             file.write(pack(f'<{ 4 * len(data) }f', *tuple(chain.from_iterable(data))))
+def writeString(file, data, length):        file.write(pack(f'<{ length }s', bytes(data, 'utf-8')))
+
+def writeUV2(file, uv):
+    uv.y = -uv.y
+
+    writeVec2(file, uv[:2])
+
+def writeUV3(file, uv):
+    uv.y = -uv.y
+
+    writeVec3(file, (uv[0], uv[1], 0.0))
+
+def writeCoordinate(file, coord, convertUnits, flipY):
+    if convertUnits: coord *= 100
+    if flipY: coord.y = -coord.y
+
+    writeVec3(file, coord[:3])
+
+def writeDirection(file, dir, flipY):
+    if flipY: dir.y = -dir.y
+
+    writeVec3(file, dir.normalized()[:3])
+
+def writePlane(file, plane, flipY):
+    if flipY: plane.y = -plane.y
+
+    writeVec4(file, plane.normalized()[:4])
+
+def writeUV2Array(file, uvs):
+    for uv in uvs:
+        uv.y = -uv.y
+
+    writeVec2Array(file, tuple(uv[:2] for uv in uvs))
+
+def writeUV3Array(file, uvs):
+    for uv in uvs:
+        uv.y = -uv.y
+
+    writeVec3Array(file, tuple((uv[0], uv[1], 0.0) for uv in uvs))
+
+def writeCoordinateArray(file, coords, convertUnits, flipY):
+    for coord in coords:
+        if convertUnits: coord *= 100
+        if flipY: coord.y = -coord.y
+
+    writeVec3Array(file, tuple(coord[:3] for coord in coords))
+
+def writeDirectionArray(file, dirs, flipY):
+    for dir in dirs:
+        if flipY: dir.y = -dir.y
+
+    writeVec3Array(file, tuple(dir[:3] for dir in dirs))
+
+def writePlaneArray(file, planes, flipY):
+    for plane in planes:
+        if flipY: plane.y = -plane.y
+
+        plane.normalize()
+
+    writeVec4Array(file, tuple(plane[:4] for plane in planes))
+
+def writeTransform(file, transform, convertUnits, flipY):
+    loc, rot, sca = transform.decompose()
+
+    if convertUnits: loc *= 100
+    if flipY:
+        loc.y = -loc.y
+
+        rot.x = -rot.x
+        rot.z = -rot.z
+
+    writeVec4Array(file, tuple(Matrix.LocRotScale(loc, rot, sca).transposed()))
+
+def writeBounds(file, bounds, convertUnits, flipY):
+    writeCoordinate(file, bounds[0], convertUnits, flipY)
+    writeCoordinate(file, bounds[1], convertUnits, flipY)

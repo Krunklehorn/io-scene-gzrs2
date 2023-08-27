@@ -32,26 +32,39 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import bpy, os, io, shutil, array
-from struct import pack
-from mathutils import Vector
+import bpy, os, io, math, shutil
 
-from .constants_gzrs2 import *
+from dataclasses import dataclass
+
 from .classes_gzrs2 import *
 from .io_gzrs2 import *
 from .lib_gzrs2 import *
 
 def exportLm(self, context):
+    state = RSLMExportState()
+
+    state.doUVs = self.doUVs
+    state.lmVersion4 = self.lmVersion4
+
+    if self.panelLogging:
+        print()
+        print("=======================================================================")
+        print("===========================  RSLM Export  =============================")
+        print("=======================================================================")
+        print(f"== { self.filepath }")
+        print("=======================================================================")
+        print()
+
     lmpath = self.filepath
     directory = os.path.dirname(lmpath)
     basename = os.path.basename(lmpath)
     splitname = basename.split(os.extsep)
     filename = splitname[0]
 
-    if self.doUVs:
+    if state.doUVs:
         blMeshObj = context.active_object
 
-        if blMeshObj is None or blMeshObj.type != 'MESH':
+        if blMeshObj is None or blMeshObj.type != 'MESH' or not blMeshObj.select_get():
             self.report({ 'ERROR' }, "GZRS2: Lightmap UV export requires an active mesh object with valid UVs in channel 3!")
             return { 'CANCELLED' }
 
@@ -75,7 +88,7 @@ def exportLm(self, context):
         version = readUInt(file)
 
         if not (id == RS2_ID or id == RS3_ID) or version < RS3_VERSION1:
-            self.report({ 'ERROR' }, f"GZRS2: RS header invalid! { hex(id) }, { version }")
+            self.report({ 'ERROR' }, f"GZRS2: RS header invalid! { hex(id) }, { hex(version) }")
             file.close()
 
             return { 'CANCELLED' }
@@ -98,7 +111,7 @@ def exportLm(self, context):
             lmPolygonCount = readUInt(file)
             lmVertexCount = readInt(file)
         else:
-            self.report({ 'ERROR' }, f"GZRS2: RS file must be for GunZ 1! { hex(id) }, { version }")
+            self.report({ 'ERROR' }, f"GZRS2: RS file must be for GunZ 1! { hex(id) }, { hex(version) }")
             file.close()
 
             return { 'CANCELLED' }
@@ -161,7 +174,7 @@ def exportLm(self, context):
         self.report({ 'ERROR' }, "GZRS2: No valid lightmap found! Image must be a square, power of two texture and the name must match \'<mapname>_LmImage\' or \'<mapname>_LmAtlas<# of cells>\'")
         return { 'CANCELLED' }
 
-    if self.doUVs:
+    if state.doUVs:
         # newPolyIDs = bytearray(lmPolygonCount * 4)
         newIndices = bytearray(lmPolygonCount * 4)
         newUVs = bytearray(lmVertexCount * 2 * 4)
@@ -193,31 +206,41 @@ def exportLm(self, context):
     fileSize = file.tell()
     file.seek(0, os.SEEK_SET)
 
-    id = readUInt(file)
-    version = readUInt(file)
+    if state.logLmHeaders or state.logLmImages:
+        print("===================  Write Lm  ===================")
+        print()
+
+    if state.logLmHeaders:
+        print(f"Path:               { lmpath }")
+        print(f"ID:                 { hex(id) }")
+        print(f"Version:            { hex(version) }")
+        print()
 
     if id != R_LM_ID or (version != R_LM_VERSION and version != R_LM_VERSION_EXT):
-        self.report({ 'ERROR' }, f"GZRS2: Lm header invalid! { hex(id) }, { version }")
+        self.report({ 'ERROR' }, f"GZRS2: Lm header invalid! { hex(id) }, { hex(version) }")
         file.close()
 
         return { 'CANCELLED' }
+
+    id = readUInt(file)
+    version = readUInt(file)
 
     skipBytes(file, 4 + 4) # skip invalid polygon count and unused node count
 
     for _ in range(readUInt(file)):
         skipBytes(file, readUInt(file)) # skip image data
 
-    if self.doUVs:
+    if state.doUVs:
         lmData = file.read(4 * lmPolygonCount) # TODO: if we can determine the polygon IDs ourselves, we can just skip the originals
     else:
         lmData = file.read(fileSize - file.tell())
 
     file.seek(4, os.SEEK_SET)
-    writeInt(file, R_LM_VERSION_EXT if self.lmVersion4 else R_LM_VERSION)
+    writeUInt(file, R_LM_VERSION_EXT if state.lmVersion4 else R_LM_VERSION)
 
     skipBytes(file, 4 + 4) # skip invalid polygon count and unused node count
 
-    writeInt(file, len(imageDatas))
+    writeUInt(file, len(imageDatas))
 
     pixelCount = imageSize ** 2
 
@@ -225,54 +248,54 @@ def exportLm(self, context):
     bmpSize = 14 + 40 + pixelCount * 3
 
     for d, imageData in enumerate(imageDatas):
-        if self.lmVersion4:
-            writeInt(file, ddsSize)
+        if state.lmVersion4:
+            writeUInt(file, ddsSize)
 
             # DDS header
             writeBytes(file, b'DDS ')
-            writeInt(file, ddsSize)
-            # writeInt(file, DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_MIPMAPCOUNT | DDSD_LINEARSIZE)
-            writeInt(file, DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_LINEARSIZE)
+            writeUInt(file, ddsSize)
+            # writeUInt(file, DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_MIPMAPCOUNT | DDSD_LINEARSIZE)
+            writeUInt(file, DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_LINEARSIZE)
             writeInt(file, imageSize)
             writeInt(file, imageSize)
-            writeInt(file, pixelCount // 2)
-            writeInt(file, 0)
-            # writeInt(file, mipCount)
-            writeInt(file, 0)
+            writeUInt(file, pixelCount // 2)
+            writeUInt(file, 0)
+            # writeUInt(file, mipCount)
+            writeUInt(file, 0)
             for _ in range(11):
-                writeInt(file, 0)
+                writeUInt(file, 0)
 
-            writeInt(file, 32)
-            writeInt(file, DDPF_FOURCC)
+            writeUInt(file, 32)
+            writeUInt(file, DDPF_FOURCC)
             writeBytes(file, b'DXT1')
             for _ in range(5):
-                writeInt(file, 0)
+                writeUInt(file, 0)
 
-            # writeInt(file, DDSCAPS_COMPLEX | DDSCAPS_TEXTURE | DDSCAPS_MIPMAP)
-            writeInt(file, DDSCAPS_TEXTURE)
+            # writeUInt(file, DDSCAPS_COMPLEX | DDSCAPS_TEXTURE | DDSCAPS_MIPMAP)
+            writeUInt(file, DDSCAPS_TEXTURE)
             for _ in range(4):
-                writeInt(file, 0)
+                writeUInt(file, 0)
         else:
-            writeInt(file, bmpSize)
+            writeUInt(file, bmpSize)
 
             # BMP header
             writeBytes(file, b'BM')
-            writeInt(file, bmpSize)
+            writeUInt(file, bmpSize)
             writeShort(file, 0)
             writeShort(file, 0)
-            writeInt(file, 14 + 40)
+            writeUInt(file, 14 + 40)
 
-            writeInt(file, 40)
-            writeInt(file, imageSize)
-            writeInt(file, imageSize)
+            writeUInt(file, 40)
+            writeUInt(file, imageSize)
+            writeUInt(file, imageSize)
             writeShort(file, 1)
             writeShort(file, 24)
             for _ in range(6):
-                writeInt(file, 0)
+                writeUInt(file, 0)
 
         file.write(imageData)
 
-    if self.doUVs:
+    if state.doUVs:
         file.write(lmData) # file.write(newPolyIDInts)
         file.write(newIndices)
         file.write(newUVs)

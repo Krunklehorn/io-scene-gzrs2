@@ -1,9 +1,12 @@
-from dataclasses import dataclass, field
+import bpy
 
-import bpy, io, mathutils
+from dataclasses import dataclass, field
 from io import StringIO
+
 from bpy.types import Material, ShaderNode, Mesh, Object, Armature, Bone
 from mathutils import Vector, Matrix
+
+
 
 @dataclass
 class GZRS2State:
@@ -48,8 +51,8 @@ class GZRS2State:
     logVerboseWeights:  bool = False
     logCleanup:         bool = False
 
-    gzrsTexDir:         str = ""
-    gzrsTexDict:        dict = field(default_factory = dict)
+    rs3TexDir:          str = ""
+    rs3TexDict:         dict = field(default_factory = dict)
     gzrsValidBones:     set = field(default_factory = set)
     blTexImages:        dict = field(default_factory = dict)
     blMatNodes:         dict = field(default_factory = dict)
@@ -164,14 +167,14 @@ class RsPortal:
 class RsCell:
     name:               str = ""
     planes:             tuple = field(default_factory = tuple)
-    faces:              list = field(default_factory = list)
-    geometry:           list = field(default_factory = list)
+    faces:              tuple = field(default_factory = tuple)
+    geometry:           tuple = field(default_factory = tuple)
 
 @dataclass
 class RsGeometry:
     vertexCount:        int = 0
     indexCount:         int = 0
-    trees:              list = field(default_factory = list)
+    trees:              tuple = field(default_factory = tuple)
 
 @dataclass
 class RsTree:
@@ -212,16 +215,16 @@ class EluMeshNode:
     meshName:           str = ""
     parentName:         str = ""
     drawFlags:          int = 0
-    transform:          Matrix = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-    vertices:           list = field(default_factory = list)
-    normals:            list = field(default_factory = list)
-    uv1s:               list = field(default_factory = list)
-    uv2s:               list = field(default_factory = list)
-    colors:             list = field(default_factory = list)
-    faces:              list = field(default_factory = list)
-    weights:            list = field(default_factory = list)
-    slots:              list = field(default_factory = list)
-    slotIDs:            list = field(default_factory = list)
+    transform:          Matrix = ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))
+    vertices:           tuple = field(default_factory = tuple)
+    normals:            tuple = field(default_factory = tuple)
+    uv1s:               tuple = field(default_factory = tuple)
+    uv2s:               tuple = field(default_factory = tuple)
+    colors:             tuple = field(default_factory = tuple)
+    faces:              tuple = field(default_factory = tuple)
+    weights:            tuple = field(default_factory = tuple)
+    slots:              tuple = field(default_factory = tuple)
+    slotIDs:            tuple = field(default_factory = tuple)
     isDummy:            bool = False
     matID:              int = 0
 
@@ -235,18 +238,19 @@ class EluIndex:
 @dataclass
 class EluFace:
     degree:             int = 0
-    ipos:               list = field(default_factory = list)
-    inor:               list = field(default_factory = list)
-    iuv1:               list = field(default_factory = list)
-    iuv2:               list = field(default_factory = list)
+    ipos:               tuple = field(default_factory = tuple)
+    inor:               tuple = field(default_factory = tuple)
+    iuv1:               tuple = field(default_factory = tuple)
+    iuv2:               tuple = field(default_factory = tuple)
     slotID:             int = 0
 
 @dataclass
 class EluWeight:
     degree:             int = 0
-    meshName:           list = field(default_factory = list)
-    meshID:             list = field(default_factory = list)
-    value:              list = field(default_factory = list)
+    meshNames:          list = field(default_factory = list)
+    meshIDs:            list = field(default_factory = list)
+    values:             list = field(default_factory = list)
+    offsets:            tuple = field(default_factory = tuple)
 
 @dataclass
 class EluPhysInfo:
@@ -267,3 +271,82 @@ class EluSlot:
 class LmImage:
     size:               int = 0
     data:               tuple = field(default_factory = tuple)
+
+##########################
+####    ELU EXPORT    ####
+##########################
+
+@dataclass
+class RSELUExportState:
+    convertUnits:           bool = False
+    selectedOnly:           bool = False
+    includeChildren:        bool = False
+
+    logEluHeaders:          bool = False
+    logEluMats:             bool = False
+    logEluMeshNodes:        bool = False
+    logVerboseIndices:      bool = False
+    logVerboseWeights:      bool = False
+
+@dataclass
+class EluMaterialExport:
+    matID:              int = 0
+    subMatID:           int = 0
+    ambient:            Vector = (0, 0, 0, 0)
+    diffuse:            Vector = (0, 0, 0, 0)
+    specular:           Vector = (0, 0, 0, 0)
+    power:              float = 0.0
+    subMatCount:        int = 0
+    texpath:            str = ""
+    alphapath:          str = ""
+    twosided:           bool = False
+    additive:           bool = False
+    alphatest:          int = 0
+
+@dataclass
+class EluMeshNodeExport:
+    meshName:           str = ""
+    parentName:         str = ""
+    transform:          Matrix = ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))
+    apScale:            Vector = (0, 0, 0)
+    rotAA:              Vector = (0, 0, 0, 0)
+    scaleAA:            Vector = (0, 0, 0, 0)
+    etcMatrix:          Matrix = ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))
+    vertexCount:        int = 0
+    vertices:           tuple = field(default_factory = tuple)
+    faceCount:          int = 0
+    faces:              tuple = field(default_factory = tuple)
+    colorCount:         int = 0
+    colors:             tuple = field(default_factory = tuple)
+    matID:              int = 0
+    weightCount:        int = 0
+    weights:            tuple = field(default_factory = tuple)
+    slotIDs:            tuple = field(default_factory = tuple)
+
+@dataclass
+class EluFaceExport:
+    indices:            tuple = field(default_factory = tuple)
+    uv1s:               tuple = field(default_factory = tuple)
+    slotID:             int = 0
+    normal:             Vector = (0, 0, 0)
+    normals:            tuple = field(default_factory = tuple)
+
+@dataclass
+class EluWeightExport:
+    meshNames:          tuple = field(default_factory = tuple)
+    values:             tuple = field(default_factory = tuple)
+    meshIDs:            tuple = field(default_factory = tuple)
+    degree:             int = 0
+    offsets:            tuple = field(default_factory = tuple)
+
+#########################
+####    LM EXPORT    ####
+#########################
+
+@dataclass
+class RSLMExportState:
+    doUVs:              bool = False
+    lmVersion4:         bool = False
+
+    logLmHeaders:       bool = False
+    logLmImages:        bool = False

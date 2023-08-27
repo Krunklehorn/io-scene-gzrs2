@@ -10,6 +10,8 @@ else:
     XML_EXTENSIONS =            ['xml', 'XML']
     COL_EXTENSIONS =            ['col', 'COL', 'cl2', 'CL2']
 
+RS2_VALID_DATA_SUBDIRS =        ['Interface', 'Maps', 'Model', 'Quest', 'Sfx', 'Shader', 'Sound', 'System']
+
 RS2_ID =                        0x12345678
 RS2_VERSION =                   7
 RS3_ID =                        0xface5678
@@ -73,9 +75,9 @@ AS_2D =                         0x10
 AS_3D =                         0x20
 
 ELU_ID =                        0x0107f060
-ELU_0 =                         0x0             # GunZ: The Duel, Alpha/Beta
+ELU_0 =                         0x0             # Mangled 0x5007
 ELU_11 =                        0x11
-ELU_5001 =                      0x5001
+ELU_5001 =                      0x5001          # GunZ: The Duel, Alpha/Beta
 ELU_5002 =                      0x5002
 ELU_5003 =                      0x5003
 ELU_5004 =                      0x5004          # GunZ: The Duel, Client
@@ -100,8 +102,10 @@ ELU_VERSIONS =                  [ ELU_0, ELU_11, ELU_5001, ELU_5002, ELU_5003, E
                                   ELU_5008, ELU_5009, ELU_500A, ELU_500B, ELU_500C, ELU_500D, ELU_500E, ELU_500F, ELU_5010,
                                   ELU_5011, ELU_5012, ELU_5013, ELU_5014 ]
 
-ELU_SUPPORTED_VERSIONS =        [ ELU_5004, ELU_5005, ELU_5006, ELU_5007, ELU_5008, ELU_5009, ELU_500A, ELU_500B, ELU_500C,
+ELU_IMPORT_VERSIONS =           [ ELU_0, ELU_11, ELU_5004, ELU_5005, ELU_5006, ELU_5007, ELU_5008, ELU_5009, ELU_500A, ELU_500B, ELU_500C,
                                   ELU_500D, ELU_500E, ELU_500F, ELU_5010, ELU_5011 ]
+
+ELU_EXPORT_VERSIONS =           [ ELU_5007 ]
 
 ELU_NAME_LENGTH =               40
 ELU_PATH_LENGTH =               256
