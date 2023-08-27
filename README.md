@@ -1,24 +1,28 @@
 # ***io_scene_gzrs2***
 
-GunZ: The Duel RealSpace2/3 content importer for Blender 3.6.1 and up.  
-Intended for users wishing to visualize GunZ content, prepare the data for a modern game engine or bake and export a lightmap.
+GunZ: The Duel RealSpace2/3 content importer for Blender 3.6.2 and up.  
+Intended for users wishing to visualize and modify GunZ content or prepare the data for a modern game engine.
 
 Please report bugs and unimplemented features to: ***Krunk#6051***
 
 RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-map-1204327/***
 
-[***DOWNLOAD v0.9.1***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.9.1/io_scene_gzrs2_v0.9.1.zip)
+[***DOWNLOAD v0.9.2***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.9.2/io_scene_gzrs2_v0.9.2.zip)
 
 
 # Latest Update
-* NEW: GunZ 2 scene.xml, prop.xml and .cl2 support
-* NEW: GunZ 1 .lm support, both import and export
-* NEW: Experimental .col cleanup recipe
-* Improved .col import discards non-hull geometry
-* Improved resource caching reduces load times
-* Improved material logic prevents unnecessary duplicates
-* Fixed issues with negative material IDs in GunZ 2 .elus
-* Fixed issues with white halos on alpha textures in render mode (Town)
+
+* NEW: .elu version 0x0 and 0x11 import support
+* NEW: .elu export support
+* Elu meshes now support multiple material slots
+* Elu meshes now include cloth physics data as color attributes
+* Elu materials now include...
+	* empty texture nodes for missing textures
+	* value nodes for material ID, sub-material ID and sub-material count
+	* RGB nodes for ambient, diffuse and specular colors
+* Elu logging now includes extra min/max information for some fields
+* Users are now warned if an .rs, .elu, .col or .lm file has bytes remaining after a successful read
+* Naming conventions are a bit tidier
 
 
 # Current Import Features
@@ -38,15 +42,64 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 # Current Export Features
 
-* supported filetypes: .lm (overwrite only)
-* can export lightmap image data as well as UVs
-  * requires an active mesh object with valid UVs in channel 3
+### Elus
+
+* GunZ 1 version 0x5007
+* supports both static and skinned meshes
+* automatically triangulates quads
+
+<!-- -->
+
+* exports smooth normals if custom split normals are included and auto-smooth is enabled
+* exports bone weight data from vertex groups
+* exports UV data from UV channel 0
+* exports cloth physics data from color attribute channel 0
+
+<!-- -->
+
+
+* requires unique names for all bones across all connected armatures
+* requires that vertex group names correspond to valid bones in a modifier-linked (not parented!) armature object
+* requires valid materials in each slot, if present
+
+###### Required Nodes
+
+| Type | Label<br />(right click -> rename) | Socket Configuration |
+| :---: | :---: | :---: |
+| Material Output* || BSDF -> Surface |
+| Principled BSDF* || BSDF -> Surface |
+| Value* | matID ||
+
+###### Optional Nodes
+
+| Type | Default | Label<br />(right click -> rename) | Details |
+| :---: | :---: | :---: | :---: |
+| Image Texture | N/A | If labeled, represents a path relative to GunZ.exe | If included, Color -> PBSDF Base Color is required |
+| Value | 0 | subMatID | May be required for certain effects |
+| Value | 0 | subMatCount | May be required for certain effects |
+| RGB | 0.588, 0.588, 0.588 | ambient ||
+| RGB | 0.588, 0.588, 0.588 | diffuse ||
+| RGB | 0.9, 0.9, 0.9 | specular ||
+
+###### Transparency Settings
+
+| Style | Blend Mode | Details | Socket Configuration |
+| :---: | :---: | :---: | :---: |
+| Alpha Blending | Alpha Hashed || Image Texture Alpha -> PBSDF Alpha |
+| Alpha Testing | Alpha Clip || Image Texture Alpha -> PBSDF Alpha |
+| Additive | Alpha Blend || Image Texture Color -> PBSDF Emission |
+| Two-sided || Controlled by the Backface Culling option ||
+
+### Lightmaps
+
+* overwrite only
+* supports image data as well as UVs
   * requires a GunZ 1 .rs file for the same map in the same directory
+  * UV export requires an active mesh object with valid UVs in channel 3
 * includes experimental "version 4" for bugfixes and DXT1 support (thanks to DeffJay)
   * version 4 lightmaps take less space and load faster, resolutions up to 8k are now viable
   * they require client changes and do not work with vanilla GunZ
   * contact Krunk#6051 for information on how to implement this
-
 
 # Planned Features
 
