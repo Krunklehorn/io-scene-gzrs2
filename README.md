@@ -35,7 +35,8 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 * displays lightmaps using a linked node group for quick toggling
 * creates a driver object for quickly tuning lights and fog
 * notifies the user of..
-  * missing textures and empty texture paths
+  * missing textures and empty texture paths during import
+	* invalid texture paths during export (see below)
   * out-of-bounds and unused material slots
   * unimplemented xml tags
 
@@ -89,6 +90,29 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 | Alpha Testing | Alpha Clip || Image Texture Alpha -> PBSDF Alpha |
 | Additive | Alpha Blend || Image Texture Color -> PBSDF Emission |
 | Two-sided || Controlled by the Backface Culling option ||
+
+###### Notes on texture paths, labels and valid data subdirectories...
+
+In Blender, if an Image Texture node does not use a label, it will simply display the name of whatever image data block it is assigned to.
+
+The path Blender uses to refer to an image on disk is not always relative to your .elu's export directory. It may also contain two filetype extensions, the latter of which should be omitted in the context of the RealSpace2 engine.
+
+To work around this, the plugin will search the image path for a valid RealSpace2 data subdirectory so that the path written to the .elu is relative to GunZ.exe. It will also remove the second extension if multiple are present. (ex: tex.bmp.dds -> tex.bmp)
+
+If you get this error during export...
+
+    Unable to determine data path for texture in ELU material!
+
+...this means the image path does not contain a valid RealSpace2 data subdirectory.
+Valid data subdirectories are...
+
+    'Interface', 'Maps', 'Model', 'Quest', 'Sfx', 'Shader', 'Sound' or 'System'
+
+This check is not case sensitive.
+
+You can override this check by labeling an Image Texture node, (right click -> rename) allowing explicit control over what path is written.
+
+During import, texture paths without a directory, valid or not, apply this override automatically to preserve their behavior when loaded by RealSpace2.
 
 ### Lightmaps
 

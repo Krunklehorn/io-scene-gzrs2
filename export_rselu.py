@@ -155,6 +155,10 @@ def exportElu(self, context):
             blMat1 = blMatSlot.material
             found = False
 
+            if blMat1 is None:
+                self.report({ 'ERROR' }, "GZRS2: Attempted to export ELU mesh with an empty material slot! Check the GitHub page for what makes a valid ELU material!")
+                return { 'CANCELLED' }
+
             for id2, blMat2 in enumerate(blMats):
                 if blMat1 == blMat2:
                     matIndices.append(id2)
@@ -415,7 +419,7 @@ def exportElu(self, context):
 
                 if version >= ELU_5005:
                     normal = triangle.normal.copy()
-                    normals = tuple(reversed(tuple(blMesh.loops[triangle.loops[i]].normal.copy() for i in range(3)))) if useCustomNormals else tuple(normal.copy(), normal.copy(), normal.copy())
+                    normals = tuple(reversed(tuple(blMesh.loops[triangle.loops[i]].normal.copy() for i in range(3)))) if useCustomNormals else (normal.copy(), normal.copy(), normal.copy())
                 else:
                     normal = None
                     normals = None
@@ -435,8 +439,13 @@ def exportElu(self, context):
                 colorCount = 0
                 colors = ()
 
-            eluMatID = eluMats[matIndices[s]].matID
-            s += len(blObj.material_slots)
+            matSlotCount = len(blObj.material_slots)
+            if matSlotCount > 0:
+                for ms in range(matSlotCount):
+                    eluMatID = eluMats[matIndices[s + ms]].matID
+                s += matSlotCount
+            else:
+                eluMatID = 0
 
             if state.logEluMeshNodes:
                 matIDs.add(eluMatID)
@@ -458,7 +467,7 @@ def exportElu(self, context):
                     total = sum(pair[0] for pair in pairs)
 
                     boneNames = tuple(pair[1] for pair in pairs)
-                    values = tuple(pair[0] / total for pair in pairs)
+                    values = tuple(pair[0] / total if total != 0.0 else pair[0] for pair in pairs)
                     meshIDs = tuple(eluIDs[boneName] if boneName != '' else 0 for boneName in boneNames)
                     offsets = tuple(eluInvMatrices[meshID] @ vertexWorld if meshID != 0 else Vector((0, 0, 0)) for meshID in meshIDs)
                     degree = min(ELU_PHYS_KEYS, degree)
