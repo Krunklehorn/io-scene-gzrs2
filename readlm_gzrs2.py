@@ -32,7 +32,7 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import math
+import math, io
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
@@ -40,7 +40,7 @@ from .io_gzrs2 import *
 from .lib_gzrs2 import *
 
 def readLm(self, path, state):
-    file = open(path, 'rb')
+    file = io.open(path, 'rb')
 
     if state.logLmHeaders or state.logLmImages:
         print("===================  Read Lm  ===================")
@@ -110,7 +110,7 @@ def readLm(self, path, state):
             state.lmImages.append(LmImage(width, tuple(readUChar(file) / 255.0 for _ in range(width * height * 3))))
         elif type == 'DD':
             skipBytes(file, 2)
-            ddsSize = readUInt(file)
+            skipBytes(file, 4) # skip dds size
             ddsFlags = readUInt(file)
             width = readUInt(file)
             height = readUInt(file)

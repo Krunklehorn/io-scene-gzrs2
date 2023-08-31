@@ -34,8 +34,6 @@
 
 import bpy, os, io, math, shutil
 
-from dataclasses import dataclass
-
 from .classes_gzrs2 import *
 from .io_gzrs2 import *
 from .lib_gzrs2 import *
@@ -82,7 +80,7 @@ def exportLm(self, context):
             self.report({ 'ERROR' }, "GZRS2: Lightmap UV export requires a GunZ 1 .rs file for the same map in the same directory!")
             return { 'CANCELLED' }
 
-        file = open(rspath, 'rb')
+        file = io.open(rspath, 'rb')
 
         id = readUInt(file)
         version = readUInt(file)
@@ -200,7 +198,7 @@ def exportLm(self, context):
 
     shutil.copy2(lmpath, os.path.join(directory, filename + "_backup") + '.' + splitname[1] + '.' + splitname[2])
 
-    file = open(lmpath, 'r+b')
+    file = io.open(lmpath, 'r+b')
 
     file.seek(0, os.SEEK_END)
     fileSize = file.tell()

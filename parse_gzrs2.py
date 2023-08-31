@@ -1,5 +1,4 @@
 import os
-import xml.dom.minidom as minidom
 
 from collections import defaultdict
 
@@ -8,20 +7,6 @@ from mathutils import Vector
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
 from .lib_gzrs2 import *
-
-'''
-from constants_gzrs2 import *
-from dataclasses import dataclass, field
-from lib_gzrs2 import *
-import re as regex
-
-@dataclass
-class GZRS2State:
-    convertUnits:       bool = False
-
-    logSceneNodes:      bool = True
-    logEluMats:         bool = True
-'''
 
 def filterNodes(childNodes):
     for child in filter(lambda x: x.nodeType == x.ELEMENT_NODE, childNodes):
@@ -38,32 +23,12 @@ def parseVec3(data, nodeName, convertUnits, flipY):
     if nodeName in ['POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT'] and convertUnits: vec *= 0.01
     if flipY and nodeName in ['POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT']: vec.y = -vec.y
 
-    '''
-    vec = [float(s) for s in data.split(' ')]
-    if nodeName in ['POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT'] and convertUnits:
-        vec[0] *= 0.01
-        vec[1] *= 0.01
-        vec[2] *= 0.01
-    if flipY and nodeName in ['POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT']:
-        vec[1] = -vec[1]
-    '''
-
     return vec
 
 def parseXYZ(node, nodeName, convertUnits, flipY):
     vec = Vector((float(node.getAttribute('x')), float(node.getAttribute('y')), float(node.getAttribute('z'))))
     if nodeName in ['POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT'] and convertUnits: vec *= 0.01
     if flipY and nodeName in ['POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT']: vec.y = -vec.y
-
-    '''
-    vec = [float(node.getAttribute('x')), float(node.getAttribute('y')), float(node.getAttribute('z'))]
-    if nodeName in ['POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT'] and convertUnits:
-        vec[0] *= 0.01
-        vec[1] *= 0.01
-        vec[2] *= 0.01
-    if flipY and nodeName in ['POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT']:
-        vec[1] = -vec[1]
-    '''
 
     return vec
 
@@ -190,9 +155,9 @@ def parseSceneXML(self, xmlScene, xmlName, state):
                             data = data.strip()
 
                         instanceEntry['resourcename'] = data
-                    elif not childName in ['UMBRAID', 'USESELECTUPDATE_HAVEVISIBLE', 'USESELECTUPDATE_HAVEANI']:
+                    elif childName not in ['UMBRAID', 'USESELECTUPDATE_HAVEVISIBLE', 'USESELECTUPDATE_HAVEANI']:
                         instanceEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SCENEINSTANCE')
-            elif not nodeName in ['SCENE', 'USER_PROPERTY']:
+            elif nodeName not in ['SCENE', 'USER_PROPERTY']:
                 instanceEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'SCENEINSTANCE')
 
         if state.logSceneNodes:
@@ -203,7 +168,7 @@ def parseSceneXML(self, xmlScene, xmlName, state):
             print("         Up:                 ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*instanceEntry['UP']))
             print("         Scale:              ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*instanceEntry['SCALE']))
             for k, v in instanceEntry.items():
-                if not k in ['type', 'name', 'resourcename', 'POSITION', 'DIRECTION', 'UP', 'SCALE']:
+                if k not in ['type', 'name', 'resourcename', 'POSITION', 'DIRECTION', 'UP', 'SCALE']:
                     print(f"        { k }: { v }")
             print()
 
@@ -290,7 +255,7 @@ def parseSceneXML(self, xmlScene, xmlName, state):
                 for child, childName, data in filterNodes(node.childNodes):
                     if childName in ['POSITION', 'SCALE']:
                         pointlightEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
-                    elif not childName in ['DIRECTION', 'UP']:
+                    elif childName not in ['DIRECTION', 'UP']:
                         pointlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'POINTLIGHT')
             elif nodeName in ['PROPERTY']:
                 for child, childName, data in filterNodes(node.childNodes):
@@ -300,7 +265,7 @@ def parseSceneXML(self, xmlScene, xmlName, state):
                         pointlightEntry[childName] = parseDistance(data, state.convertUnits)
                     elif childName in ['COLOR', 'AREARANGE']:
                         pointlightEntry[childName] = tuple(float(s) for s in data.split(' '))
-                    elif not childName in ['FOV']:
+                    elif childName not in ['FOV']:
                         pointlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'POINTLIGHT')
             else:
                 pointlightEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'POINTLIGHT')
@@ -329,7 +294,7 @@ def parseSceneXML(self, xmlScene, xmlName, state):
                         effectEntry['resourcename'] = data
                     else:
                         effectEntry[childName] = parseUnknown(self, data, childName, xmlName, 'EFFECTINSTANCE')
-            elif not nodeName in ['SCENE', 'USER_PROPERTY']:
+            elif nodeName not in ['SCENE', 'USER_PROPERTY']:
                 effectEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'EFFECTINSTANCE')
 
         nodeEntries.append(effectEntry)
@@ -394,9 +359,9 @@ def parsePropXML(self, xmlProp, xmlName, state):
 
                         if childName in ['NAME']: objectEntry['name'] = data
                         else: objectEntry['resourcename'] = data
-                    elif not childName in ['Show', 'PartsColor', 'CameraCollision', 'UMBRAID']:
+                    elif childName not in ['Show', 'PartsColor', 'CameraCollision', 'UMBRAID']:
                         objectEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SCENEOBJECT')
-            elif not nodeName in ['TOOL']:
+            elif nodeName not in ['TOOL']:
                 objectEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'SCENEOBJECT')
 
         if state.logSceneNodes:
@@ -406,7 +371,7 @@ def parsePropXML(self, xmlProp, xmlName, state):
             print("         Direction:          ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*objectEntry['DIRECTION']))
             print("         Up:                 ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*objectEntry['UP']))
             for k, v in objectEntry.items():
-                if not k in ['type', 'id', 'name', 'resourcename', 'POSITION', 'DIRECTION', 'UP']:
+                if k not in ['type', 'id', 'name', 'resourcename', 'POSITION', 'DIRECTION', 'UP']:
                     print(f"        { k }: { v }")
             print()
 
@@ -479,64 +444,10 @@ def parseEluXML(self, xmlElu, state):
                 print(f"        ALPHATESTVALUE: { materialEntry['ALPHATESTVALUE'] }")
 
             for k, v in materialEntry.items():
-                if not k in ['type', 'name', 'textures', 'DIFFUSE', 'AMBIENT', 'SPECULAR', 'SPECULAR_LEVEL', 'GLOSSINESS', 'SELFILLUSIONSCALE', 'ALPHATESTVALUE']:
+                if k not in ['type', 'name', 'textures', 'DIFFUSE', 'AMBIENT', 'SPECULAR', 'SPECULAR_LEVEL', 'GLOSSINESS', 'SELFILLUSIONSCALE', 'ALPHATESTVALUE']:
                     print(f"        { k }: { v }")
             print()
 
         materialEntries.append(materialEntry)
 
     return materialEntries
-
-'''
-class TestSelf:
-    def report(self, t, s):
-        print(s)
-
-testpaths = [
-    "..\\..\\GunZ2\\Changzu\\Data\\Maps\\pvp_mansion2\\pvp_mansion2.scene.xml",
-    "..\\..\\GunZ2\\Changzu\\Data\\Maps\\pvp_mansion2\\pvp_mansion2.prop.xml",
-    "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Maps\\PvP_maps\\pvp_market_town\\pvp_market_town.prop.xml",
-    "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Model\\MapObject\\S_01\\pvp_market_town\\pvp_market_town_final.scene.xml"
-]
-
-for testpath in testpaths:
-    splitname = os.path.basename(testpath).split(os.extsep)
-    filename = splitname[0]
-    xmltype = splitname[-2].lower()
-
-    print(f"{ filename } { testpath }")
-
-    with open(path) as file:
-        string = file.read()
-        string = regex.sub(r"(<Umbra Synchronization[^>]+\/>)", '', string)
-
-    if xmltype == 'scene': parseSceneXML(TestSelf(), minidom.parseString(string), filename, GZRS2State())
-    elif xmltype == 'prop': parsePropXML(TestSelf(), minidom.parseString(string), filename, GZRS2State())
-
-testElupaths = {
-'ELU_0': "..\\..\\GunZ\\clean\\Model\\weapon\\blade\\blade_2011_4lv.elu.xml",
-'ELU_5004': "..\\..\\GunZ\\clean\\Model\\weapon\\rocketlauncher\\rocket.elu.xml",
-'ELU_5005': "..\\..\\GunZ\\clean\\Model\\weapon\\dagger\\dagger04.elu.xml",
-'ELU_5006': "..\\..\\GunZ\\clean\\Model\\weapon\\katana\\katana10.elu.xml",
-'ELU_5007': "..\\..\\GunZ\\clean\\Model\\weapon\\blade\\blade07.elu.xml",
-
-'ELU_5008': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\sky_daytime_cloudy.elu.xml",
-'ELU_5009': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\sky_night_nebula.elu.xml",
-'ELU_500A': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\weather_rainy.elu.xml",
-'ELU_500B': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\weather_heavy_rainy.elu.xml",
-'ELU_500C': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\mdk\\RealSpace3\\Runtime\\TestRS3\\Data\\Model\\MapObject\\login_water_p_01.elu.xml",
-'ELU_500D': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\mdk\\RealSpace3\\Runtime\\Mesh\\goblin_commander\\goblin_commander.elu.xml",
-'ELU_500E': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\colony_machinegun01.elu.xml",
-'ELU_500F': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\healcross.elu.xml",
-'ELU_5010': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\weapon\\eq_ws_smg_06.elu.xml",
-
-'ELU_5011': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Assassin\Male\\Assassin_Male_01.elu.xml",
-'ELU_5012': "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Model\\MapObject\\Props\\Box\\Wood_Box\\prop_box_wood_01a.elu.xml",
-'ELU_5013': "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Model\\weapon\\character_weapon\\Knife\\Wpn_knife_0001.elu.xml",
-'ELU_5014': "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Model\\weapon\\character_weapon\\Katana\\Wpn_katana_0002.elu.xml"
-}
-
-for version, testpath in testElupaths.items():
-print(f"{ version } { testpath }")
-parseEluXML(TestSelf(), minidom.parse(testpath), GZRS2State())
-'''

@@ -32,17 +32,17 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import os, math
+import os, io
 
-import struct
-from struct import unpack
+# import struct
+# from struct import unpack
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
 from .io_gzrs2 import *
 
 def readRs(self, path, state):
-    file = open(path, 'rb')
+    file = io.open(path, 'rb')
 
     if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsLeaves or state.logRsVerts:
         print("===================  Read RS  ===================")
@@ -160,7 +160,7 @@ def readRs(self, path, state):
         if len(state.rsVerts) != state.lmVertexCount:
             self.report({ 'ERROR' }, f"GZRS2: Bsp vertex count did not match vertices written! { len(state.rsVerts) }, { state.lmVertexCount }")
     elif id == RS3_ID and version >= RS3_VERSION1:
-        if not version in RS_SUPPORTED_VERSIONS:
+        if version not in RS_SUPPORTED_VERSIONS:
             self.report({ 'ERROR' }, f"GZRS2: RS3 version is not supported yet! Model will not load properly! Please submit to Krunk#6051 for testing! { path }, { hex(version) }")
             file.close()
 
@@ -197,8 +197,7 @@ def readRs(self, path, state):
             geometry = []
             for g in range(geometryCount):
                 if version >= RS3_VERSION2: skipBytes(file, 4) # skip FVF flags
-                skipBytes(file, 4) # skip node count
-                polyInfoCount = readInt(file)
+                skipBytes(file, 4 + 4) # skip node count and polygon info count
                 geoVertexCount = readInt(file)
                 indexCount = readInt(file)
 

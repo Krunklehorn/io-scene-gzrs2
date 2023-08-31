@@ -32,7 +32,7 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import bpy, os, io, math
+import bpy, os, math
 import xml.dom.minidom as minidom
 
 from mathutils import Vector, Matrix
@@ -125,7 +125,7 @@ def importElu(self, context):
 
     if len(state.gzrsValidBones) > 0:
         state.blArmature = bpy.data.armatures.new("Armature")
-        state.blArmatureObj = bpy.data.objects.new(f"Armature", state.blArmature)
+        state.blArmatureObj = bpy.data.objects.new("Armature", state.blArmature)
 
         state.blArmatureObj.display_type = 'WIRE'
         state.blArmatureObj.show_in_front = True
@@ -140,7 +140,7 @@ def importElu(self, context):
         reorientLocal = Matrix.Rotation(math.radians(-90.0), 4, 'Z') @ Matrix.Rotation(math.radians(-90.0), 4, 'Y')
 
         for eluMesh, blMeshOrDummyObj in state.blObjPairs:
-            if not eluMesh.meshName in state.gzrsValidBones:
+            if eluMesh.meshName not in state.gzrsValidBones:
                 continue
 
             editBone = state.blArmature.edit_bones.new(eluMesh.meshName)
@@ -212,7 +212,7 @@ def importElu(self, context):
 
         for child, childObj in state.blObjPairs:
             isBone = child.meshName in state.gzrsValidBones
-            noParentBone = not child.parentName in state.gzrsValidBones
+            noParentBone = child.parentName not in state.gzrsValidBones
             isNubDummy = isBone and child.isDummy and 'Nub' in child.meshName
             isNotRoot = child.meshName != 'Bip01'
 

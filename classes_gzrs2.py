@@ -1,12 +1,8 @@
-import bpy
-
 from dataclasses import dataclass, field
 from io import StringIO
 
-from bpy.types import Material, ShaderNode, Mesh, Object, Armature, Bone
+from bpy.types import Material, ShaderNode, Mesh, Object, Armature
 from mathutils import Vector, Matrix
-
-
 
 @dataclass
 class GZRS2State:
@@ -15,7 +11,7 @@ class GZRS2State:
     directory:          str = ""
 
     convertUnits:       bool = False
-    meshMode:           str = False
+    meshMode:           str = ""
     doCleanup:          bool = False
     doCollision:        bool = False
     doLightmap:         bool = False

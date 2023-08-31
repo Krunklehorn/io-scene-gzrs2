@@ -32,14 +32,14 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import os, math
+import os, io
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
 from .io_gzrs2 import *
 
 def readCol(self, path, state):
-    file = open(path, 'rb')
+    file = io.open(path, 'rb')
 
     if state.logColHeaders or state.logColNodes or state.logColTris:
         print("===================  Read Col  ===================")
@@ -186,37 +186,3 @@ def readCol(self, path, state):
         print()
 
     file.close()
-
-'''
-testpaths = [
-    "..\\..\\GunZ\\clean\\Maps\\Battle Arena\\Battle Arena.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Castle\\Castle.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Catacomb\\Catacomb.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Citadel\\Citadel.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Dungeon\\Dungeon.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Factory\\Factory.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Garden\\Garden.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Hall\\Hall.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Halloween Town\\Halloween Town.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\High_Haven\\High_Haven.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Island\\Island.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Jail\\Jail.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Lost Shrine\\Lost Shrine.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Mansion\\Mansion.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Port\\Port.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Prison\\Prison.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Prison II\\Prison II.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Ruin\\Ruin.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Shower Room\\Shower Room.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Ruin\\Ruin.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Snow_Town\\Snow_Town.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Stairway\\Stairway.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Station\\Station.RS.col",
-    "..\\..\\GunZ\\clean\\Maps\\Town\\Town.RS.col",
-    "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Maps\\PvP_maps\\pvp_beast_of_steel\\pvp_beast_of_steel.cl2",
-    "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Maps\\PvP_maps\\pvp_colosseum\\pvp_colosseum.cl2",
-    "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Maps\\PvP_maps\\pvp_lair_of_beast\\pvp_lair_of_beast.cl2",
-    "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Maps\\PvP_maps\\pvp_mansion_gt\\pvp_mansion_gt.cl2",
-    "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Maps\\PvP_maps\\pvp_pier5\\pvp_pier5.cl2"
-]
-'''

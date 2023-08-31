@@ -32,7 +32,7 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import math
+import math, io
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
@@ -40,7 +40,7 @@ from .io_gzrs2 import *
 from .lib_gzrs2 import *
 
 def readElu(self, path, state):
-    file = open(path, 'rb')
+    file = io.open(path, 'rb')
 
     if state.logEluHeaders or state.logEluMats or state.logEluMeshNodes:
         print("===================  Read Elu  ===================")
@@ -63,13 +63,13 @@ def readElu(self, path, state):
         print(f"Mesh Count:         { meshCount }")
         print()
 
-    if id != ELU_ID or not version in ELU_VERSIONS:
+    if id != ELU_ID or version not in ELU_VERSIONS:
         self.report({ 'ERROR' }, f"GZRS2: ELU header invalid! { hex(id) }, { hex(version) }")
         file.close()
 
         return { 'CANCELLED' }
 
-    if not version in ELU_IMPORT_VERSIONS:
+    if version not in ELU_IMPORT_VERSIONS:
         self.report({ 'ERROR' }, f"GZRS2: Importing this ELU version is not supported yet! Model will not load properly! { path }, { hex(version) }")
         file.close()
 
@@ -358,8 +358,6 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
             maxWeightValue = float('-inf')
             minWeightID = -1
             maxWeightID = -1
-            minWeightOffset = Vector((float('inf'), float('inf'), float('inf')))
-            maxWeightOffset = Vector((float('-inf'), float('-inf'), float('-inf')))
             minWeightName = 'ERROR'
             maxWeightName = 'ERROR'
 
@@ -407,13 +405,11 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
                     if weightValue < minWeightValue:
                         minWeightValue = weightValue
                         minWeightID = weightID
-                        minWeightOffset = weightOffset
                         minWeightName = weightName
 
                     if weightValue > maxWeightValue:
                         maxWeightValue = weightValue
                         maxWeightID = weightID
-                        maxWeightOffset = weightOffset
                         maxWeightName = weightName
 
                     if state.logVerboseWeights:
@@ -483,7 +479,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
         # visibility = readFloat(file) if version >= ELU_500A else None
         skipBytes(file, 4) # skip visibility
 
-        lightmapID = -1
+        # lightmapID = -1
 
         # RMeshNodeLoadImpl.cpp -> LoadVertex()
         if version < ELU_5011:
@@ -596,7 +592,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
         if state.logEluMeshNodes:
             print("Slot IDs:           {{{}}}".format(', '.join(map(str, slotIDs))))
 
-        #LoadVertexInfo
+        # LoadVertexInfo
         colors = readVec3Array(file, readUInt(file))
         if state.logEluMeshNodes:
             output = "Colors:             {:<6d}".format(len(colors))
@@ -660,7 +656,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             output += "      Min:  {:>5.02f}  {:<14d}    Max:  {:>5.02f}  {:<14d}".format(minWeightValue, minWeightID, maxWeightValue, maxWeightID) if weightCount > 0 else ''
             print(output)
 
-        #LoadEtc
+        # LoadEtc
         for _ in range(readUInt(file)): skipBytes(file, 4 * 4 * 4 + 2) # skip bone etc matrices and indices
 
         '''
@@ -734,37 +730,3 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
                                            vertices, normals, uv1s, uv2s,
                                            colors, tuple(faces), tuple(weights), tuple(slots),
                                            slotIDs, isDummy, eluMatID))
-
-'''
-class TestSelf:
-    def report(self, t, s):
-        print(s)
-
-testpaths = {
-    'ELU_0': "..\\..\\GunZ\\clean\\Model\\weapon\\blade\\blade_2011_4lv.elu",
-    'ELU_5004': "..\\..\\GunZ\\clean\\Model\\weapon\\rocketlauncher\\rocket.elu",
-    'ELU_5005': "..\\..\\GunZ\\clean\\Model\\weapon\\dagger\\dagger04.elu",
-    'ELU_5006': "..\\..\\GunZ\\clean\\Model\\weapon\\katana\\katana10.elu",
-    'ELU_5007': "..\\..\\GunZ\\clean\\Model\\weapon\\blade\\blade07.elu",
-
-    'ELU_5008': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\sky_daytime_cloudy.elu.xml",
-    'ELU_5009': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\sky_night_nebula.elu.xml",
-    'ELU_500A': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\weather_rainy.elu.xml",
-    'ELU_500B': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Sky\\weather_heavy_rainy.elu.xml",
-    'ELU_500C': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\mdk\\RealSpace3\\Runtime\\TestRS3\\Data\\Model\\MapObject\\login_water_p_01.elu.xml",
-    'ELU_500D': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\mdk\\RealSpace3\\Runtime\\Mesh\\goblin_commander\\goblin_commander.elu.xml",
-    'ELU_500E': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\colony_machinegun01.elu.xml",
-    'ELU_500F': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\healcross.elu.xml",
-    'ELU_5010': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\weapon\\eq_ws_smg_06.elu.xml",
-
-    'ELU_5011': "..\\..\\GunZ2\\Trinityent\\Gunz2\\Develop\\Gunz2\\Runtime\\Data\\Model\\Assassin\Male\\Assassin_Male_01.elu.xml",
-    'ELU_5012': "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Model\\MapObject\\Props\\Box\\Wood_Box\\prop_box_wood_01a.elu.xml",
-    'ELU_5013': "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Model\\weapon\\character_weapon\\Knife\\Wpn_knife_0001.elu.xml",
-    'ELU_5014': "..\\..\\GunZ2\\z3ResEx\\datadump\\Data\\Model\\weapon\\character_weapon\\Katana\\Wpn_katana_0002.elu.xml"
-}
-
-for version, testpath in testpaths.items():
-    print(f"{ version } { testpath }")
-
-    readElu(TestSelf(), testpath, GZRS2State(logEluHeaders = True, logEluMats = True, logEluMeshNodes = True))
-'''

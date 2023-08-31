@@ -32,11 +32,11 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import bpy, os, io, math
+import bpy, os, math
 import xml.dom.minidom as minidom
 import re as regex
 
-from mathutils import Vector, Matrix
+from mathutils import Matrix
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
@@ -78,12 +78,12 @@ def importRs3(self, context):
         scenexmlpath = xmlpath
 
         for ext in XML_EXTENSIONS:
-            propxmlpath = pathExists(f"{ state.directory }\{ state.filename }.prop.{ ext }")
+            propxmlpath = pathExists(f"{ state.directory }\\{ state.filename }.prop.{ ext }")
     elif xmltype == 'prop':
         propxmlpath = xmlpath
 
         for ext in XML_EXTENSIONS:
-            scenexmlpath = pathExists(f"{ state.directory }\{ state.filename }.scene.{ ext }")
+            scenexmlpath = pathExists(f"{ state.directory }\\{ state.filename }.scene.{ ext }")
 
     if scenexmlpath:
         with open(scenexmlpath) as file:
@@ -135,7 +135,7 @@ def importRs3(self, context):
             elif node['type'] in ['ACTOR']:
                 node['elupath'] = resourcepath
 
-                if not resourcepath in elupaths:
+                if resourcepath not in elupaths:
                     elupaths.add(resourcepath)
 
                     readElu(self, resourcepath, state)
@@ -177,7 +177,7 @@ def importRs3(self, context):
         print()
 
     for m, eluMesh in enumerate(state.eluMeshes):
-        if not eluMesh.elupath in state.blActorRoots:
+        if eluMesh.elupath not in state.blActorRoots:
             blActorRoot = collections.new(f"{ eluMesh.meshName }_Actor")
             rootActors.children.link(blActorRoot)
             state.blActorRoots[eluMesh.elupath] = blActorRoot

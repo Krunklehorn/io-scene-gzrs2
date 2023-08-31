@@ -1,3 +1,6 @@
+from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rslm
+from . import export_rselu, export_rslm
+
 bl_info = {
     "name": "GZRS2/3 Format",
     "author": "Krunklehorn",
@@ -18,16 +21,11 @@ if "bpy" in locals():
     if "import_rslm" in locals(): importlib.reload(import_rslm)
     if "export_rselu" in locals(): importlib.reload(export_rselu)
     if "export_rslm" in locals(): importlib.reload(export_rslm)
-
-import bpy
-from bpy.types import Operator, Panel
-from bpy_extras.io_utils import ImportHelper, ExportHelper
-from bpy.props import BoolProperty, StringProperty, EnumProperty
-
-from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rslm
-from . import export_rselu, export_rslm
-
-from .constants_gzrs2 import *
+else:
+    import bpy
+    from bpy.types import Operator, Panel
+    from bpy_extras.io_utils import ImportHelper, ExportHelper
+    from bpy.props import BoolProperty, StringProperty, EnumProperty
 
 def cleanse_modules():
     import sys
@@ -35,7 +33,7 @@ def cleanse_modules():
     all_modules = sys.modules
     all_modules = dict(sorted(all_modules.items(), key = lambda x: x[0]))
 
-    for k,v in all_modules.items():
+    for k, v in all_modules.items():
         if k.startswith(__name__):
             del sys.modules[k]
 

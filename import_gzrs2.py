@@ -188,8 +188,8 @@ def importRs2(self, context):
             readElu(self, elupath, state)
 
     if state.doFog and not state.doLights:
-            state.doFog = False
-            self.report({ 'INFO' }, "Fog data but no lights, fog volume will not be generated.")
+        state.doFog = False
+        self.report({ 'INFO' }, "Fog data but no lights, fog volume will not be generated.")
 
     state.doLightDrivers =   state.doLightDrivers and state.doLights
     state.doFogDriver =      state.doFogDriver and state.doFog
@@ -242,10 +242,10 @@ def importRs2(self, context):
 
             if lcRoot is not None:
                 for lcExtras in lcRoot.children:
-                        if lcExtras.collection is rootExtras:
-                            for lcBspBounds in lcExtras.children:
-                                if lcBspBounds.collection is rootBspBounds:
-                                    lcBspBounds.hide_viewport = True
+                    if lcExtras.collection is rootExtras:
+                        for lcBspBounds in lcExtras.children:
+                            if lcBspBounds.collection is rootBspBounds:
+                                lcBspBounds.hide_viewport = True
             else:
                 self.report({ 'INFO' }, f"GZRS2: Unable to find root collection in view layer: { viewLayer }")
 
@@ -440,7 +440,7 @@ def importRs2(self, context):
             bpy.ops.object.mode_set(mode = 'OBJECT')
 
     if state.doLights:
-        for l, light in enumerate(state.xmlLits):
+        for light in state.xmlLits:
             name = light['name']
             softness = (light['ATTENUATIONEND'] - light['ATTENUATIONSTART']) / light['ATTENUATIONEND']
             hardness = 0.001 / (1 - min(softness, 0.9999))
@@ -557,7 +557,7 @@ def importRs2(self, context):
             space = '2D' if type[0] == 'a' else '3D'
             shape = 'AABB' if type[1] == '0' else 'SPHERE'
 
-            if (shape == 'AABB' and not ('MIN_POSITION' in sound and 'MAX_POSITION' in sound)) or (shape == 'SPHERE' and not 'CENTER' in sound):
+            if (shape == 'AABB' and not ('MIN_POSITION' in sound and 'MAX_POSITION' in sound)) or (shape == 'SPHERE' and 'CENTER' not in sound):
                 skippedSounds.append(s)
                 continue
 
@@ -735,7 +735,7 @@ def importRs2(self, context):
             p1 = Vector((math.inf, math.inf, math.inf))
             p2 = Vector((-math.inf, -math.inf, -math.inf))
 
-            for l, litObj in enumerate(state.blLightObjs):
+            for litObj in state.blLightObjs:
                 p1.x = min(p1.x, litObj.location.x)
                 p1.y = min(p1.y, litObj.location.y)
                 p1.z = min(p1.z, litObj.location.z)

@@ -1,9 +1,9 @@
-import sys, os, math
+import sys, os
 
 from struct import pack, unpack, iter_unpack
 from itertools import chain
 
-from mathutils import Vector, Matrix, Quaternion
+from mathutils import Vector, Matrix
 
 def skipBytes(file, length):                return file.seek(length, 1)
 
@@ -30,9 +30,9 @@ def readShortArray(file, length):           return unpack(f'<{ length }h', file.
 def readUIntArray(file, length):            return unpack(f'<{ length }I', file.read(4 * length))
 def readIntArray(file, length):             return unpack(f'<{ length }i', file.read(4 * length))
 def readFloatArray(file, length):           return unpack(f'<{ length }f', file.read(4 * length))
-def readVec2Array(file, length):            return tuple(iter_unpack(f'<2f', file.read(2 * 4 * length)))
-def readVec3Array(file, length):            return tuple(iter_unpack(f'<3f', file.read(3 * 4 * length)))
-def readVec4Array(file, length):            return tuple(iter_unpack(f'<4f', file.read(4 * 4 * length)))
+def readVec2Array(file, length):            return tuple(iter_unpack('<2f', file.read(2 * 4 * length)))
+def readVec3Array(file, length):            return tuple(iter_unpack('<3f', file.read(3 * 4 * length)))
+def readVec4Array(file, length):            return tuple(iter_unpack('<4f', file.read(4 * 4 * length)))
 def readString(file, length):               return str(file.read(length), 'utf-8').split('\x00', 1)[0].strip()
 
 def readUV2(file):

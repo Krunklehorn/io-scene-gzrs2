@@ -32,9 +32,7 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import bpy, os, shutil
-
-from dataclasses import dataclass
+import os, io, shutil
 
 from mathutils import Vector, Matrix
 
@@ -115,7 +113,7 @@ def exportElu(self, context):
                 blArmatureObj = modifier.object if modifier is not None and modifier.object.type == 'ARMATURE' else None
                 blArmature = blArmatureObj.data if blArmatureObj is not None else None
 
-                if blArmature is not None and not blArmatureObj in blArmatureObjs:
+                if blArmature is not None and blArmatureObj not in blArmatureObjs:
                     blArmatureObj.update_from_editmode()
                     blArmatureObjs.append(blArmatureObj)
 
@@ -123,7 +121,7 @@ def exportElu(self, context):
                         blBoneName = blBone.name
 
                         if blBoneName.startswith(("Bip01", "Bone")):
-                            if not blBoneName in blBoneNames:
+                            if blBoneName not in blBoneNames:
                                 blBoneNames.append(blBone.name)
                             else:
                                 self.report({ 'ERROR' }, "GZRS2: ELU export requires unique names for all bones across all connected armatures!")
@@ -476,7 +474,6 @@ def exportElu(self, context):
 
                 weights = tuple(weights)
             else:
-                groupLookup = ()
                 weightCount = 0
                 weights = ()
         else:
@@ -569,8 +566,6 @@ def exportElu(self, context):
                 maxWeightValue = float('-inf')
                 minWeightID = -1
                 maxWeightID = -1
-                minWeightOffset = Vector((float('inf'), float('inf'), float('inf')))
-                maxWeightOffset = Vector((float('-inf'), float('-inf'), float('-inf')))
                 minWeightName = 'ERROR'
                 maxWeightName = 'ERROR'
 
@@ -599,13 +594,11 @@ def exportElu(self, context):
                         if weightValue < minWeightValue:
                             minWeightValue = weightValue
                             minWeightID = weightID
-                            minweightOffset = weightOffset
                             minWeightName = weightName
 
                         if weightValue > maxWeightValue:
                             maxWeightValue = weightValue
                             maxWeightID = weightID
-                            maxweightOffset = weightOffset
                             maxWeightName = weightName
 
                     if state.logVerboseWeights:
@@ -637,18 +630,18 @@ def exportElu(self, context):
         print(f"Mesh Count:         { meshCount }")
         print()
 
-    if id != ELU_ID or not version in ELU_VERSIONS:
+    if id != ELU_ID or version not in ELU_VERSIONS:
         self.report({ 'ERROR' }, f"GZRS2: ELU header invalid! { hex(id) }, { hex(version) }")
         return { 'CANCELLED' }
 
-    if not version in ELU_EXPORT_VERSIONS:
+    if version not in ELU_EXPORT_VERSIONS:
         self.report({ 'ERROR' }, f"GZRS2: Exporting this ELU version is not supported yet! { elupath }, { hex(version) }")
         return { 'CANCELLED' }
 
     if os.path.isfile(elupath):
         shutil.copy2(elupath, os.path.join(directory, filename + "_backup") + '.' + splitname[1])
 
-    file = open(elupath, 'wb')
+    file = io.open(elupath, 'wb')
 
     writeUInt(file, id)
     writeUInt(file, version)

@@ -1,4 +1,4 @@
-import bpy, os, math, time
+import bpy, os, math
 
 from contextlib import redirect_stdout
 
@@ -192,7 +192,7 @@ def lcFindRoot(lc, collection):
 def getTexImage(bpy, texpath, alphamode, state):
     texImages = state.blTexImages.setdefault(texpath, {})
 
-    if not alphamode in texImages:
+    if alphamode not in texImages:
         image = bpy.data.images.load(texpath)
         image.alpha_mode = alphamode
         texImages[alphamode] = image
@@ -222,7 +222,6 @@ def getMatNode(bpy, blMat, nodes, texpath, alphamode, x, y, state):
         elif not haveAlphaMode:
             matNodes[texpath][alphamode] = texture
 
-
     return matNodes[texpath][alphamode]
 
 def setupErrorMat(state):
@@ -236,7 +235,9 @@ def setupErrorMat(state):
     state.blErrorMat = blErrorMat
 
 def setupEluMat(self, eluMat, state):
+    elupath = eluMat.elupath
     matID = eluMat.matID
+
     subMatID = eluMat.subMatID
     subMatCount = eluMat.subMatCount
     ambient = eluMat.ambient
@@ -252,13 +253,25 @@ def setupEluMat(self, eluMat, state):
     texDir = eluMat.texDir
 
     for eluMat2, blMat2 in state.blEluMatPairs:
-        if (subMatID == eluMat2.subMatID and subMatCount == eluMat2.subMatCount and
-            compareColors(ambient, eluMat2.ambient) and compareColors(diffuse, eluMat2.diffuse) and compareColors(specular, eluMat2.specular) and
-            math.isclose(power, eluMat2.power, rel_tol = 0.01) and math.isclose(alphatest, eluMat2.alphatest, rel_tol = 0.01) and
-            useopacity == eluMat2.useopacity and twosided == eluMat2.twosided and additive == eluMat2.additive and
-            texName == eluMat2.texName and texBase == eluMat2.texBase and texDir == eluMat2.texDir):
-            state.blEluMats.setdefault(eluMat.elupath, {})[matID] = blMat2
-            return
+        if subMatID !=       eluMat2.subMatID:       continue
+        if subMatCount !=    eluMat2.subMatCount:    continue
+
+        if not compareColors(ambient,    eluMat2.ambient):   continue
+        if not compareColors(diffuse,    eluMat2.diffuse):   continue
+        if not compareColors(specular,   eluMat2.specular):  continue
+
+        if not math.isclose(power,       eluMat2.power,      rel_tol = 0.01): continue
+        if not math.isclose(alphatest,   eluMat2.alphatest,  rel_tol = 0.01): continue
+
+        if not useopacity    == eluMat2.useopacity:  continue
+        if not twosided      == eluMat2.twosided:    continue
+        if not additive      == eluMat2.additive:    continue
+        if not texName       == eluMat2.texName:     continue
+        if not texBase       == eluMat2.texBase:     continue
+        if not texDir        == eluMat2.texDir:      continue
+
+        state.blEluMats.setdefault(elupath, {})[matID] = blMat2
+        return
 
     blMat = bpy.data.materials.new(texName or f"Material_{ matID }_{ subMatID }")
     blMat.use_nodes = True
@@ -360,7 +373,7 @@ def setupEluMat(self, eluMat, state):
             tree.links.new(transparent.outputs[0], add.inputs[1])
             tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
 
-    state.blEluMats.setdefault(eluMat.elupath, {})[matID] = blMat
+    state.blEluMats.setdefault(elupath, {})[matID] = blMat
     state.blEluMatPairs.append((eluMat, blMat))
 
 def setupXmlEluMat(self, elupath, xmlEluMat, state):
@@ -372,31 +385,32 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     additive = xmlEluMat['ADDITIVE']
 
     for xmlEluMat2, blMat2 in state.blXmlEluMatPairs:
-        if (math.isclose(specular, xmlEluMat2['SPECULAR_LEVEL'], rel_tol = 0.01) and
-            math.isclose(glossiness, xmlEluMat2['GLOSSINESS'], rel_tol = 0.01) and
-            math.isclose(emission, xmlEluMat2['SELFILLUSIONSCALE'], rel_tol = 0.01) and
-            math.isclose(alphatest, xmlEluMat2['ALPHATESTVALUE'], rel_tol = 0.01) and
-            twosided == xmlEluMat2['TWOSIDED'] and additive == xmlEluMat2['ADDITIVE'] and
-            len(xmlEluMat['textures']) == len(xmlEluMat2['textures'])):
-            match = True
+        if not math.isclose(specular, xmlEluMat2['SPECULAR_LEVEL'], rel_tol = 0.01): continue
+        if not math.isclose(glossiness, xmlEluMat2['GLOSSINESS'], rel_tol = 0.01): continue
+        if not math.isclose(emission, xmlEluMat2['SELFILLUSIONSCALE'], rel_tol = 0.01): continue
+        if not math.isclose(alphatest, xmlEluMat2['ALPHATESTVALUE'], rel_tol = 0.01): continue
+        if not twosided == xmlEluMat2['TWOSIDED'] and additive == xmlEluMat2['ADDITIVE']: continue
+        if not len(xmlEluMat['textures']) == len(xmlEluMat2['textures']): continue
 
-            for t, texture in enumerate(xmlEluMat['textures']):
-                textype = texture['type']
-                texname = texture['name']
+        match = True
 
-                if textype in XMLELU_TEXTYPES and texname:
-                    texture2 = xmlEluMat2['textures'][t]
-                    textype2 = texture2['type']
-                    texname2 = texture2['name']
+        for t, texture in enumerate(xmlEluMat['textures']):
+            textype = texture['type']
+            texname = texture['name']
 
-                    if textype2 in XMLELU_TEXTYPES and texname2:
-                        if textype != textype2 or texname != texname2:
-                            match = False
-                            break
+            if textype in XMLELU_TEXTYPES and texname:
+                texture2 = xmlEluMat2['textures'][t]
+                textype2 = texture2['type']
+                texname2 = texture2['name']
 
-            if match:
-                state.blXmlEluMats.setdefault(elupath, []).append(blMat2)
-                return
+                if textype2 in XMLELU_TEXTYPES and texname2:
+                    if textype != textype2 or texname != texname2:
+                        match = False
+                        break
+
+        if match:
+            state.blXmlEluMats.setdefault(elupath, []).append(blMat2)
+            return
 
     blMat = bpy.data.materials.new(f"{ state.filename }_{ xmlEluMat['name'] }")
     blMat.use_nodes = True
@@ -650,7 +664,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
                     else:
                         meshID = weight.meshIDs[d]
 
-                    if not meshID in meshGroups:
+                    if meshID not in meshGroups:
                         boneName = state.eluMeshes[meshID].meshName
                         meshGroups[meshID] = blMeshObj.vertex_groups.new(name = boneName)
                         state.gzrsValidBones.add(boneName)
@@ -1084,26 +1098,26 @@ def compareLights(light1, light2):
                 math.isclose(light1.shadow_soft_size,    light2.shadow_soft_size,    rel_tol = 0.0001)))
 
 def groupLights(lights):
-        groups = []
-        skip = []
+    groups = []
+    skip = []
 
-        for l1, light1 in enumerate(lights):
-            if l1 in skip: continue
-            else: skip.append(l1)
+    for l1, light1 in enumerate(lights):
+        if l1 in skip: continue
+        else: skip.append(l1)
 
-            matches = [light1]
+        matches = [light1]
 
-            for l2, light2 in enumerate(lights):
-                if l2 in skip: continue
+        for l2, light2 in enumerate(lights):
+            if l2 in skip: continue
 
-                if compareLights(light1, light2):
-                    skip.append(l2)
-                    matches.append(light2)
+            if compareLights(light1, light2):
+                skip.append(l2)
+                matches.append(light2)
 
-            if len(lights) > 1:
-                groups.append(matches)
+        if len(lights) > 1:
+            groups.append(matches)
 
-        return groups
+    return groups
 
 def createArrayDriver(target, targetProp, sources, sourceProp):
     target[targetProp] = getattr(sources, sourceProp)
