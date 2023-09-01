@@ -47,6 +47,7 @@ def exportElu(self, context):
     state.convertUnits = self.convertUnits
     state.selectedOnly = self.selectedOnly
     state.includeChildren = self.includeChildren and self.selectedOnly
+    state.visibleOnly = self.visibleOnly
 
     if self.panelLogging:
         print()
@@ -81,12 +82,12 @@ def exportElu(self, context):
 
                 for child in object.children_recursive:
                     objects.add(child)
-
-            objects = tuple(objects)
         else:
             objects = context.selected_objects
     else:
         objects = context.scene.objects
+
+    objects = tuple(object for object in objects if object.visible_get()) if state.visibleOnly else tuple(objects)
 
     blObjs = []
     blArmatureObjs = []
@@ -112,6 +113,10 @@ def exportElu(self, context):
                 modifier = object.modifiers.get("Armature", None)
                 blArmatureObj = modifier.object if modifier is not None and modifier.object.type == 'ARMATURE' else None
                 blArmature = blArmatureObj.data if blArmatureObj is not None else None
+
+                if blArmatureObj is not None and (state.selectedOnly and not blArmatureObj.select_get() or state.visibleOnly and not blArmatureObj.visible_get()):
+                    blArmatureObj = None
+                    blArmature = None
 
                 if blArmature is not None and blArmatureObj not in blArmatureObjs:
                     blArmatureObj.update_from_editmode()
@@ -393,9 +398,17 @@ def exportElu(self, context):
             color1 = blMesh.color_attributes[0] if len(blMesh.color_attributes) > 0 else None
             vertexGroups = blObj.vertex_groups if len(blObj.vertex_groups) > 0 else None
 
+            modifier = blObj.modifiers.get("Armature", None)
+            blArmatureObj = modifier.object if modifier is not None and modifier.object.type == 'ARMATURE' else None
+            blArmature = blArmatureObj.data if blArmatureObj is not None else None
+
+            if blArmatureObj is not None and (state.selectedOnly and not blArmatureObj.select_get() or state.visibleOnly and not blArmatureObj.visible_get()):
+                blArmatureObj = None
+                blArmature = None
+
             hasUV1s = uvLayer1 is not None
             hasColors = color1 is not None
-            hasVGroups = vertexGroups is not None
+            hasVGroups = vertexGroups is not None and blArmature is not None
 
             if hasColors and (color1.data_type != 'FLOAT_COLOR' or color1.domain != 'POINT'):
                 self.report({ 'ERROR' }, f"GZRS2: Mesh with invalid color attribute! Colors must be stored as per-vertex float data! { meshName }")
@@ -455,10 +468,14 @@ def exportElu(self, context):
 
                 for v, vgroupInfos in enumerate(vgroupLookup):
                     pairs = []
-                    degree = len(vgroupInfos)
                     vertexWorld = worldMatrix @ vertices[v]
 
-                    for vgroupInfo in vgroupInfos: pairs.append((vgroupInfo.weight, vertexGroups[vgroupInfo.group].name))
+                    for vgroupInfo in vgroupInfos:
+                        boneName = vertexGroups[vgroupInfo.group].name
+                        if boneName in blBoneNames:
+                            pairs.append((vgroupInfo.weight, boneName))
+
+                    degree = len(pairs)
                     for _ in range(ELU_PHYS_KEYS - degree): pairs.append((0.0, ''))
 
                     pairs = sorted(pairs, reverse = True)[:ELU_PHYS_KEYS]

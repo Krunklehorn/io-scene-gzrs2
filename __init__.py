@@ -881,9 +881,15 @@ class ExportRSELU(Operator, ExportHelper):
         default = False
     )
 
+    visibleOnly: BoolProperty(
+        name = "Visible Only",
+        description = "Limit export to visible objects only",
+        default = False
+    )
+
     includeChildren: BoolProperty(
         name = "Include Children",
-        description = "Include children of selected objects",
+        description = "Include children of selected or visible objects",
         default = True
     )
 
@@ -947,6 +953,8 @@ class RSELU_PT_Export_Main(Panel):
         column = layout.column()
         column.prop(operator, "includeChildren")
         column.enabled = operator.selectedOnly
+
+        layout.prop(operator, "visibleOnly")
 
 class RSELU_PT_Export_Logging(Panel):
     bl_space_type = "FILE_BROWSER"

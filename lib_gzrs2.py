@@ -660,7 +660,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
                                 break
 
                         if not found:
-                            self.report({ 'ERROR' }, f"GZRS2: Named search failed to find mesh id for weight group: { meshName }, { parentName }")
+                            self.report({ 'ERROR' }, f"GZRS2: Named search failed to find mesh id for weight group: { meshName }, { parentMesh.meshName }")
                     else:
                         meshID = weight.meshIDs[d]
 
