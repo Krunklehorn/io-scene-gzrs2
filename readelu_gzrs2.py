@@ -161,7 +161,7 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
             if version >= ELU_5004: additive = readBool32(file)
             if version == ELU_5007: alphatest = readUInt(file)
 
-            useopacity = alphapath is not None and alphapath.lower().endswith('.tga')
+            useopacity = alphapath != '' and alphapath.lower().endswith('.tga') or alphapath.lower().endswith('.tga.dds')
 
         if state.logEluMats:
             print(f"Sub Mat Count:      { subMatCount }")

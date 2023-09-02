@@ -246,7 +246,7 @@ def exportElu(self, context):
             self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
             return { 'CANCELLED' }
 
-        bsdfPower = shader.inputs[7].default_value * 100
+        bsdfPower = (1 - shader.inputs[9].default_value) * 100
         if version <= ELU_5002:
             power = 20 if bsdfPower == 0 else bsdfPower
         else:

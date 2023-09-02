@@ -63,15 +63,15 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 * requires that vertex group names correspond to valid bones in a modifier-linked (not parented!) armature object
 * requires valid materials in each slot, if present
 
-###### Required Nodes
+##### Required Material Nodes
 
 | Type | Label<br />(right click -> rename) | Socket Configuration |
 | :---: | :---: | :---: |
-| Material Output* || BSDF -> Surface |
-| Principled BSDF* || BSDF -> Surface |
-| Value* | matID ||
+| Material Output || BSDF -> Surface |
+| Principled BSDF || BSDF -> Surface |
+| Value | matID ||
 
-###### Optional Nodes
+##### Optional Nodes
 
 | Type | Default | Label<br />(right click -> rename) | Details |
 | :---: | :---: | :---: | :---: |
@@ -82,16 +82,24 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 | RGB | 0.588, 0.588, 0.588 | diffuse ||
 | RGB | 0.9, 0.9, 0.9 | specular ||
 
-###### Transparency Settings
+##### Transparency Settings
 
 | Style | Blend Mode | Details | Socket Configuration |
 | :---: | :---: | :---: | :---: |
 | Alpha Blending | Alpha Hashed || Image Texture Alpha -> PBSDF Alpha |
 | Alpha Testing | Alpha Clip || Image Texture Alpha -> PBSDF Alpha |
 | Additive | Alpha Blend || Image Texture Color -> PBSDF Emission |
-| Two-sided || Controlled by the Backface Culling option ||
 
-###### Notes on texture paths, labels and valid data subdirectories...
+##### Extra Controls
+
+| Control | Details |
+| :---: | :---: |
+| Two-sided | Controlled by the Backface Culling checkbox |
+| Specular Smoothness | Controlled by the the Principled BSDF Roughness value, lower is smoother |
+
+![Basic Material](meta/basicmaterial_230902.jpg)
+
+##### Notes on texture paths, labels and valid data subdirectories...
 
 In Blender, if an Image Texture node does not use a label, it will simply display the name of whatever image data block it is assigned to.
 

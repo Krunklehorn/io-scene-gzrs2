@@ -317,7 +317,8 @@ def setupEluMat(self, eluMat, state):
     shader = nodes.get('Principled BSDF')
     shader.location = (20, 300)
     shader.select = False
-    shader.inputs[7].default_value = power / 100
+    shader.inputs[7].default_value = 1.0
+    shader.inputs[9].default_value = 1.0 - (power / 100.0)
 
     nodes.active = shader
     nodes.get('Material Output').select = False
@@ -422,7 +423,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     shader.location = (20, 300)
     shader.select = False
     shader.inputs[6].default_value = glossiness / 100.0
-    shader.inputs[7].default_value = specular / 100
+    shader.inputs[7].default_value = specular / 100.0
 
     nodes.active = shader
     nodes.get('Material Output').select = False
