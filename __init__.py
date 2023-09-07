@@ -4,7 +4,7 @@ from . import export_rselu, export_rslm
 bl_info = {
     "name": "GZRS2/3 Format",
     "author": "Krunklehorn",
-    "version": (0, 9, 2),
+    "version": (0, 9, 3),
     "blender": (3, 6, 2),
     "location": "File > Import-Export",
     "description": "GunZ: The Duel RealSpace2/3 content importer.",
@@ -800,12 +800,6 @@ class ImportRSLM(Operator, ImportHelper):
         options = { 'HIDDEN' }
     )
 
-    panelLogging: BoolProperty(
-        name = "Logging",
-        description = "Log details to the console",
-        default = True
-    )
-
     logLmHeaders: BoolProperty(
         name = "Lm Headers",
         description = "Log Lm header data",
@@ -840,7 +834,6 @@ class RSLM_PT_Import_Logging(Panel):
 
         layout.use_property_split = True
         layout.use_property_decorate = False
-        layout.enabled = operator.panelLogging
 
         layout.prop(operator, "logLmHeaders")
         layout.prop(operator, "logLmImages")
@@ -1004,6 +997,12 @@ class ExportRSLM(Operator, ExportHelper):
         default = True
     )
 
+    panelLogging: BoolProperty(
+        name = "Logging",
+        description = "Log details to the console",
+        default = False
+    )
+
     doUVs: BoolProperty(
         name = "UV Data",
         description = "Export UV data, requires an active mesh object with valid UVs in channel 3 as well as a GunZ 1 .rs file for the same map in the same directory",
@@ -1019,6 +1018,18 @@ class ExportRSLM(Operator, ExportHelper):
     mod4Fix: BoolProperty(
         name = "MOD4 Fix",
         description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag. Disable if re-exporting an existing lightmap",
+        default = True
+    )
+
+    logLmHeaders: BoolProperty(
+        name = "Lm Headers",
+        description = "Log Lm header data",
+        default = True
+    )
+
+    logLmImages: BoolProperty(
+        name = "Lm Images",
+        description = "Log Lm image data",
         default = True
     )
 
@@ -1053,6 +1064,30 @@ class RSLM_PT_Export_Main(Panel):
         column.prop(operator, "mod4Fix")
         column.enabled = not operator.lmVersion4
 
+class RSLM_PT_Export_Logging(Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Logging"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_rslm"
+
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelLogging
+
+        layout.prop(operator, "logLmHeaders")
+        layout.prop(operator, "logLmImages")
+
 classes = (
     ImportGZRS2,
     GZRS2_PT_Import_Main,
@@ -1073,7 +1108,8 @@ classes = (
     RSELU_PT_Export_Main,
     RSELU_PT_Export_Logging,
     ExportRSLM,
-    RSLM_PT_Export_Main
+    RSLM_PT_Export_Main,
+    RSLM_PT_Export_Logging
 )
 
 def menu_func_import(self, context):

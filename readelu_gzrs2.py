@@ -41,14 +41,13 @@ from .lib_gzrs2 import *
 
 def readElu(self, path, state):
     file = io.open(path, 'rb')
+    file.seek(0, os.SEEK_END)
+    fileSize = file.tell()
+    file.seek(0, os.SEEK_SET)
 
     if state.logEluHeaders or state.logEluMats or state.logEluMeshNodes:
         print("===================  Read Elu  ===================")
         print()
-
-        file.seek(0, os.SEEK_END)
-        fileSize = file.tell()
-        file.seek(0, os.SEEK_SET)
 
     id = readUInt(file)
     version = readUInt(file)

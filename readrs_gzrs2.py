@@ -43,14 +43,13 @@ from .io_gzrs2 import *
 
 def readRs(self, path, state):
     file = io.open(path, 'rb')
+    file.seek(0, os.SEEK_END)
+    fileSize = file.tell()
+    file.seek(0, os.SEEK_SET)
 
     if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsLeaves or state.logRsVerts:
         print("===================  Read RS  ===================")
         print()
-
-        file.seek(0, os.SEEK_END)
-        fileSize = file.tell()
-        file.seek(0, os.SEEK_SET)
 
     id = readUInt(file)
     version = readUInt(file)
@@ -81,17 +80,19 @@ def readRs(self, path, state):
                 if file.read(1) == b'\x00':
                     break
 
-        rsPolyCount = readInt(file)
-        skipBytes(file, 4) # skip total vertex count
+        auxPolyCount = readInt(file)
+        skipBytes(file, 4) # skip auxiliary vertex count
 
-        for _ in range(rsPolyCount):
-            skipBytes(file, 4 + 4 + (4 * 4) + 4) # skip material id, draw flags, plane and area data
-            skipBytes(file, 2 * readInt(file) * 4 * 3) # skip vertex data and normal data
+        # I think these are pre-cut, either during the bsp process or to separate convex n-gons, or both
+        # The uvs mays be inferred through the leaf aux ids
+        for _ in range(auxPolyCount):
+            skipBytes(file, 4 + 4 + 4 * 4 + 4) # skip material id, draw flags, plane and area data
+            skipBytes(file, 2 * readUInt(file) * 4 * 3) # skip vertex data and normal data
 
         skipBytes(file, 4 * 4) # skip unused, unknown counts
         skipBytes(file, 4) # skip node count
-        state.lmPolygonCount = readUInt(file)
-        state.lmVertexCount = readInt(file)
+        state.rsPolygonCount = readUInt(file)
+        state.rsVertexCount = readInt(file)
         skipBytes(file, 4) # skip indices count
 
         vertexOffset = 0
@@ -109,9 +110,9 @@ def readRs(self, path, state):
 
             for _ in range(readUInt(file)):
                 leafMatID = readInt(file)
-                lightmapIndex = readInt(file)
+                skipBytes(file, 4) # skip auxiliary polygon id
                 drawFlags = readUInt(file)
-                leafVertexCount = readInt(file)
+                leafVertexCount = readUInt(file)
 
                 for v in range(leafVertexCount):
                     pos = readCoordinate(file, state.convertUnits, True)
@@ -119,7 +120,7 @@ def readRs(self, path, state):
                     uv1 = readUV2(file)
                     uv2 = readUV2(file)
 
-                    # Why does the second UV layer end up as garbage? I don't understand...
+                    # Why does the second UV layer end up garbled? I don't understand...
                     # file.seek(-8, os.SEEK_CUR)
                     # uv1x = file.read(4)
                     # uv1y = file.read(4)
@@ -147,7 +148,6 @@ def readRs(self, path, state):
                 if state.logRsLeaves:
                     print(f"===== Leaf { l + 1 }     =============================")
                     print(f"Material ID:        { leafMatID }")
-                    print(f"Lightmap Index:     { lightmapIndex }")
                     print(f"Draw Flags:         { drawFlags }")
                     print(f"Vertex Count:       { leafVertexCount }")
                     print(f"Vertex Offset:      { vertexOffset }")
@@ -157,8 +157,8 @@ def readRs(self, path, state):
 
         openRS2BspNode()
 
-        if len(state.rsVerts) != state.lmVertexCount:
-            self.report({ 'ERROR' }, f"GZRS2: Bsp vertex count did not match vertices written! { len(state.rsVerts) }, { state.lmVertexCount }")
+        if state.rsVertexCount != len(state.rsVerts):
+            self.report({ 'ERROR' }, f"GZRS2: Bsp vertex count did not match vertices written! { state.rsVertexCount }, { len(state.rsVerts) }")
     elif id == RS3_ID and version >= RS3_VERSION1:
         if version not in RS_SUPPORTED_VERSIONS:
             self.report({ 'ERROR' }, f"GZRS2: RS3 version is not supported yet! Model will not load properly! Please submit to Krunk#6051 for testing! { path }, { hex(version) }")
@@ -270,7 +270,6 @@ def readRs(self, path, state):
                     openRS3BspNode()
 
                     trees.append(RsTree(matCount, lightmapID, treeVertexCount))
-                    state.lmVertexCount += vertexOffset
 
                     if state.logRsTrees:
                         print(f"===== Tree { t + 1 }     =============================")

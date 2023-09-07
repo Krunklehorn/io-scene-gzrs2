@@ -41,14 +41,13 @@ from .lib_gzrs2 import *
 
 def readLm(self, path, state):
     file = io.open(path, 'rb')
+    file.seek(0, os.SEEK_END)
+    fileSize = file.tell()
+    file.seek(0, os.SEEK_SET)
 
     if state.logLmHeaders or state.logLmImages:
         print("===================  Read Lm  ===================")
         print()
-
-        file.seek(0, os.SEEK_END)
-        fileSize = file.tell()
-        file.seek(0, os.SEEK_SET)
 
     id = readUInt(file)
     version = readUInt(file)
@@ -165,8 +164,8 @@ def readLm(self, path, state):
             pixels = [0 for _ in range(width * height * 3)]
 
             for b in range(blockCount):
-                p0 = RGB565ToVector(imageShorts[b * 4 + 0])
-                p1 = RGB565ToVector(imageShorts[b * 4 + 1])
+                p0 = rgb565ToVector(imageShorts[b * 4 + 0])
+                p1 = rgb565ToVector(imageShorts[b * 4 + 1])
                 indices = imageInts[b * 2 + 1]
 
                 if p0 > p1:
@@ -177,10 +176,10 @@ def readLm(self, path, state):
                     p3 = Vector((0, 0, 0))
 
                 bx = b % blockSpan
-                by = blockSpan - 1 - b // blockSpan # DirectX -> OpenGL
+                by = b // blockSpan
 
                 for p in range(blockStride):
-                    s = (blockStride - 1 - p) * 2
+                    s = p * 2
 
                     index = (indices & (3 << s)) >> s
 
@@ -193,8 +192,8 @@ def readLm(self, path, state):
                     py = p // blockLength
 
                     f = bx * blockLength
-                    f += by * width * blockLength
-                    f += (blockLength - 1 - px) + py * width # DirectX -> OpenGL
+                    f += by * blockLength * width
+                    f += px + py * width
 
                     pixels[f * 3 + 2] = pixel.x
                     pixels[f * 3 + 1] = pixel.y
@@ -210,12 +209,12 @@ def readLm(self, path, state):
 
             return { 'CANCELLED' }
 
-    skipBytes(file, 4 * state.lmPolygonCount) # skip unused polygon ids
-    state.lmIndices = readUIntArray(file, state.lmPolygonCount)
-    state.lmUVs = readUV2Array(file, state.lmVertexCount)
+    state.lmPolygonIDs = readUIntArray(file, state.rsPolygonCount)
+    state.lmIndices = readUIntArray(file, state.rsPolygonCount)
+    state.lmUVs = readUV2Array(file, state.rsVertexCount)
 
     if state.logLmHeaders or state.logLmImages:
-        bytesRemaining = fileSize - file.tell()
+        bytesRemaining = fileSize - file.tell() if state.rsVertexCount > 0 else 0
 
         if bytesRemaining > 0:
             self.report({ 'INFO' }, f"GZRS2: LM import finished with bytes remaining! { path }, { hex(id) }, { hex(version) }")

@@ -1,7 +1,8 @@
-import bpy, os, math
+import bpy, os, math, ctypes
+
+from ctypes import *
 
 from contextlib import redirect_stdout
-
 from mathutils import Vector, Matrix
 
 from .constants_gzrs2 import *
@@ -515,7 +516,9 @@ def setupRsMesh(self, m, blMesh, state):
             found = True
 
             if meshUV3 is not None and numCells > 1:
-                c = state.lmIndices[l]
+                # TODO: Atlased indices are garbled (Citadel)
+                # l != lmPolygonIDs[l]
+                c = state.lmIndices[state.lmPolygonIDs[l]]
                 cx = c % cellSpan
                 cy = c // cellSpan
 
@@ -529,6 +532,7 @@ def setupRsMesh(self, m, blMesh, state):
                     uv3 = state.lmUVs[v]
 
                     if numCells > 1:
+
                         uv3.x += cx
                         uv3.y -= cy
                         uv3 /= cellSpan
@@ -860,14 +864,14 @@ def unpackLmImages(state):
 
         for c, lmImage in enumerate(state.lmImages):
             cx = c % cellSpan
-            cy = cellSpan - 1 - c // cellSpan # OpenGL -> DirectX
+            cy = cellSpan - 1 - c // cellSpan
 
             for p in range(imageSize * imageSize):
                 px = p % imageSize
                 py = p // imageSize
 
                 a = cx * imageSize
-                a += cy * atlasSize * imageSize
+                a += cy * imageSize * atlasSize
                 a += px + py * atlasSize
 
                 atlasPixels[a * 4 + 0] = lmImage.data[p * 3 + 2]
@@ -882,6 +886,24 @@ def unpackLmImages(state):
     state.blLmImage = blLmImage
 
 def packLmImageData(self, imageSize, floats, fromAtlas = False, atlasSize = 0, cx = 0, cy = 0):
+    sopath = os.path.join(os.path.dirname(__file__), 'clib_gzrs2', 'clib_gzrs2.x86_64-w64-mingw32.so')
+    success = True
+
+    try:
+        clib = ctypes.CDLL(sopath)
+    except OSError as ex:
+        print(f"GZRS2: Failed to load C library, defaulting to pure Python: { ex }, { sopath }")
+        success = False
+
+    if success:
+        clib.packLmImageData.restype = py_object
+        clib.packLmImageData.argtypes = [c_uint, py_object, c_bool, c_bool, c_bool, c_uint, c_uint, c_uint]
+
+        try:
+            return clib.packLmImageData(imageSize, floats, self.lmVersion4, self.mod4Fix, fromAtlas, atlasSize, cx, cy)
+        except (ValueError, ctypes.ArgumentError) as ex:
+            print(f"GZRS2: Failed to call C function, defaulting to pure Python: { ex }")
+
     pixelCount = imageSize ** 2
 
     if not self.lmVersion4:
@@ -899,7 +921,7 @@ def packLmImageData(self, imageSize, floats, fromAtlas = False, atlasSize = 0, c
                 py = p // imageSize
 
                 f = cx * imageSize
-                f += cy * atlasSize * imageSize
+                f += cy * imageSize * atlasSize
                 f += px + py * atlasSize
 
                 imageData[p * 3 + 0] = int(floats[f * 4 + 2] * exportRange)
@@ -910,6 +932,7 @@ def packLmImageData(self, imageSize, floats, fromAtlas = False, atlasSize = 0, c
         imageData = bytearray(pixelCount // 2)
         imageShorts = memoryview(imageData).cast('H')
         imageInts = memoryview(imageData).cast('I')
+        missed = False
 
         blockLength = 4
         blockStride = blockLength ** 2
@@ -920,7 +943,7 @@ def packLmImageData(self, imageSize, floats, fromAtlas = False, atlasSize = 0, c
 
         for b, block in enumerate(blocks):
             bx = b % blockSpan
-            by = blockSpan - 1 - b // blockSpan # OpenGL -> DirectX
+            by = b // blockSpan
             maximum = Vector((0, 0, 0))
             minimum = Vector((1, 1, 1))
             maxlen2 = 0
@@ -932,20 +955,17 @@ def packLmImageData(self, imageSize, floats, fromAtlas = False, atlasSize = 0, c
 
                 if not fromAtlas:
                     f = bx * blockLength
-                    f += by * imageSize * blockLength
-                    f += px + (blockLength - 1 - py) * imageSize # OpenGL -> DirectX
+                    f += by * blockLength * imageSize
+                    f += px + py * imageSize
                 else:
                     f = cx * imageSize
-                    f += cy * atlasSize * imageSize
+                    f += cy * imageSize * atlasSize
                     f += bx * blockLength
-                    f += by * atlasSize * blockLength
-                    f += px + (blockLength - 1 - py) * atlasSize # OpenGL -> DirectX
+                    f += by * blockLength * atlasSize
+                    f += px + py * atlasSize
 
                 pixel = Vector((floats[f * 4 + 0], floats[f * 4 + 1], floats[f * 4 + 2]))
-
                 len2 = pixel.length_squared
-
-                block[2][p] = pixel
 
                 if len2 > maxlen2:
                     maxlen2 = len2
@@ -955,32 +975,34 @@ def packLmImageData(self, imageSize, floats, fromAtlas = False, atlasSize = 0, c
                     minlen2 = len2
                     minimum = pixel
 
+                block[2][p] = pixel
+
             block[0] = maximum
             block[1] = minimum
 
         for b, block in enumerate(blocks):
-            uint1 = VectorToRGB565(block[0])
-            uint2 = VectorToRGB565(block[1])
+            ushort1 = vectorToRGB565(block[0])
+            ushort2 = vectorToRGB565(block[1])
 
-            if uint1 == uint2:
-                if uint1 == 0:
-                    imageShorts[b * 4 + 0] = uint1 + 1
-                    imageShorts[b * 4 + 1] = uint1
-                    imageInts[b * 2 + 1] = 21845
+            if ushort1 == ushort2:
+                if ushort1 == 0:
+                    imageShorts[b * 4 + 0] = ushort1 + 1
+                    imageShorts[b * 4 + 1] = ushort1
+                    imageInts[b * 2 + 1] = 21845 # 0x5555 -> 0101010101010101
                 else:
-                    imageShorts[b * 4 + 0] = uint1
-                    imageShorts[b * 4 + 1] = uint1 - 1
+                    imageShorts[b * 4 + 0] = ushort1
+                    imageShorts[b * 4 + 1] = ushort1 - 1
                     imageInts[b * 2 + 1] = 0
             else:
                 rgb1 = block[0]
                 rgb2 = block[1]
 
-                if uint1 < uint2:
-                    uint1, uint2 = uint2, uint1
+                if ushort1 < ushort2:
+                    ushort1, ushort2 = ushort2, ushort1
                     rgb1, rgb2 = rgb2, rgb1
 
-                imageShorts[b * 4 + 0] = uint1
-                imageShorts[b * 4 + 1] = uint2
+                imageShorts[b * 4 + 0] = ushort1
+                imageShorts[b * 4 + 1] = ushort2
 
                 p0 = rgb1
                 p1 = rgb2
@@ -1007,20 +1029,25 @@ def packLmImageData(self, imageSize, floats, fromAtlas = False, atlasSize = 0, c
                         imageInts[b * 2 + 1] |=  (1 << (s + 1))
                     elif minimum == d3:
                         imageInts[b * 2 + 1] |=  (3 << (s + 0)) # Set both bits to 1        = 3
+                    else:
+                        missed = True
+
+        if missed:
+            print("Warning! Failed to pick a distance for one or more dds pixels!")
 
         imageShorts.release()
         imageInts.release()
 
     return imageData
 
-def VectorToRGB565(vec):
+def vectorToRGB565(vec):
     r = int((vec.x + 8 / 255.0) * 31) << 11
     g = int((vec.y + 4 / 255.0) * 63) << 5
     b = int((vec.z + 8 / 255.0) * 31)
 
     return r | g | b
 
-def RGB565ToVector(rgb):
+def rgb565ToVector(rgb):
     r = ((rgb >> 11) & 0b11111 ) / 31.0
     g = ((rgb >>  5) & 0b111111) / 63.0
     b = ((rgb >>  0) & 0b11111 ) / 31.0

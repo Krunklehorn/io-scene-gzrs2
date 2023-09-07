@@ -73,6 +73,8 @@ class GZRS2State:
     xmlAmbs:            list = field(default_factory = list)
     xmlItms:            list = field(default_factory = list)
 
+    rsPolygonCount:     int = 0
+    rsVertexCount:      int = 0
     bspBounds:          list = field(default_factory = list)
     rsVerts:            list = field(default_factory = list)
     rsLeaves:           list = field(default_factory = list)
@@ -81,9 +83,8 @@ class GZRS2State:
     colVerts:           list = field(default_factory = list)
     eluMats:            list = field(default_factory = list)
     eluMeshes:          list = field(default_factory = list)
-    lmPolygonCount:     int = 0
-    lmVertexCount:      int = 0
     lmImages:           list = field(default_factory = list)
+    lmPolygonIDs:       tuple = field(default_factory = tuple)
     lmIndices:          tuple = field(default_factory = tuple)
     lmUVs:              tuple = field(default_factory = tuple)
     lmMixGroup:         Object      = None

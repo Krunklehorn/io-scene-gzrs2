@@ -38,6 +38,45 @@ from .classes_gzrs2 import *
 from .io_gzrs2 import *
 from .lib_gzrs2 import *
 
+def writeDDSHeader(file, imageSize, pixelCount, ddsSize):
+    writeBytes(file, b'DDS ')
+    writeUInt(file, ddsSize)
+    # writeUInt(file, DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_MIPMAPCOUNT | DDSD_LINEARSIZE)
+    writeUInt(file, DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_LINEARSIZE)
+    writeInt(file, imageSize)
+    writeInt(file, imageSize)
+    writeUInt(file, pixelCount // 2)
+    writeUInt(file, 0)
+    writeUInt(file, 0) # writeUInt(file, mipCount)
+    for _ in range(11):
+        writeUInt(file, 0)
+
+    writeUInt(file, 32)
+    writeUInt(file, DDPF_FOURCC)
+    writeBytes(file, b'DXT1')
+    for _ in range(5):
+        writeUInt(file, 0)
+
+    # writeUInt(file, DDSCAPS_COMPLEX | DDSCAPS_TEXTURE | DDSCAPS_MIPMAP)
+    writeUInt(file, DDSCAPS_TEXTURE)
+    for _ in range(4):
+        writeUInt(file, 0)
+
+def writeBMPHeader(file, imageSize, bmpSize):
+    writeBytes(file, b'BM')
+    writeUInt(file, bmpSize)
+    writeShort(file, 0)
+    writeShort(file, 0)
+    writeUInt(file, 14 + 40)
+
+    writeUInt(file, 40)
+    writeUInt(file, imageSize)
+    writeUInt(file, imageSize)
+    writeShort(file, 1)
+    writeShort(file, 24)
+    for _ in range(6):
+        writeUInt(file, 0)
+
 def exportLm(self, context):
     state = RSLMExportState()
 
@@ -52,6 +91,9 @@ def exportLm(self, context):
         print(f"== { self.filepath }")
         print("=======================================================================")
         print()
+
+        state.logLmHeaders = self.logLmHeaders
+        state.logLmImages = self.logLmImages
 
     lmpath = self.filepath
     directory = os.path.dirname(lmpath)
@@ -106,8 +148,8 @@ def exportLm(self, context):
 
             skipBytes(file, 4 * 4) # skip unused, unknown counts
             skipBytes(file, 4) # skip node count
-            lmPolygonCount = readUInt(file)
-            lmVertexCount = readInt(file)
+            rsPolygonCount = readUInt(file)
+            rsVertexCount = readInt(file)
         else:
             self.report({ 'ERROR' }, f"GZRS2: RS file must be for GunZ 1! { hex(id) }, { hex(version) }")
             file.close()
@@ -161,7 +203,7 @@ def exportLm(self, context):
 
             for c in range(numCells):
                 cx = c % cellSpan
-                cy = cellSpan - 1 - c // cellSpan # OpenGL -> DirectX
+                cy = cellSpan - 1 - c // cellSpan
 
                 imageDatas.append(packLmImageData(self, imageSize, floats, True, atlasSize, cx, cy))
 
@@ -173,20 +215,20 @@ def exportLm(self, context):
         return { 'CANCELLED' }
 
     if state.doUVs:
-        # newPolyIDs = bytearray(lmPolygonCount * 4)
-        newIndices = bytearray(lmPolygonCount * 4)
-        newUVs = bytearray(lmVertexCount * 2 * 4)
+        # newPolyIDs = bytearray(rsPolygonCount * 4)
+        newIndices = bytearray(rsPolygonCount * 4)
+        newUVs = bytearray(rsVertexCount * 2 * 4)
 
         # newPolyIDInts = memoryview(newPolyIDs).cast('I')
         newIndexInts = memoryview(newIndices).cast('I')
         newUVFloats = memoryview(newUVs).cast('f')
 
-        # TODO: can we determine these ourselves?
-        for p in range(lmPolygonCount):
-            # newPolyIDInts[p] = p
-            newIndexInts[p] = 0
+        # TODO: the polgyon IDs aren't as they seem...
+        for p in range(rsPolygonCount):
+            # newPolyIDInts[p] = 0
+            newIndexInts[p] = 0 # Never atlas
 
-        for v in range(lmVertexCount):
+        for v in range(rsVertexCount):
             uv3 = uvLayer3.data[v].uv
 
             newUVFloats[v * 2 + 0] = uv3.x
@@ -199,10 +241,12 @@ def exportLm(self, context):
     shutil.copy2(lmpath, os.path.join(directory, filename + "_backup") + '.' + splitname[1] + '.' + splitname[2])
 
     file = io.open(lmpath, 'r+b')
-
     file.seek(0, os.SEEK_END)
     fileSize = file.tell()
     file.seek(0, os.SEEK_SET)
+
+    id = readUInt(file)
+    version = readUInt(file)
 
     if state.logLmHeaders or state.logLmImages:
         print("===================  Write Lm  ===================")
@@ -220,23 +264,20 @@ def exportLm(self, context):
 
         return { 'CANCELLED' }
 
-    id = readUInt(file)
-    version = readUInt(file)
-
-    skipBytes(file, 4 + 4) # skip invalid polygon count and unused node count
+    skipBytes(file, 4 + 4) # skip invalid (auxiliary?) polygon count and unused node count
 
     for _ in range(readUInt(file)):
         skipBytes(file, readUInt(file)) # skip image data
 
     if state.doUVs:
-        lmData = file.read(4 * lmPolygonCount) # TODO: if we can determine the polygon IDs ourselves, we can just skip the originals
+        lmData = file.read(4 * rsPolygonCount)
     else:
         lmData = file.read(fileSize - file.tell())
 
     file.seek(4, os.SEEK_SET)
     writeUInt(file, R_LM_VERSION_EXT if state.lmVersion4 else R_LM_VERSION)
 
-    skipBytes(file, 4 + 4) # skip invalid polygon count and unused node count
+    skipBytes(file, 4 + 4) # skip invalid (auxiliary?) polygon count and unused node count
 
     writeUInt(file, len(imageDatas))
 
@@ -246,61 +287,32 @@ def exportLm(self, context):
     bmpSize = 14 + 40 + pixelCount * 3
 
     for d, imageData in enumerate(imageDatas):
-        if state.lmVersion4:
-            writeUInt(file, ddsSize)
+        writeUInt(file, ddsSize if state.lmVersion4 else bmpSize)
 
-            # DDS header
-            writeBytes(file, b'DDS ')
-            writeUInt(file, ddsSize)
-            # writeUInt(file, DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_MIPMAPCOUNT | DDSD_LINEARSIZE)
-            writeUInt(file, DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_LINEARSIZE)
-            writeInt(file, imageSize)
-            writeInt(file, imageSize)
-            writeUInt(file, pixelCount // 2)
-            writeUInt(file, 0)
-            # writeUInt(file, mipCount)
-            writeUInt(file, 0)
-            for _ in range(11):
-                writeUInt(file, 0)
-
-            writeUInt(file, 32)
-            writeUInt(file, DDPF_FOURCC)
-            writeBytes(file, b'DXT1')
-            for _ in range(5):
-                writeUInt(file, 0)
-
-            # writeUInt(file, DDSCAPS_COMPLEX | DDSCAPS_TEXTURE | DDSCAPS_MIPMAP)
-            writeUInt(file, DDSCAPS_TEXTURE)
-            for _ in range(4):
-                writeUInt(file, 0)
-        else:
-            writeUInt(file, bmpSize)
-
-            # BMP header
-            writeBytes(file, b'BM')
-            writeUInt(file, bmpSize)
-            writeShort(file, 0)
-            writeShort(file, 0)
-            writeUInt(file, 14 + 40)
-
-            writeUInt(file, 40)
-            writeUInt(file, imageSize)
-            writeUInt(file, imageSize)
-            writeShort(file, 1)
-            writeShort(file, 24)
-            for _ in range(6):
-                writeUInt(file, 0)
+        if state.lmVersion4:    writeDDSHeader(file, imageSize, pixelCount, bmpSize)
+        else:                   writeBMPHeader(file, imageSize, bmpSize)
 
         file.write(imageData)
 
     if state.doUVs:
-        file.write(lmData) # file.write(newPolyIDInts)
+        file.write(lmData) # file.write(newPolyIDs)
         file.write(newIndices)
         file.write(newUVs)
     else:
         file.write(lmData)
 
     file.truncate()
+    file.close()
+
+    imgpath = os.path.join(directory, filename) + "_LmImage" + ('.dds' if state.lmVersion4 else '.bmp')
+    file = io.open(imgpath, 'wb')
+
+    for d, imageData in enumerate(imageDatas):
+        if state.lmVersion4:    writeDDSHeader(file, imageSize, pixelCount, ddsSize)
+        else:                   writeBMPHeader(file, imageSize, bmpSize)
+
+        file.write(imageData)
+
     file.close()
 
     return { 'FINISHED' }

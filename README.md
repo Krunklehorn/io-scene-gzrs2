@@ -143,11 +143,12 @@ During import, texture paths without a directory, valid or not, apply this overr
 
 # Known Issues
 
-* quest maps and community maps have not been tested at all yet
-* handful of GunZ 1 elus with improper bone weights (woman-parts_eola)
-* GunZ 1 UV layer 2 comes out mangled (just import the lightmap and use layer 3 for now)
-* GunZ 2 some objects are not oriented correctly (spotlights)
-* GunZ 2 embedded scene hierarchies are not parsed yet (lighting_candlestick_y02, lighting_chandelier_g01, etc.)
+* GunZ 1: most community maps load fine but quest maps have not been tested at all yet
+* GunZ 1: handful of .elus with improper bone weights (woman-parts_eola)
+* GunZ 1: all polygons in UV channel 2 come out garbled (import the lightmap and use channel 3 for now)
+* GunZ 1: some polygons in UV channel 3 come out garbled on maps with multiple lightmaps (Citadel)
+* GunZ 2: some objects are not oriented correctly (spotlights)
+* GunZ 2: embedded scene hierarchies are not parsed yet (lighting_candlestick_y02, lighting_chandelier_g01, etc.)
 
 
 ![Preview](meta/preview_220327_1.jpg)

@@ -40,14 +40,13 @@ from .io_gzrs2 import *
 
 def readCol(self, path, state):
     file = io.open(path, 'rb')
+    file.seek(0, os.SEEK_END)
+    fileSize = file.tell()
+    file.seek(0, os.SEEK_SET)
 
     if state.logColHeaders or state.logColNodes or state.logColTris:
         print("===================  Read Col  ===================")
         print()
-
-        file.seek(0, os.SEEK_END)
-        fileSize = file.tell()
-        file.seek(0, os.SEEK_SET)
 
     id = readUInt(file)
     version = readUInt(file)
