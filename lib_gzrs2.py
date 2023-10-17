@@ -59,7 +59,17 @@ def pathExists(path):
 
         return current
 
-def textureSearch(self, texBase, targetpath, isRS3, state):
+def isValidTextureName(texname):
+    if texname.endswith(os.sep): return False
+    if os.path.splitext(texname)[1] == '': return False
+
+    return True
+
+def textureSearch(self, texBase, texDir, isRS3, state):
+    if not isValidTextureName(texBase):
+        self.report({ 'INFO' }, f"GZRS2: textureSearch() called with an invalid texture path, must not be a directory: { texBase }")
+        return None
+
     ddsBase = f"{ texBase }.dds".replace('.dds.dds', '.dds')
     ddspath = os.path.join(state.directory, ddsBase)
     texpath = os.path.join(state.directory, texBase)
@@ -70,10 +80,38 @@ def textureSearch(self, texBase, targetpath, isRS3, state):
     texExists = pathExists(texpath)
     if texExists: return texExists
 
-    if targetpath is None: return None
-    elif targetpath:
-        texpath = os.path.join(state.directory, targetpath, texBase)
-        ddspath = os.path.join(state.directory, targetpath, ddsBase)
+    if texDir is None: return None
+    elif texDir == '':
+        targetDir = os.path.dirname(state.directory)
+        tokens = ['Texture'] if isRS3 else RS2_VALID_DATA_SUBDIRS
+
+        for u in range(MAX_UPWARD_DIRECTORY_SEARCH):
+            for dirpath, dirnames, filenames in os.walk(targetDir):
+                for filename in filenames:
+                    if filename == ddsBase or filename == texBase:
+                        return os.path.join(dirpath, filename)
+
+            dirpath, dirnames, filenames = next(os.walk(targetDir))
+
+            for dirname in dirnames:
+                for token in tokens:
+                    if dirname.lower() == token.lower():
+                        if not state.rs2DataDirFound:
+                            self.report({ 'INFO' }, f"GZRS2: Upward directory search found a valid data subdirectory and will exit early: { u }, { token }, { texBase }")
+
+                        state.rs2DataDirFound = True
+                        break
+
+                if state.rs2DataDirFound:
+                    break
+
+            if state.rs2DataDirFound:
+                break
+
+            targetDir = os.path.dirname(targetDir)
+    else:
+        texpath = os.path.join(state.directory, texDir, texBase)
+        ddspath = os.path.join(state.directory, texDir, ddsBase)
 
         ddsExists = pathExists(ddspath)
         if ddsExists: return ddsExists
@@ -82,15 +120,15 @@ def textureSearch(self, texBase, targetpath, isRS3, state):
         if texExists: return texExists
 
         parentDir = os.path.dirname(state.directory)
-        targetDir = targetpath.split(os.sep)[0]
+        targetname = texDir.split(os.sep)[0]
 
         for _ in range(MAX_UPWARD_DIRECTORY_SEARCH):
             dirpath, dirnames, filenames = next(os.walk(parentDir))
 
             for dirname in dirnames:
-                if dirname.lower() == targetDir.lower():
-                    texpath = os.path.join(parentDir, targetpath, texBase)
-                    ddspath = os.path.join(parentDir, targetpath, ddsBase)
+                if dirname.lower() == targetname.lower():
+                    texpath = os.path.join(parentDir, texDir, texBase)
+                    ddspath = os.path.join(parentDir, texDir, ddsBase)
 
                     ddsExists = pathExists(ddspath)
                     if ddsExists: return ddsExists
@@ -102,12 +140,12 @@ def textureSearch(self, texBase, targetpath, isRS3, state):
 
             parentDir = os.path.dirname(parentDir)
 
-        self.report({ 'INFO' }, f"GZRS2: Upward directory not found for material during texture search: { texBase }, { targetpath }")
+        self.report({ 'INFO' }, f"GZRS2: Upward directory not found during texture search: { texBase }, { texDir }")
 
-    for dirpath, dirnames, filenames in os.walk(state.directory):
-        for filename in filenames:
-            if filename == ddsBase or filename == texBase:
-                return os.path.join(dirpath, filename)
+        for dirpath, dirnames, filenames in os.walk(state.directory):
+            for filename in filenames:
+                if filename == ddsBase or filename == texBase:
+                    return os.path.join(dirpath, filename)
 
     if not isRS3: return None
 
@@ -324,7 +362,7 @@ def setupEluMat(self, eluMat, state):
     nodes.active = shader
     nodes.get('Material Output').select = False
 
-    if texBase:
+    if texBase and isValidTextureName(texBase):
         texpath = textureSearch(self, texBase, texDir, False, state)
 
         if texpath is None:
@@ -435,40 +473,43 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
 
         if textype in XMLELU_TEXTYPES:
             if texname:
-                texpath = textureSearch(self, texname, '', True, state)
+                if isValidTextureName(texname):
+                    texpath = textureSearch(self, texname, '', True, state)
 
-                if texpath is not None:
-                    if textype == 'DIFFUSEMAP':
-                        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
-                        tree.links.new(texture.outputs[0], shader.inputs[0])
-                    elif textype == 'SPECULARMAP':
-                        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 0, state)
+                    if texpath is not None:
+                        if textype == 'DIFFUSEMAP':
+                            texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
+                            tree.links.new(texture.outputs[0], shader.inputs[0])
+                        elif textype == 'SPECULARMAP':
+                            texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 0, state)
 
-                        invert = nodes.new('ShaderNodeInvert')
-                        invert.location = (texture.location.x + 280, texture.location.y)
+                            invert = nodes.new('ShaderNodeInvert')
+                            invert.location = (texture.location.x + 280, texture.location.y)
 
-                        tree.links.new(texture.outputs[1], invert.inputs[1])
-                        tree.links.new(invert.outputs[0], shader.inputs[9])
-                    elif textype == 'SELFILLUMINATIONMAP':
-                        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, -300, state)
-                        tree.links.new(texture.outputs[0], shader.inputs[19])
-                        shader.inputs[20].default_value = emission
-                    elif textype == 'OPACITYMAP':
-                        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
-                        tree.links.new(texture.outputs[1], shader.inputs[21])
+                            tree.links.new(texture.outputs[1], invert.inputs[1])
+                            tree.links.new(invert.outputs[0], shader.inputs[9])
+                        elif textype == 'SELFILLUMINATIONMAP':
+                            texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, -300, state)
+                            tree.links.new(texture.outputs[0], shader.inputs[19])
+                            shader.inputs[20].default_value = emission
+                        elif textype == 'OPACITYMAP':
+                            texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
+                            tree.links.new(texture.outputs[1], shader.inputs[21])
 
-                        blMat.blend_method = 'CLIP'
-                        blMat.shadow_method = 'CLIP'
-                        blMat.alpha_threshold = alphatest / 255.0
-                    elif textype == 'NORMALMAP':
-                        texture = getMatNode(bpy, blMat, nodes, texpath, 'NONE', -540, -600, state)
-                        texture.image.colorspace_settings.name = 'Non-Color'
-                        normal = nodes.new('ShaderNodeNormalMap')
-                        normal.location = (-260, -600)
-                        tree.links.new(texture.outputs[0], normal.inputs[1])
-                        tree.links.new(normal.outputs[0], shader.inputs[22])
+                            blMat.blend_method = 'CLIP'
+                            blMat.shadow_method = 'CLIP'
+                            blMat.alpha_threshold = alphatest / 255.0
+                        elif textype == 'NORMALMAP':
+                            texture = getMatNode(bpy, blMat, nodes, texpath, 'NONE', -540, -600, state)
+                            texture.image.colorspace_settings.name = 'Non-Color'
+                            normal = nodes.new('ShaderNodeNormalMap')
+                            normal.location = (-260, -600)
+                            tree.links.new(texture.outputs[0], normal.inputs[1])
+                            tree.links.new(normal.outputs[0], shader.inputs[22])
+                    else:
+                        self.report({ 'INFO' }, f"GZRS2: Texture not found for .elu.xml material: { texname }, { textype }")
                 else:
-                    self.report({ 'INFO' }, f"GZRS2: Texture not found for .elu.xml material: { texname }, { textype }")
+                    self.report({ 'INFO' }, f"GZRS2: .elu.xml material with invalid texture name, must not be a directory: { texname }, { textype }")
             else:
                 self.report({ 'INFO' }, f"GZRS2: .elu.xml material with empty texture name: { texname }, { textype }")
         else:

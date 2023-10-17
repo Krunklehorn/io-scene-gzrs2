@@ -412,7 +412,8 @@ def parseEluXML(self, xmlElu, state):
                             if data is not None:
                                 data = data.strip()
 
-                                if data: data = os.path.normpath(data)
+                                if data:
+                                    data = os.path.normpath(data)
                             else:
                                 data = ''
 

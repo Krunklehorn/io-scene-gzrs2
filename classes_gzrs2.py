@@ -47,6 +47,7 @@ class GZRS2State:
     logVerboseWeights:  bool = False
     logCleanup:         bool = False
 
+    rs2DataDirFound:    bool = False
     rs3TexDir:          str = ""
     rs3TexDict:         dict = field(default_factory = dict)
     gzrsValidBones:     set = field(default_factory = set)
