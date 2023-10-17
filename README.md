@@ -7,7 +7,7 @@ Please report bugs and unimplemented features to: ***Krunk#6051***
 
 RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-map-1204327/***
 
-[***DOWNLOAD v0.9.2***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.9.2/io_scene_gzrs2_v0.9.2.zip)
+[***DOWNLOAD v0.9.2.1***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.9.2/io_scene_gzrs2_v0.9.2.1.zip)
 
 
 # Latest Update
@@ -23,6 +23,16 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 * Elu logging now includes extra min/max information for some fields
 * Users are now warned if an .rs, .elu, .col or .lm file has bytes remaining after a successful read
 * Naming conventions are a bit tidier
+
+***Latest hotfix: v0.9.2.1***
+
+* Experimental: compiled C library adds multithreading support during lightmap export
+  * compiler -> gcc
+  * triplet -> x86_64-w64-mingw32
+  * should automatically catch and fallback to Python if anything goes wrong
+* Smarter and faster texture search now successfully finds even more textures
+* Fix for invalid xml textures (Snow Town)
+* Other minor fixes and tweaks
 
 
 # Current Import Features
