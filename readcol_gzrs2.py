@@ -107,7 +107,7 @@ def readCol(self, path, state):
                     vertices = readCoordinateArray(file, 3, state.convertUnits, True)
 
                     if hull:
-                        for v in vertices: state.colVerts.append(v)
+                        state.colVerts.extend(vertices)
 
                     nor = readDirection(file, True)
 

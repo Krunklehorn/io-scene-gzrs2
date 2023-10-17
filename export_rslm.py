@@ -179,7 +179,7 @@ def exportLm(self, context):
 
         if imageName == imageTarget:
             imageSize = image.size[0]
-            floats = tuple(image.pixels)
+            floats = image.pixels[:]
 
             imageDatas.append(packLmImageData(self, imageSize, floats))
 
@@ -199,7 +199,7 @@ def exportLm(self, context):
             cellSpan = int(math.sqrt(nextSquare(numCells)))
             atlasSize = image.size[0]
             imageSize = atlasSize // cellSpan
-            floats = tuple(image.pixels)
+            floats = image.pixels[:]
 
             for c in range(numCells):
                 cx = c % cellSpan
