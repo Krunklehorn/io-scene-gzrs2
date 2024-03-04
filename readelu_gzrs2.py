@@ -623,13 +623,16 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             degree = readUInt(file)
             meshIDs = [0 for _ in range(degree)]
             values = [0 for _ in range(degree)]
+            
+            for d in range(degree):
+                skipBytes(file, 2) # skip unused id
+                meshID = readShort(file)
+                value = readFloat(file)
 
-            if state.logEluMeshNodes:
-                for d in range(degree):
-                    skipBytes(file, 2) # skip unused id
-                    meshID = readShort(file)
-                    value = readFloat(file)
+                values[d] = value
+                meshIDs[d] = meshID
 
+                if state.logEluMeshNodes:
                     if value < minWeightValue:
                         minWeightValue = value
                         minWeightID = meshID
@@ -637,11 +640,8 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
                     if value > maxWeightValue:
                         maxWeightValue = value
                         maxWeightID = meshID
-
-                    values[d] = value
-                    meshIDs[d] = meshID
-
-                    if state.logEluMeshNodes and state.logVerboseWeights:
+                    
+                    if state.logVerboseWeights:
                         print("Weight:             {:>1d}, {:>6.03f}, {:>2d}".format(degree, values[d], meshIDs[d]))
 
             weights.append(EluWeight(degree, None, tuple(meshIDs), tuple(values), None))

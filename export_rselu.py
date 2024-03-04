@@ -618,8 +618,8 @@ def exportElu(self, context):
                             maxWeightID = weightID
                             maxWeightName = weightName
 
-                    if state.logVerboseWeights:
-                        print("Weight:             {:>1d}, {:>6.03f}, {:>2d}, {:<16s}    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(degree, weightValue, weightID, weightName, *weightOffset))
+                        if state.logVerboseWeights:
+                            print("Weight:             {:>1d}, {:>6.03f}, {:>2d}, {:<16s}    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(degree, weightValue, weightID, weightName, *weightOffset))
 
                 if state.logVerboseWeights:
                     print()
