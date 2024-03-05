@@ -37,7 +37,7 @@ def cleanse_modules():
         if k.startswith(__name__):
             del sys.modules[k]
 
-    return None
+    return
 
 class ImportGZRS2(Operator, ImportHelper):
     bl_idname = "import_scene.gzrs2"
@@ -276,7 +276,7 @@ class ImportGZRS2(Operator, ImportHelper):
         pass
 
     def execute(self, context):
-        return import_gzrs2.importRs2(self, context)
+        return import_gzrs2.importRS2(self, context)
 
 class GZRS2_PT_Import_Main(Panel):
     bl_space_type = "FILE_BROWSER"
@@ -474,7 +474,7 @@ class ImportGZRS3(Operator, ImportHelper):
         pass
 
     def execute(self, context):
-        return import_gzrs3.importRs3(self, context)
+        return import_gzrs3.importRS3(self, context)
 
 class GZRS3_PT_Import_Main(Panel):
     bl_space_type = "FILE_BROWSER"

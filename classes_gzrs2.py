@@ -46,14 +46,12 @@ class GZRS2State:
     logVerboseIndices:  bool = False
     logVerboseWeights:  bool = False
     logCleanup:         bool = False
-
-    rs2DataDirFound:    bool = False
-    rs3TexDir:          str = ""
-    rs3TexDict:         dict = field(default_factory = dict)
+    
     gzrsValidBones:     set = field(default_factory = set)
     blTexImages:        dict = field(default_factory = dict)
     blMatNodes:         dict = field(default_factory = dict)
-
+    
+    rs2DataDir:         str = ""
     rs3DataDir:         str = ""
     rs3DataDict:        dict = field(default_factory = dict)
 

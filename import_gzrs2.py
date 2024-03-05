@@ -48,7 +48,7 @@ from .readlm_gzrs2 import *
 from .readelu_gzrs2 import *
 from .lib_gzrs2 import *
 
-def importRs2(self, context):
+def importRS2(self, context):
     state = GZRS2State()
 
     state.convertUnits = self.convertUnits

@@ -36,7 +36,7 @@ def pathExists(path):
         target = next(targets)
 
         while target is not None:
-            dirpath, dirnames, filenames = next(os.walk(current))
+            _, dirnames, filenames = next(os.walk(current))
 
             if os.path.splitext(target)[1] == '':
                 found = False
@@ -65,10 +65,67 @@ def isValidTextureName(texname):
 
     return True
 
+def texMatchDownward(root, texBase, ddsBase):
+    for dirpath, _, filenames in os.walk(root):
+        for filename in filenames:
+            if filename == ddsBase or filename == texBase:
+                return os.path.join(dirpath, filename)
+
+def matchRS2DataDirectory(self, dirpath, dirbase, tokens, state):
+    _, dirnames, _ = next(os.walk(dirpath))
+                
+    for token in RS2_VALID_DATA_SUBDIRS:
+        if dirbase.lower() == token.lower():
+            state.rs2DataDir = os.path.dirname(dirpath)
+            return True
+        
+        for dirname in dirnames:
+            if dirname.lower() == token.lower():
+                state.rs2DataDir = dirpath
+                return True
+    
+    return False
+
+def ensureRS3DataDirectory(self, state):
+    if state.rs3DataDir: return
+    
+    currentDir = state.directory
+
+    for _ in range(MAX_UPWARD_DIRECTORY_SEARCH):
+        currentBase = os.path.basename(currentDir)
+        
+        if currentBase.lower() == 'data':
+            state.rs3DataDir = currentDir
+            break
+
+        _, dirnames, _ = next(os.walk(currentDir))
+        
+        for dirname in dirnames:
+            if dirname.lower() == 'data':
+                state.rs3DataDir = os.path.join(currentDir, dirname)
+                break
+
+        currentDir = os.path.dirname(currentDir)
+
+    if not state.rs3DataDir:
+        self.report({ 'INFO' }, f"GZRS2: Failed to find RS3 data directory!")
+        return
+    
+    for dirpath, _, filenames in os.walk(state.rs3DataDir):
+        for filename in filenames:
+            splitname = filename.split(os.extsep)
+
+            if splitname[-1].lower() in ['xml', 'elu', 'dds']:
+                resourcepath = pathExists(os.path.join(dirpath, filename))
+
+                if resourcepath: state.rs3DataDict[filename] = resourcepath
+                else: self.report({ 'INFO' }, f"GZRS2: Resource found but pathExists() failed, potential case sensitivity issue: { filename }")
+        
+
 def textureSearch(self, texBase, texDir, isRS3, state):
     if not isValidTextureName(texBase):
         self.report({ 'INFO' }, f"GZRS2: textureSearch() called with an invalid texture path, must not be a directory: { texBase }")
-        return None
+        return
 
     ddsBase = f"{ texBase }.dds".replace('.dds.dds', '.dds')
     ddspath = os.path.join(state.directory, ddsBase)
@@ -79,37 +136,9 @@ def textureSearch(self, texBase, texDir, isRS3, state):
 
     texExists = pathExists(texpath)
     if texExists: return texExists
-
-    if texDir is None: return None
-    elif texDir == '':
-        targetDir = os.path.dirname(state.directory)
-        tokens = ['Texture'] if isRS3 else RS2_VALID_DATA_SUBDIRS
-
-        for u in range(MAX_UPWARD_DIRECTORY_SEARCH):
-            for dirpath, dirnames, filenames in os.walk(targetDir):
-                for filename in filenames:
-                    if filename == ddsBase or filename == texBase:
-                        return os.path.join(dirpath, filename)
-
-            dirpath, dirnames, filenames = next(os.walk(targetDir))
-
-            for dirname in dirnames:
-                for token in tokens:
-                    if dirname.lower() == token.lower():
-                        if not state.rs2DataDirFound:
-                            self.report({ 'INFO' }, f"GZRS2: Upward directory search found a valid data subdirectory and will exit early: { u }, { token }, { texBase }")
-
-                        state.rs2DataDirFound = True
-                        break
-
-                if state.rs2DataDirFound:
-                    break
-
-            if state.rs2DataDirFound:
-                break
-
-            targetDir = os.path.dirname(targetDir)
-    else:
+    
+    if texDir is None: return
+    elif texDir != '':
         texpath = os.path.join(state.directory, texDir, texBase)
         ddspath = os.path.join(state.directory, texDir, ddsBase)
 
@@ -123,7 +152,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
         targetname = texDir.split(os.sep)[0]
 
         for _ in range(MAX_UPWARD_DIRECTORY_SEARCH):
-            dirpath, dirnames, filenames = next(os.walk(parentDir))
+            _, dirnames, _ = next(os.walk(parentDir))
 
             for dirname in dirnames:
                 if dirname.lower() == targetname.lower():
@@ -136,74 +165,47 @@ def textureSearch(self, texBase, texDir, isRS3, state):
                     texExists = pathExists(texpath)
                     if texExists: return texExists
 
-                    return None
+                    return
 
             parentDir = os.path.dirname(parentDir)
+        
+        self.report({ 'INFO' }, f"GZRS2: Texture search failed, directory not found: { texBase }, { texDir }")
+    elif not isRS3:
+        result = texMatchDownward(state.directory, texBase, ddsBase)
+        if result: return result
 
-        self.report({ 'INFO' }, f"GZRS2: Upward directory not found during texture search: { texBase }, { texDir }")
+        if not state.rs2DataDir:
+            currentDir = os.path.dirname(currentDir)
 
-        for dirpath, dirnames, filenames in os.walk(state.directory):
-            for filename in filenames:
-                if filename == ddsBase or filename == texBase:
-                    return os.path.join(dirpath, filename)
-
-    if not isRS3: return None
-
-    if not state.rs3TexDir:
-        parentDir = os.path.dirname(state.directory)
-
-        for _ in range(MAX_UPWARD_DIRECTORY_SEARCH):
-            dirpath, dirnames, filenames = next(os.walk(parentDir))
-
-            for dirname in dirnames:
-                if dirname.lower() == 'texture':
-                    state.rs3TexDir = os.path.join(dirpath, dirname)
-
-                    for dirpath, dirnames, filenames in os.walk(state.rs3TexDir):
-                        for filename in filenames:
-                            filepath = pathExists(os.path.join(dirpath, filename))
-
-                            if filepath: state.rs3TexDict[filename] = filepath
-                            else:
-                                self.report({ 'INFO' }, f"GZRS2: Texture found but pathExists() failed, potential case sensitivity issue: { filename }")
-                                return None
-
+            for u in range(MAX_UPWARD_DIRECTORY_SEARCH):
+                result = texMatchDownward(currentDir, texBase, ddsBase)
+                if result: return result
+                
+                currentBase = os.path.basename(currentDir)
+                
+                if matchRS2DataDirectory(self, currentDir, currentBase, state):
+                    self.report({ 'INFO' }, f"GZRS2: Upward directory search found a valid data subdirectory: { u }, { token }, { texBase }")
                     break
 
-            parentDir = os.path.dirname(parentDir)
+                currentDir = os.path.dirname(currentDir)
+        
+        result = texMatchDownward(state.rs2DataDir, texBase, ddsBase)
+        if result: return result
+        
+        self.report({ 'INFO' }, f"GZRS2: Texture search failed, no downward match: { texBase }")
+    else:
+        ensureRS3DataDirectory(self, state)
 
-    if texBase in state.rs3TexDict: return state.rs3TexDict[texBase]
-    elif ddsBase in state.rs3TexDict: return state.rs3TexDict[ddsBase]
-    else: self.report({ 'INFO' }, f"GZRS2: Texture search failed: { texBase }")
+        if texBase in state.rs3DataDict: return state.rs3DataDict[texBase]
+        elif ddsBase in state.rs3DataDict: return state.rs3DataDict[ddsBase]
+        
+        self.report({ 'INFO' }, f"GZRS2: Texture search failed, no entry in data dictionary: { texBase }")
 
 def resourceSearch(self, resourcename, state):
     resourcepath = os.path.join(state.directory, resourcename)
     if pathExists(resourcepath): return resourcepath
 
-    if not state.rs3DataDir:
-        parentDir = os.path.dirname(state.directory)
-
-        for _ in range(MAX_UPWARD_DIRECTORY_SEARCH):
-            dirpath, dirnames, filenames = next(os.walk(parentDir))
-
-            for dirname in dirnames:
-                if dirname.lower() == 'data':
-                    state.rs3DataDir = os.path.join(dirpath, dirname)
-
-                    for dirpath, dirnames, filenames in os.walk(state.rs3DataDir):
-                        for filename in filenames:
-                            splitname = filename.split(os.extsep)
-
-                            if splitname[-1].lower() in ['xml', 'elu', 'dds']:
-                                resourcepath = pathExists(os.path.join(dirpath, filename))
-
-                                if resourcepath: state.rs3DataDict[filename] = resourcepath
-                                else: self.report({ 'INFO' }, f"GZRS2: Resource found but pathExists() failed, potential case sensitivity issue: { filename }")
-
-                    break
-
-            if state.rs3DataDir: break
-            else: parentDir = os.path.dirname(parentDir)
+    ensureRS3DataDirectory(self, state)
 
     if resourcename in state.rs3DataDict:
         return state.rs3DataDict[resourcename]
@@ -220,7 +222,7 @@ def resourceSearch(self, resourcename, state):
 
 def lcFindRoot(lc, collection):
     if lc.collection is collection: return lc
-    elif len(lc.children) == 0: return None
+    elif len(lc.children) == 0: return
 
     for child in lc.children:
         next = lcFindRoot(child, collection)
@@ -1099,10 +1101,10 @@ def setupLmMixGroup(state):
     if 'Lightmap Mix' in bpy.data.node_groups:
         state.lmMixGroup = bpy.data.node_groups['Lightmap Mix']
     else:
-        group = bpy.data.node_groups.new('Lightmap Mix', 'ShaderNodeTree')
-        groupA = group.inputs.new('NodeSocketColor', 'A')
-        groupB = group.inputs.new('NodeSocketColor', 'B')
-        groupResult = group.outputs.new('NodeSocketColor', 'Result')
+        group = bpy.data.node_groups.new('Lightmap Mix',  'ShaderNodeTree')
+        groupA = group.interface.new_socket(name = 'A', in_out = 'INPUT', socket_type = 'NodeSocketColor')
+        groupB = group.interface.new_socket(name = 'B', in_out = 'INPUT', socket_type = 'NodeSocketColor')
+        groupResult = group.interface.new_socket(name = 'Result', in_out = 'OUTPUT', socket_type = 'NodeSocketColor')
 
         groupA.default_value = (1.0, 1.0, 1.0, 1.0)
         groupB.default_value = (1.0, 1.0, 1.0, 1.0)

@@ -45,7 +45,7 @@ from .readrs_gzrs2 import *
 from .readelu_gzrs2 import *
 from .lib_gzrs2 import *
 
-def importRs3(self, context):
+def importRS3(self, context):
     state = GZRS2State()
 
     state.convertUnits = self.convertUnits
@@ -101,7 +101,7 @@ def importRs3(self, context):
 
     elupaths = set()
 
-    def openRs3Node(node):
+    def openRS3Node(node):
         if node['type'] in ['SCENEINSTANCE', 'SCENEOBJECT', 'ACTOR']:
             resourcename = node['resourcename']
 
@@ -120,7 +120,7 @@ def importRs3(self, context):
                     }
                     node['children'] = [childnode]
 
-                    openRs3Node(childnode)
+                    openRS3Node(childnode)
                 else:
                     with open(resourcepath) as file:
                         childstring = file.read()
@@ -131,14 +131,16 @@ def importRs3(self, context):
                     for childnode in node['children']:
                         childnode['parent'] = node
 
-                        openRs3Node(childnode)
+                        openRS3Node(childnode)
             elif node['type'] in ['ACTOR']:
+                # TODO: this should not be guaranteed here, see below
                 node['elupath'] = resourcepath
 
                 if resourcepath not in elupaths:
                     elupaths.add(resourcepath)
 
                     readElu(self, resourcepath, state)
+                    # TODO: readElu needs to fail properly if the elu version is unsupported
 
                     for ext in XML_EXTENSIONS:
                         eluxmlpath = pathExists(f"{ resourcepath }.{ ext }")
@@ -148,7 +150,7 @@ def importRs3(self, context):
                             break
 
     for node in state.rs3Graph:
-        openRs3Node(node)
+        openRS3Node(node)
 
     bpy.ops.ed.undo_push()
     collections = bpy.data.collections
@@ -198,7 +200,7 @@ def importRs3(self, context):
 
     processEluHeirarchy(self, state)
 
-    def processRs3Node(node):
+    def processRS3Node(node):
         if node['type'] in ['SCENEINSTANCE', 'SCENEOBJECT', 'EFFECTINSTANCE', 'DIRLIGHT', 'SPOTLIGHT', 'POINTLIGHT', 'OCCLUDER']:
             name = f"{ node.get('name', node.get('resourcename', 'Node')) }_{ node['type'] }"
 
@@ -267,15 +269,16 @@ def importRs3(self, context):
 
             if 'children' in node:
                 for childnode in node['children']:
-                    processRs3Node(childnode)
+                    processRS3Node(childnode)
         elif node['type'] in ['ACTOR']:
             if 'parent' in node:
                 blNodeObj = node['parent']['blNodeObj']
                 blNodeObj.instance_type = 'COLLECTION'
+                # TODO: KeyError if the .elu was an unsupported version
                 blNodeObj.instance_collection = state.blActorRoots[node['elupath']]
 
     for node in state.rs3Graph:
-        processRs3Node(node)
+        processRS3Node(node)
 
     bpy.ops.object.select_all(action = 'DESELECT')
 
