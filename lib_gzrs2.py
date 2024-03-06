@@ -265,6 +265,143 @@ def getMatNode(bpy, blMat, nodes, texpath, alphamode, x, y, state):
 
     return matNodes[texpath][alphamode]
 
+def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, shader, state):
+    if not texname:
+        self.report({ 'INFO' }, f"GZRS2: Bsp material with empty texture name: { m }, { name }")
+        return
+    
+    if not isValidTextureName(texname):
+        self.report({ 'INFO' }, f"GZRS2: Bsp material with invalid texture name, must not be a directory: { m }, { name }, { texname }")
+        return
+    
+    texpath = textureSearch(self, texname, '', False, state)
+
+    if texpath is None:
+        self.report({ 'INFO' }, f"GZRS2: Texture not found for bsp material: { m }, { name }, { texname }")
+        return
+    
+    texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
+
+    if state.doLightmap:
+        lightmap = nodes.new('ShaderNodeTexImage')
+        uvmap = nodes.new('ShaderNodeUVMap')
+        mix = nodes.new('ShaderNodeGroup')
+
+        lightmap.image = state.blLmImage
+        uvmap.uv_map = 'UVMap.002'
+        mix.node_tree = state.lmMixGroup
+
+        texture.location = (-440, 300)
+        lightmap.location = (-440, -20)
+        uvmap.location = (-640, -20)
+        mix.location = (-160, 300)
+
+        texture.select = False
+        lightmap.select = True
+        uvmap.select = False
+        mix.select = False
+
+        tree.links.new(texture.outputs[0], mix.inputs[0])
+        tree.links.new(lightmap.outputs[0], mix.inputs[1])
+        tree.links.new(uvmap.outputs[0], lightmap.inputs[0])
+        tree.links.new(mix.outputs[0], shader.inputs[0]) # Base Color
+
+        nodes.active = lightmap
+    else:
+        tree.links.new(texture.outputs[0], shader.inputs[0]) # Base Color
+        nodes.active = texture
+
+    blMat.use_backface_culling = not xmlRsMat.get('TWOSIDED', False)
+
+    if xmlRsMat.get('USEALPHATEST'):
+        blMat.blend_method = 'CLIP'
+        blMat.shadow_method = 'CLIP'
+
+    elif xmlRsMat.get('USEOPACITY'):
+        blMat.blend_method = 'HASHED'
+        blMat.shadow_method = 'HASHED'
+
+    if xmlRsMat.get('USEALPHATEST') or xmlRsMat.get('USEOPACITY'):
+        blMat.show_transparent_back = True
+        blMat.use_backface_culling = False
+
+        tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
+
+    if xmlRsMat.get('ADDITIVE'):
+        blMat.blend_method = 'BLEND'
+        blMat.show_transparent_back = True
+        blMat.use_backface_culling = False
+
+        add = nodes.new('ShaderNodeAddShader')
+        transparent = nodes.new('ShaderNodeBsdfTransparent')
+
+        add.location = (300, 140)
+        transparent.location = (300, 20)
+
+        add.select = False
+        transparent.select = False
+
+        if state.doLightmap:    tree.links.new(mix.outputs[0], shader.inputs[26]) # Emission Color
+        else:                   tree.links.new(texture.outputs[0], shader.inputs[26]) # Emission Color
+
+        shader.inputs[27].default_value = 1.0 # Emission Strength
+
+        tree.links.new(shader.outputs[0], add.inputs[0])
+        tree.links.new(transparent.outputs[0], add.inputs[1])
+        tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
+
+def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alphatest, state):
+    textype = texlayer['type']
+    texname = texlayer['name']
+
+    if not textype in XMLELU_TEXTYPES:
+        self.report({ 'INFO' }, f"GZRS2: Unsupported texture type for .elu.xml material: { texname }, { textype }")
+        return
+
+    if not texname:
+        self.report({ 'INFO' }, f"GZRS2: .elu.xml material with empty texture name: { texname }, { textype }")
+        return
+
+    if not isValidTextureName(texname):
+        self.report({ 'INFO' }, f"GZRS2: .elu.xml material with invalid texture name, must not be a directory: { texname }, { textype }")
+        return
+    
+    texpath = textureSearch(self, texname, '', True, state)
+
+    if texpath is None:
+        self.report({ 'INFO' }, f"GZRS2: Texture not found for .elu.xml material: { texname }, { textype }")
+        return
+    
+    if textype == 'DIFFUSEMAP':
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
+        tree.links.new(texture.outputs[0], shader.inputs[0]) # Base Color
+    elif textype == 'SPECULARMAP':
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 0, state)
+        invert = nodes.new('ShaderNodeInvert')
+        invert.location = (texture.location.x + 280, texture.location.y)
+
+        tree.links.new(texture.outputs[0], shader.inputs[13]) # Specular Tint
+        tree.links.new(texture.outputs[0], invert.inputs[1])
+        tree.links.new(invert.outputs[0], shader.inputs[2]) # Roughness
+    elif textype == 'SELFILLUMINATIONMAP':
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, -300, state)
+        tree.links.new(texture.outputs[0], shader.inputs[26]) # Emission Color
+        shader.inputs[27].default_value = emission # Emission Strength
+    elif textype == 'OPACITYMAP':
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
+        tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
+
+        blMat.blend_method = 'CLIP'
+        blMat.shadow_method = 'CLIP'
+        blMat.alpha_threshold = alphatest / 255.0
+    elif textype == 'NORMALMAP':
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'NONE', -540, -600, state)
+        texture.image.colorspace_settings.name = 'Non-Color'
+        normal = nodes.new('ShaderNodeNormalMap')
+        normal.location = (-260, -600)
+        tree.links.new(texture.outputs[0], normal.inputs[1])
+        tree.links.new(normal.outputs[0], shader.inputs[5]) # Normal
+
 def setupErrorMat(state):
     blErrorMat = bpy.data.materials.new(f"{ state.filename }_Error")
     blErrorMat.use_nodes = False
@@ -358,8 +495,8 @@ def setupEluMat(self, eluMat, state):
     shader = nodes.get('Principled BSDF')
     shader.location = (20, 300)
     shader.select = False
-    shader.inputs[7].default_value = 1.0
-    shader.inputs[9].default_value = 1.0 - (power / 100.0)
+    shader.inputs[12].default_value = 0.0 # Specular IOR Level
+    shader.inputs[2].default_value = 1.0 - (power / 100.0) # Roughness
 
     nodes.active = shader
     nodes.get('Material Output').select = False
@@ -372,7 +509,7 @@ def setupEluMat(self, eluMat, state):
 
         texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
         texture.label = texBase if texDir == '' else ''
-        diffuseLink = tree.links.new(texture.outputs[0], shader.inputs[0])
+        diffuseLink = tree.links.new(texture.outputs[0], shader.inputs[0]) # Base Color
         diffuseLink.is_muted = texpath is None
         nodes.active = texture
         blMat.use_backface_culling = not twosided
@@ -380,19 +517,16 @@ def setupEluMat(self, eluMat, state):
         if alphatest > 0:
             blMat.blend_method = 'CLIP'
             blMat.shadow_method = 'CLIP'
-            blMat.show_transparent_back = True
-            blMat.use_backface_culling = False
             blMat.alpha_threshold = 1.0 - (alphatest / 100.0)
-
-            alphaLink = tree.links.new(texture.outputs[1], shader.inputs[21])
-            alphaLink.is_muted = texpath is None
         elif useopacity:
             blMat.blend_method = 'HASHED'
             blMat.shadow_method = 'HASHED'
+
+        if alphatest > 0 or useopacity:
             blMat.show_transparent_back = True
             blMat.use_backface_culling = False
 
-            alphaLink = tree.links.new(texture.outputs[1], shader.inputs[21])
+            alphaLink = tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
             alphaLink.is_muted = texpath is None
 
         if additive:
@@ -409,7 +543,8 @@ def setupEluMat(self, eluMat, state):
             add.select = False
             transparent.select = False
 
-            emitLink = tree.links.new(texture.outputs[0], shader.inputs[19])
+            emitLink = tree.links.new(texture.outputs[0], shader.inputs[26]) # Emission Color
+            shader.inputs[27].default_value = 1.0 # Emission Strength
             emitLink.is_muted = texpath is None
             tree.links.new(shader.outputs[0], add.inputs[0])
             tree.links.new(transparent.outputs[0], add.inputs[1])
@@ -463,59 +598,14 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     shader = nodes.get('Principled BSDF')
     shader.location = (20, 300)
     shader.select = False
-    shader.inputs[6].default_value = glossiness / 100.0
-    shader.inputs[7].default_value = specular / 100.0
+    shader.inputs[6].default_value = glossiness / 100.0 # Metallic
+    shader.inputs[12].default_value = specular / 100.0 # Specular IOR Level
 
     nodes.active = shader
     nodes.get('Material Output').select = False
 
     for texlayer in xmlEluMat['textures']:
-        textype = texlayer['type']
-        texname = texlayer['name']
-
-        if textype in XMLELU_TEXTYPES:
-            if texname:
-                if isValidTextureName(texname):
-                    texpath = textureSearch(self, texname, '', True, state)
-
-                    if texpath is not None:
-                        if textype == 'DIFFUSEMAP':
-                            texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
-                            tree.links.new(texture.outputs[0], shader.inputs[0])
-                        elif textype == 'SPECULARMAP':
-                            texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 0, state)
-
-                            invert = nodes.new('ShaderNodeInvert')
-                            invert.location = (texture.location.x + 280, texture.location.y)
-
-                            tree.links.new(texture.outputs[1], invert.inputs[1])
-                            tree.links.new(invert.outputs[0], shader.inputs[9])
-                        elif textype == 'SELFILLUMINATIONMAP':
-                            texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, -300, state)
-                            tree.links.new(texture.outputs[0], shader.inputs[19])
-                            shader.inputs[20].default_value = emission
-                        elif textype == 'OPACITYMAP':
-                            texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
-                            tree.links.new(texture.outputs[1], shader.inputs[21])
-
-                            blMat.blend_method = 'CLIP'
-                            blMat.shadow_method = 'CLIP'
-                            blMat.alpha_threshold = alphatest / 255.0
-                        elif textype == 'NORMALMAP':
-                            texture = getMatNode(bpy, blMat, nodes, texpath, 'NONE', -540, -600, state)
-                            texture.image.colorspace_settings.name = 'Non-Color'
-                            normal = nodes.new('ShaderNodeNormalMap')
-                            normal.location = (-260, -600)
-                            tree.links.new(texture.outputs[0], normal.inputs[1])
-                            tree.links.new(normal.outputs[0], shader.inputs[22])
-                    else:
-                        self.report({ 'INFO' }, f"GZRS2: Texture not found for .elu.xml material: { texname }, { textype }")
-                else:
-                    self.report({ 'INFO' }, f"GZRS2: .elu.xml material with invalid texture name, must not be a directory: { texname }, { textype }")
-            else:
-                self.report({ 'INFO' }, f"GZRS2: .elu.xml material with empty texture name: { texname }, { textype }")
-        else:
-            self.report({ 'INFO' }, f"GZRS2: Unsupported texture type for .elu.xml material: { texname }, { textype }")
+        processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alphatest, state)
 
     blMat.use_backface_culling = not twosided
 

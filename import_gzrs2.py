@@ -272,93 +272,14 @@ def importRS2(self, context):
         shader = nodes.get('Principled BSDF')
         shader.location = (20, 300)
         shader.select = False
-        shader.inputs[7].default_value = 0.0
+        shader.inputs[12].default_value = 0.0 # Specular IOR Level
 
         nodes.active = shader
         nodes.get('Material Output').select = False
 
         texname = xmlRsMat.get('DIFFUSEMAP')
 
-        if texname:
-            if isValidTextureName(texname):
-                texpath = textureSearch(self, texname, '', False, state)
-
-                if texpath is not None:
-                    texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
-
-                    if state.doLightmap:
-                        lightmap = nodes.new('ShaderNodeTexImage')
-                        uvmap = nodes.new('ShaderNodeUVMap')
-                        mix = nodes.new('ShaderNodeGroup')
-
-                        lightmap.image = state.blLmImage
-                        uvmap.uv_map = 'UVMap.002'
-                        mix.node_tree = state.lmMixGroup
-
-                        texture.location = (-440, 300)
-                        lightmap.location = (-440, -20)
-                        uvmap.location = (-640, -20)
-                        mix.location = (-160, 300)
-
-                        texture.select = False
-                        lightmap.select = True
-                        uvmap.select = False
-                        mix.select = False
-
-                        tree.links.new(texture.outputs[0], mix.inputs[0])
-                        tree.links.new(lightmap.outputs[0], mix.inputs[1])
-                        tree.links.new(uvmap.outputs[0], lightmap.inputs[0])
-                        tree.links.new(mix.outputs[0], shader.inputs[0])
-
-                        nodes.active = lightmap
-                    else:
-                        tree.links.new(texture.outputs[0], shader.inputs[0])
-                        nodes.active = texture
-
-                    blMat.use_backface_culling = not xmlRsMat.get('TWOSIDED', False)
-
-                    if xmlRsMat.get('USEALPHATEST'):
-                        blMat.blend_method = 'CLIP'
-                        blMat.shadow_method = 'CLIP'
-                        blMat.show_transparent_back = True
-                        blMat.use_backface_culling = False
-                        blMat.alpha_threshold = 0.5
-
-                        tree.links.new(texture.outputs[1], shader.inputs[21])
-                    elif xmlRsMat.get('USEOPACITY'):
-                        blMat.blend_method = 'HASHED'
-                        blMat.shadow_method = 'HASHED'
-                        blMat.show_transparent_back = True
-                        blMat.use_backface_culling = False
-
-                        tree.links.new(texture.outputs[1], shader.inputs[21])
-
-                    if xmlRsMat.get('ADDITIVE'):
-                        blMat.blend_method = 'BLEND'
-                        blMat.show_transparent_back = True
-                        blMat.use_backface_culling = False
-
-                        add = nodes.new('ShaderNodeAddShader')
-                        transparent = nodes.new('ShaderNodeBsdfTransparent')
-
-                        add.location = (300, 140)
-                        transparent.location = (300, 20)
-
-                        add.select = False
-                        transparent.select = False
-
-                        if state.doLightmap:    tree.links.new(mix.outputs[0], shader.inputs[19])
-                        else:                   tree.links.new(texture.outputs[0], shader.inputs[19])
-
-                        tree.links.new(shader.outputs[0], add.inputs[0])
-                        tree.links.new(transparent.outputs[0], add.inputs[1])
-                        tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
-                else:
-                    self.report({ 'INFO' }, f"GZRS2: Texture not found for bsp material: { m }, { name }, { texname }")
-            else:
-                self.report({ 'INFO' }, f"GZRS2: Bsp material with invalid texture name, must not be a directory: { m }, { name }, { texname }")
-        else:
-            self.report({ 'INFO' }, f"GZRS2: Bsp material with empty texture name: { m }, { name }")
+        processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, shader, state)
 
         state.blXmlRsMats.append(blMat)
 
