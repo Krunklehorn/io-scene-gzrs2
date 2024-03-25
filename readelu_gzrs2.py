@@ -488,9 +488,17 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
         if version <= ELU_5012:
             drawFlags = readUInt(file)
             skipBytes(file, 4) # skip mesh align
-            if version <= ELU_5009: skipBytes(file, 4 * 3) # skip unused bodypart info
+
+            if version <= ELU_5009:
+                skipBytes(file, 4 * 3) # skip unused bodypart info
+
             localMatrix = readTransform(file, state.convertUnits, False)
-            if version >= ELU_500A: skipBytes(file, 4) # skip visibility
+
+            if version >= ELU_500A:
+                skipBytes(file, 4) # skip visibility
+
+            if version == ELU_5012:
+                skipBytes(file, 4) # skip unknown, always zero
         else:
             localMatrix = readTransform(file, state.convertUnits, False)
             skipBytes(file, 4) # skip visibility
@@ -537,11 +545,11 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             print(output)
         
         if   version <= ELU_500E or version == ELU_5014:    skipBytes(file, 4 * 3 * readUInt(file)) # skip tangents
-        elif version != ELU_5012:                           skipBytes(file, 4 * 4 * readUInt(file)) # skip tangents
+        else:                                               skipBytes(file, 4 * 4 * readUInt(file)) # skip tangents
         
         if version <= ELU_5013:  skipBytes(file, 4 * 3 * readUInt(file)) # skip bitangents
 
-        if version == ELU_5012 or version == ELU_5014:
+        if version == ELU_5014:
             skipBytes(file, 4 * 4 * readUInt(file)) # x/y/z are normalized, w is either -1.0 or 1.0
             skipBytes(file, 4) # skip unknown data, may be the start of the 7th buffer
             
@@ -601,11 +609,10 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
                     if version == ELU_5014:
                         skipBytes(file, 2) # skip unknown index, can be negative
                     
-                    if version <= ELU_5011:
-                        if len(vertices) > 0    and pos >= len(vertices):   self.report({ 'ERROR' }, f"GZRS2: Vertex index out of bounds! { pos } { len(vertices) }");  return { 'CANCELLED' }
-                        if len(normals) > 0     and nor >= len(normals):    self.report({ 'ERROR' }, f"GZRS2: Normal index out of bounds! { nor } { len(normals) }");   return { 'CANCELLED' }
-                        if len(uv1s) > 0        and uv1 >= len(uv1s):       self.report({ 'ERROR' }, f"GZRS2: UV1 index out of bounds! { uv1 } { len(uv1s) }");         return { 'CANCELLED' }
-                        if len(uv2s) > 0        and uv2 >= len(uv2s):       self.report({ 'ERROR' }, f"GZRS2: UV2 index out of bounds! { uv2 } { len(uv2s) }");         return { 'CANCELLED' }
+                    if len(vertices) > 0    and pos >= len(vertices):   self.report({ 'ERROR' }, f"GZRS2: Vertex index out of bounds! { pos } { len(vertices) }");  #return { 'CANCELLED' }
+                    if len(normals) > 0     and nor >= len(normals):    self.report({ 'ERROR' }, f"GZRS2: Normal index out of bounds! { nor } { len(normals) }");   #return { 'CANCELLED' }
+                    if len(uv1s) > 0        and uv1 >= len(uv1s):       self.report({ 'ERROR' }, f"GZRS2: UV1 index out of bounds! { uv1 } { len(uv1s) }");         #return { 'CANCELLED' }
+                    if len(uv2s) > 0        and uv2 >= len(uv2s):       self.report({ 'ERROR' }, f"GZRS2: UV2 index out of bounds! { uv2 } { len(uv2s) }");         #return { 'CANCELLED' }
 
                     vindices[d] = pos
                     nindices[d] = nor
