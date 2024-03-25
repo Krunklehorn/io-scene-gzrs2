@@ -536,10 +536,10 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             output += "      Min: ({:>5.02f}, {:>5.02f}, {:>5.02f})     Max: ({:>5.02f}, {:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(normals, 3)) if len(normals) > 0 else ''
             print(output)
         
-        if   version <= ELU_500E or version == ELU_5014:  skipBytes(file, 4 * 3 * readUInt(file)) # skip tangents
-        elif version != ELU_5012:                         skipBytes(file, 4 * 4 * readUInt(file)) # skip tangents
+        if   version <= ELU_500E or version == ELU_5014:    skipBytes(file, 4 * 3 * readUInt(file)) # skip tangents
+        elif version != ELU_5012:                           skipBytes(file, 4 * 4 * readUInt(file)) # skip tangents
         
-        if version <= ELU_5011 or version == ELU_5013:  skipBytes(file, 4 * 3 * readUInt(file)) # skip bitangents
+        if version <= ELU_5013:  skipBytes(file, 4 * 3 * readUInt(file)) # skip bitangents
 
         if version == ELU_5012 or version == ELU_5014:
             skipBytes(file, 4 * 4 * readUInt(file)) # x/y/z are normalized, w is either -1.0 or 1.0
