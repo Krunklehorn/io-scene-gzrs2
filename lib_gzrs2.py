@@ -91,7 +91,7 @@ def ensureRS3DataDirectory(self, state):
     
     currentDir = state.directory
 
-    for _ in range(MAX_UPWARD_DIRECTORY_SEARCH):
+    for _ in range(RS3_UPWARD_DIRECTORY_SEARCH):
         currentBase = os.path.basename(currentDir)
         
         if currentBase.lower() == 'data':
@@ -150,8 +150,8 @@ def textureSearch(self, texBase, texDir, isRS3, state):
 
         parentDir = os.path.dirname(state.directory)
         targetname = texDir.split(os.sep)[0]
-
-        for _ in range(MAX_UPWARD_DIRECTORY_SEARCH):
+        
+        for _ in range(RS2_UPWARD_DIRECTORY_SEARCH):
             _, dirnames, _ = next(os.walk(parentDir))
 
             for dirname in dirnames:
@@ -177,7 +177,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
         if not state.rs2DataDir:
             currentDir = os.path.dirname(currentDir)
 
-            for u in range(MAX_UPWARD_DIRECTORY_SEARCH):
+            for u in range(RS2_UPWARD_DIRECTORY_SEARCH):
                 result = texMatchDownward(currentDir, texBase, ddsBase)
                 if result: return result
                 
