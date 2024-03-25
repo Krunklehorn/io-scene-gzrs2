@@ -50,6 +50,14 @@ def readUV3(file):
 
     return Vector((x, y))
 
+def readUV4(file):
+    x, y = readVec2(file)
+    skipBytes(file, 8)
+
+    y = -y
+
+    return Vector((x, y))
+
 def readCoordinate(file, convertUnits, flipY):
     coord = Vector(readVec3(file))
 
@@ -74,6 +82,7 @@ def readPlane(file, flipY):
 
 def readUV2Array(file, length): return tuple(readUV2(file) for _ in range(length))
 def readUV3Array(file, length): return tuple(readUV3(file) for _ in range(length))
+def readUV4Array(file, length): return tuple(readUV4(file) for _ in range(length))
 
 def readCoordinateArray(file, length, convertUnits, flipY):
     result = []
