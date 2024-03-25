@@ -53,7 +53,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 # Current Export Features
 
-### Elus
+### Model Export (.elu)
 
 * GunZ 1 version 0x5007
 * supports both static and skinned meshes
@@ -68,12 +68,13 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 <!-- -->
 
+* requires valid materials in each slot, if present (see below)
+* requires bones be contained in an Armature object
+* requires Armatures be linked using an Armature modifier (not parented!)
+* requires vertex groups corresponding to bones by exact name (case-sensitive!)
+* requires unique names for all bones across all linked armatures
 
-* requires unique names for all bones across all connected armatures
-* requires that vertex group names correspond to valid bones in a modifier-linked (not parented!) armature object
-* requires valid materials in each slot, if present
-
-##### Required Material Nodes
+#### Required Material Nodes
 
 | Type | Label<br />(right click -> rename) | Socket Configuration |
 | :---: | :---: | :---: |
@@ -81,7 +82,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 | Principled BSDF || BSDF -> Surface |
 | Value | matID ||
 
-##### Optional Nodes
+#### Optional Nodes
 
 | Type | Default | Label<br />(right click -> rename) | Details |
 | :---: | :---: | :---: | :---: |
@@ -92,7 +93,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 | RGB | 0.588, 0.588, 0.588 | diffuse ||
 | RGB | 0.9, 0.9, 0.9 | specular ||
 
-##### Transparency Settings
+#### Transparency Settings
 
 | Style | Blend Mode | Details | Socket Configuration |
 | :---: | :---: | :---: | :---: |
@@ -100,7 +101,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 | Alpha Testing | Alpha Clip || Image Texture Alpha -> PBSDF Alpha |
 | Additive | Alpha Blend || Image Texture Color -> PBSDF Emission |
 
-##### Extra Controls
+#### Extra Controls
 
 | Control | Details |
 | :---: | :---: |
@@ -109,30 +110,38 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 ![Basic Material](meta/basicmaterial_230902.jpg)
 
-##### Notes on texture paths, labels and valid data subdirectories...
+#### Notes on texture paths, labels and valid data subdirectories...
 
-In Blender, if an Image Texture node does not use a label, it will simply display the name of whatever image data block it is assigned to.
+RealSpace2's .elu format references textures using relative file paths. Paths are either relative to the .elu or relative to GunZ.exe.
 
-The path Blender uses to refer to an image on disk is not always relative to your .elu's export directory. It may also contain two filetype extensions, the latter of which should be omitted in the context of the RealSpace2 engine.
-
-To work around this, the plugin will search the image path for a valid RealSpace2 data subdirectory so that the path written to the .elu is relative to GunZ.exe. It will also remove the second extension if multiple are present. (ex: tex.bmp.dds -> tex.bmp)
+Blender on the other hand, references textures using absolute file paths. Paths are always relative to your system's root. (ex: C:/...)
 
 If you get this error during export...
 
     Unable to determine data path for texture in ELU material!
 
-...this means the image path does not contain a valid RealSpace2 data subdirectory.
+...this means one of your Image Texture node labels does not contain a valid RealSpace2 data subdirectory.
 Valid data subdirectories are...
 
     'Interface', 'Maps', 'Model', 'Quest', 'Sfx', 'Shader', 'Sound' or 'System'
 
 This check is not case sensitive.
 
-You can override this check by labeling an Image Texture node, (right click -> rename) allowing explicit control over what path is written.
+To work around this, we control what path is written during export by labeling an Image Texture node. (right click -> rename)
+- If an Image Texture node has no label, the file name of the image is written, which RealSpace2 interprets as .elu relative.
+- If it does have a label, the file path needs to be relative to Gunz.exe.
 
-During import, texture paths without a directory, valid or not, apply this override automatically to preserve their behavior when loaded by RealSpace2.
+The plugin will automatically truncate and verify the result for you. It will also remove the second extension if multiple are present. (ex: tex.bmp.dds -> tex.bmp)
 
-### Lightmaps
+#### Examples of valid node labels:
+- "model\woman\shoes.tga"
+- "Documents\My Custom Gunz Content\SFX\fireball.bmp.dds"
+
+#### Examples of invalid node labels:
+- "shoes.tga" -> just omit the label entirely
+- "Documents\My Custom Gunz Content\shoes.bmp.dds" -> rearrange your folders, include a data subdirectory
+
+### Lightmap Export (.lm)
 
 * overwrite only
 * supports image data as well as UVs
@@ -140,13 +149,12 @@ During import, texture paths without a directory, valid or not, apply this overr
   * UV export requires an active mesh object with valid UVs in channel 3
 * includes experimental "version 4" for bugfixes and DXT1 support (thanks to DeffJay)
   * version 4 lightmaps take less space and load faster, resolutions up to 8k are now viable
-  * they require client changes and do not work with vanilla GunZ
+  * for private servers only, v4 lightmaps do not work with vanilla GunZ
   * contact Krunk#6051 for information on how to implement this
 
 # Planned Features
 
-* GunZ 1.5 elu versions: 0x0, 0x11 and 0x5001, 0x5002 & 0x5003
-* GunZ 2 retail elu versions: 0x5012, 0x5013 & 0x5014
+* GunZ 1.5 elu versions: 0x11 and 0x5001, 0x5002 & 0x5003
 * .ani support
 * nav mesh support
 
@@ -159,7 +167,10 @@ During import, texture paths without a directory, valid or not, apply this overr
 * GunZ 1: some polygons in UV channel 3 come out garbled on maps with multiple lightmaps (Citadel)
 * GunZ 2: some objects are not oriented correctly (spotlights)
 * GunZ 2: embedded scene hierarchies are not parsed yet (lighting_candlestick_y02, lighting_chandelier_g01, etc.)
+* GunZ 2: materials do not support composition layers yet (weird colored terrain)
 
+
+# Screenshots
 
 ![Preview](meta/preview_220327_1.jpg)
 ![Preview](meta/preview_220420.jpg)

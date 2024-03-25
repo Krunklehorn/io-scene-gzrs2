@@ -269,12 +269,13 @@ def exportElu(self, context):
 
         if texture is not None:
             if texture.label == '':
-                texpath = makeRS2DataPath(texture.image.filepath)
+                texpath = os.path.basename(texture.image.filepath)
+            else:
+                texpath = makeRS2DataPath(texture.label)
 
                 if texpath == False:
-                    self.report({ 'ERROR' }, f"GZRS2: Unable to determine data path for texture in ELU material! Check the GitHub page for a list of valid data subdirectories! { matID }, { matName }, { texture.image.filepath }")
+                    self.report({ 'ERROR' }, f"GZRS2: Unable to determine data path for texture in ELU material! Check the GitHub page for a list of valid data subdirectories! { matID }, { matName }, { texture.label }")
                     return { 'CANCELLED' }
-            else: texpath = texture.label
 
             if len(texpath) >= maxPathLength:
                 self.report({ 'ERROR' }, f"GZRS2: Data path for texture has too many characters! Max length is 40 for versions <= ELU_5005 and 256 for everything above! { matID }, { matName }, { texpath }")
@@ -283,12 +284,13 @@ def exportElu(self, context):
 
         if alpha is not None:
             if alpha.label == '':
-                alphapath = makeRS2DataPath(alpha.image.filepath)
+                alphapath = alpha.image.filepath
+            else:
+                alphapath = makeRS2DataPath(alpha.label)
 
                 if alphapath == False:
-                    self.report({ 'ERROR' }, f"GZRS2: Unable to determine data path for texture in ELU material! Check the GitHub page for a list of valid data subdirectories! { matID }, { matName }, { alpha.image.filepath }")
+                    self.report({ 'ERROR' }, f"GZRS2: Unable to determine data path for texture in ELU material! Check the GitHub page for a list of valid data subdirectories! { matID }, { matName }, { texture.label }")
                     return { 'CANCELLED' }
-            else: alphapath = alpha.label
 
             if len(alphapath) > maxPathLength:
                 self.report({ 'ERROR' }, f"GZRS2: Data path for texture has too many characters! Max length is 40 for versions <= ELU_5005 and 256 for everything above! { matID }, { matName }, { alphapath }")

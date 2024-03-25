@@ -68,7 +68,7 @@ def isValidTextureName(texname):
 def texMatchDownward(root, texBase, ddsBase):
     for dirpath, _, filenames in os.walk(root):
         for filename in filenames:
-            if filename == ddsBase or filename == texBase:
+            if filename == texBase or filename == ddsBase:
                 return os.path.join(dirpath, filename)
 
 def matchRS2DataDirectory(self, dirpath, dirbase, tokens, state):
@@ -175,7 +175,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
         if result: return result
 
         if not state.rs2DataDir:
-            currentDir = os.path.dirname(currentDir)
+            currentDir = os.path.dirname(state.directory)
 
             for u in range(RS2_UPWARD_DIRECTORY_SEARCH):
                 result = texMatchDownward(currentDir, texBase, ddsBase)
@@ -192,7 +192,10 @@ def textureSearch(self, texBase, texDir, isRS3, state):
         result = texMatchDownward(state.rs2DataDir, texBase, ddsBase)
         if result: return result
         
-        self.report({ 'INFO' }, f"GZRS2: Texture search failed, no downward match: { texBase }")
+        if state.rs2DataDir:
+            self.report({ 'INFO' }, f"GZRS2: Texture search failed, no downward match: { texBase }")
+        else:
+            self.report({ 'INFO' }, f"GZRS2: Texture search failed, no downward match and no data directory: { texBase }")
     else:
         ensureRS3DataDirectory(self, state)
 
@@ -450,8 +453,9 @@ def setupEluMat(self, eluMat, state):
 
         state.blEluMats.setdefault(elupath, {})[matID] = blMat2
         return
-
-    blMat = bpy.data.materials.new(texName or f"Material_{ matID }_{ subMatID }")
+    
+    matName = texName or f"Material_{ matID }_{ subMatID }"
+    blMat = bpy.data.materials.new(matName)
     blMat.use_nodes = True
 
     tree = blMat.node_tree
@@ -508,7 +512,15 @@ def setupEluMat(self, eluMat, state):
             self.report({ 'INFO' }, f"GZRS2: Texture not found for .elu material: { texBase }")
 
         texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
-        texture.label = texBase if texDir == '' else ''
+        datapath = makeRS2DataPath(texpath)
+
+        if texDir == '':
+            texture.label = ''
+        elif datapath != False:
+            texture.label = datapath
+        else:
+            texture.label = os.path.join(texDir, texBase)
+
         diffuseLink = tree.links.new(texture.outputs[0], shader.inputs[0]) # Base Color
         diffuseLink.is_muted = texpath is None
         nodes.active = texture
@@ -925,7 +937,7 @@ def isValidEluImageNode(node, muted):
     return True
 
 def makeRS2DataPath(path):
-    if path == '': return path
+    if path == None or path == '': return False
     found = None
 
     for token in RS2_VALID_DATA_SUBDIRS:
@@ -951,7 +963,7 @@ def makeRS2DataPath(path):
     name2, ext2 = os.path.splitext(name1)
 
     if ext2 == '': return found
-    else: return dir + '\\' + name1
+    else: return os.path.join(dir, name1)
 
 def calcEtcData(version, transform): # TODO
     if version >= ELU_5001:
