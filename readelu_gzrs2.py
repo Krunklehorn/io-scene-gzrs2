@@ -177,8 +177,9 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
             print(f"Use Opacity:        { useopacity }")
             print()
 
-        frameCount, frameSpeed, frameGap = 0, 0, 0.0
-
+        texBase, texName, texExt, texDir = "", "", "", ""
+        isAniTex, frameCount, frameSpeed, frameGap = False, 0, 0, 0.0
+        
         if texpath:
             texDir = os.path.dirname(texpath)
             texBase = os.path.basename(texpath)
