@@ -440,14 +440,25 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
         print()
 
 def readEluRS3UVs(file, version):
-    uv1s = readUV3Array(file, readUInt(file)) # skips invalid z-coordinate
+    uv1s, uv2s = (), ()
 
-    if version == ELU_500E or version == ELU_500F:
-        skipBytes(file, 4 * 3 * readUInt(file)) # skip lightmap uvs
+    if version <= ELU_5013:
+        uv1s = readUV3Array(file, readUInt(file)) # skips invalid z-coordinate
+    else:
+        uv1Stride = readShort(file)
+        uv1Count = readUInt(file)
+        
+        if   uv1Stride == 2:    uv1s = readUV2Array(file, uv1Count)
+        elif uv1Stride == 3:    uv1s = readUV3Array(file, uv1Count)
+        elif uv1Stride == 4:    uv1s = readUV4Array(file, uv1Count)
+        else:
+            self.report({ 'ERROR' }, f"GZRS2: Unsupported uv stride length! { uv1Stride }")
+            return { 'CANCELLED' }
 
-        return uv1s, ()
-    elif version >= ELU_5011:
-        return uv1s, readUV3Array(file, readUInt(file)) # skips invalid z-coordinate
+    if version == ELU_500E or version == ELU_500F:  skipBytes(file, 4 * 3 * readUInt(file)) # skip invalid lightmap uvs
+    elif version >= ELU_5011:                       uv2s = readUV3Array(file, readUInt(file)) # skips invalid z-coordinate
+    
+    return uv1s, uv2s
 
 def readEluRS3Meshes(self, path, file, version, meshCount, state):
     if state.logEluMeshNodes and meshCount > 0:
@@ -458,7 +469,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
     for m in range(meshCount):
         meshName = readString(file, readUInt(file))
 
-        if version != ELU_5013:
+        if not version in [ELU_5013, ELU_5014]:
             parentName = readString(file, readUInt(file))
             meshID = readInt(file)
         else:
@@ -474,10 +485,10 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
 
         # RMeshNodeLoadImpl.cpp -> LoadInfo()
 
-        if version != ELU_5013:
+        if not version in [ELU_5013, ELU_5014]:
             drawFlags = readUInt(file)
             skipBytes(file, 4) # skip mesh align
-            if version < ELU_500A: skipBytes(file, 4 * 3) # skip unused bodypart info
+            if version <= ELU_5009: skipBytes(file, 4 * 3) # skip unused bodypart info
             localMatrix = readTransform(file, state.convertUnits, False)
             if version >= ELU_500A: skipBytes(file, 4) # skip visibility
         else:
@@ -498,7 +509,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
         
 
         # RMeshNodeLoadImpl.cpp -> LoadVertex()
-        if version < ELU_5011:
+        if version <= ELU_5010:
             if version >= ELU_500D:
                 skipBytes(file, 4) # skip FVF flags
             
@@ -507,35 +518,44 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
                 skipBytes(file, 4) # skip lightmap ID
         
         vertices = readCoordinateArray(file, readUInt(file), state.convertUnits, False)
+
         if state.logEluMeshNodes:
             output = "Vertices:           {:<6d}".format(len(vertices))
             output += "      Min: ({:>5.02f}, {:>5.02f}, {:>5.02f})     Max: ({:>5.02f}, {:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(vertices, 3)) if len(vertices) > 0 else ''
             print(output)
         
-        uv1s, uv2s = readEluRS3UVs(file, version) if version == ELU_5013 else ((), ())
+        uv1s, uv2s = (), ()
         
+        if version >= ELU_5013:
+            uv1s, uv2s = readEluRS3UVs(file, version)
+
         normals = readDirectionArray(file, readUInt(file), False)
+
         if state.logEluMeshNodes:
             output = "Normals:            {:<6d}".format(len(normals))
             output += "      Min: ({:>5.02f}, {:>5.02f}, {:>5.02f})     Max: ({:>5.02f}, {:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(normals, 3)) if len(normals) > 0 else ''
             print(output)
         
-        # skip tangents
-        if version < ELU_500F:  skipBytes(file, 4 * 3 * readUInt(file))
-        else:                   skipBytes(file, 4 * 4 * readUInt(file))
-
-        skipBytes(file, 4 * 3 * readUInt(file)) # skip bitangents
+        if version <= ELU_500E or version == ELU_5014:  skipBytes(file, 4 * 3 * readUInt(file)) # skip tangents
+        else:                                           skipBytes(file, 4 * 4 * readUInt(file)) # skip tangents
         
-        uv1s, uv2s = readEluRS3UVs(file, version) if version != ELU_5013 else ((), ())
-
+        if version <= ELU_5013:
+            skipBytes(file, 4 * 3 * readUInt(file)) # skip bitangents
+        else:
+            skipBytes(file, 4 * 4 * readUInt(file)) # x/y/z are normalized, w is either -1.0 or 1.0
+            skipBytes(file, 4) # skip unknown data, may be the start of the 7th buffer
+            
+        if version <= ELU_5012:
+            uv1s, uv2s = readEluRS3UVs(file, version)
+        
         if state.logEluMeshNodes:
-            output = "UV1s:               {:<6d}".format(len(uv1s))
-            output += "      Min: ({:>5.02f}, {:>5.02f})            Max: ({:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(uv1s, 2)) if len(uv1s) > 0 else ''
-            print(output)
+                output = "UV1s:               {:<6d}".format(len(uv1s))
+                output += "      Min: ({:>5.02f}, {:>5.02f})            Max: ({:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(uv1s, 2)) if len(uv1s) > 0 else ''
+                print(output)
 
-            output = "UV2s:               {:<6d}".format(len(uv2s))
-            output += "      Min: ({:>5.02f}, {:>5.02f})            Max: ({:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(uv2s, 2)) if len(uv2s) > 0 else ''
-            print(output)
+                output = "UV2s:               {:<6d}".format(len(uv2s))
+                output += "      Min: ({:>5.02f}, {:>5.02f})            Max: ({:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(uv2s, 2)) if len(uv2s) > 0 else ''
+                print(output)
         
 
         # RMeshNodeLoadImpl.cpp -> LoadFace()
@@ -547,7 +567,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             print(f"Faces:              { faceCount }")
 
         if faceCount > 0:
-            if version < ELU_500B:
+            if version <= ELU_500A:
                 totalDegree = faceCount * 3
                 totalTris = faceCount
             else:
@@ -559,7 +579,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
                 print(f"Total Tris:         { totalTris }")
 
             for f in range(faceCount):
-                if version < ELU_500B: degree = 3
+                if version <= ELU_500A: degree = 3
                 else: degree = readUInt(file)
 
                 if state.logEluMeshNodes and state.logVerboseIndices:
@@ -577,8 +597,11 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
                     uv2 = readShort(file) if version >= ELU_500E else -1 # stored, but not valid until ELU_5011
                     nor = readShort(file)
                     skipBytes(file, 2 * 2) # skip bitangent and tangent indices
+
+                    if version == ELU_5014:
+                        skipBytes(file, 2) # skip unknown index, can be negative
                     
-                    if version != ELU_5013:
+                    if not version in [ELU_5013, ELU_5014]:
                         if len(vertices) > 0    and pos >= len(vertices):   self.report({ 'ERROR' }, f"GZRS2: Vertex index out of bounds! { pos } { len(vertices) }");  return { 'CANCELLED' }
                         if len(normals) > 0     and nor >= len(normals):    self.report({ 'ERROR' }, f"GZRS2: Normal index out of bounds! { nor } { len(normals) }");   return { 'CANCELLED' }
                         if len(uv1s) > 0        and uv1 >= len(uv1s):       self.report({ 'ERROR' }, f"GZRS2: UV1 index out of bounds! { uv1 } { len(uv1s) }");         return { 'CANCELLED' }
@@ -674,7 +697,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
 
         # RMeshNodeLoadImpl.cpp -> LoadEtc()
         
-        if version != ELU_5013:
+        if not version in [ELU_5013, ELU_5014]:
             boneIndexCount = readUInt(file)
             if state.logEluMeshNodes:
                 print(f"Bone Indices:       { boneIndexCount }")
@@ -721,11 +744,12 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             print(f"Etc Vert Indices:   { vertIndexCount }")
         
         # skip secondary vertex indices
-        if version <= ELU_500D: skipBytes(file, 2 * 5 * vertIndexCount)
-        else:                   skipBytes(file, 2 * 6 * vertIndexCount)
+        if   version <= ELU_500D:   skipBytes(file, 2 * 5 * vertIndexCount)
+        elif version <  ELU_5014:   skipBytes(file, 2 * 6 * vertIndexCount)
+        else:                       skipBytes(file, 2 * 7 * vertIndexCount)
         
-        if version != ELU_5013:
-            if version < ELU_500B:
+        if not version in [ELU_5013, ELU_5014]:
+            if version <= ELU_500A:
                 faceIndexCount = faceCount * 3
             else:
                 skipBytes(file, 4) # skip primitive type
@@ -736,7 +760,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             
             skipBytes(file, 2 * faceIndexCount) # skip secondary face indices
 
-        if version == ELU_5013:
+        if version in [ELU_5013, ELU_5014]:
             skipBytes(file, (4 * 4 * 4 + 2) * readUInt(file)) # skip bone etc matrices and indices
         
         slots = []
@@ -756,7 +780,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
 
             slots.append(EluSlot(slotID, indexOffset, faceCount, maskID))
         
-        if version == ELU_5013:
+        if version in [ELU_5013, ELU_5014]:
             skipBytes(file, 2 * readUInt(file)) # skip secondary face indices
 
         if version >= ELU_500C:
