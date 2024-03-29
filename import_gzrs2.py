@@ -313,7 +313,7 @@ def importRS2(self, context):
                 def cleanupFunc():
                     bpy.ops.object.select_all(action = 'DESELECT')
                     state.blMeshObjs[m].select_set(True)
-                    bpy.ops.object.shade_smooth(use_auto_smooth = True)
+                    bpy.ops.object.shade_smooth()
                     bpy.ops.object.select_all(action = 'DESELECT')
 
                     bpy.ops.object.mode_set(mode = 'EDIT')

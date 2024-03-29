@@ -73,33 +73,33 @@ def texMatchDownward(root, texBase, ddsBase):
 
 def matchRS2DataDirectory(self, dirpath, dirbase, tokens, state):
     _, dirnames, _ = next(os.walk(dirpath))
-                
+
     for token in RS2_VALID_DATA_SUBDIRS:
         if dirbase.lower() == token.lower():
             state.rs2DataDir = os.path.dirname(dirpath)
             return True
-        
+
         for dirname in dirnames:
             if dirname.lower() == token.lower():
                 state.rs2DataDir = dirpath
                 return True
-    
+
     return False
 
 def ensureRS3DataDirectory(self, state):
     if state.rs3DataDir: return
-    
+
     currentDir = state.directory
 
     for _ in range(RS3_UPWARD_DIRECTORY_SEARCH):
         currentBase = os.path.basename(currentDir)
-        
+
         if currentBase.lower() == 'data':
             state.rs3DataDir = currentDir
             break
 
         _, dirnames, _ = next(os.walk(currentDir))
-        
+
         for dirname in dirnames:
             if dirname.lower() == 'data':
                 state.rs3DataDir = os.path.join(currentDir, dirname)
@@ -110,7 +110,7 @@ def ensureRS3DataDirectory(self, state):
     if not state.rs3DataDir:
         self.report({ 'INFO' }, f"GZRS2: Failed to find RS3 data directory!")
         return
-    
+
     for dirpath, _, filenames in os.walk(state.rs3DataDir):
         for filename in filenames:
             splitname = filename.split(os.extsep)
@@ -120,7 +120,7 @@ def ensureRS3DataDirectory(self, state):
 
                 if resourcepath: state.rs3DataDict[filename] = resourcepath
                 else: self.report({ 'INFO' }, f"GZRS2: Resource found but pathExists() failed, potential case sensitivity issue: { filename }")
-        
+
 
 def textureSearch(self, texBase, texDir, isRS3, state):
     if not isValidTextureName(texBase):
@@ -136,7 +136,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
 
     texExists = pathExists(texpath)
     if texExists: return texExists
-    
+
     if texDir is None: return
     elif texDir != '':
         texpath = os.path.join(state.directory, texDir, texBase)
@@ -150,7 +150,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
 
         parentDir = os.path.dirname(state.directory)
         targetname = texDir.split(os.sep)[0]
-        
+
         for _ in range(RS2_UPWARD_DIRECTORY_SEARCH):
             _, dirnames, _ = next(os.walk(parentDir))
 
@@ -168,7 +168,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
                     return
 
             parentDir = os.path.dirname(parentDir)
-        
+
         self.report({ 'INFO' }, f"GZRS2: Texture search failed, directory not found: { texBase }, { texDir }")
     elif not isRS3:
         result = texMatchDownward(state.directory, texBase, ddsBase)
@@ -180,18 +180,18 @@ def textureSearch(self, texBase, texDir, isRS3, state):
             for u in range(RS2_UPWARD_DIRECTORY_SEARCH):
                 result = texMatchDownward(currentDir, texBase, ddsBase)
                 if result: return result
-                
+
                 currentBase = os.path.basename(currentDir)
-                
+
                 if matchRS2DataDirectory(self, currentDir, currentBase, state):
                     self.report({ 'INFO' }, f"GZRS2: Upward directory search found a valid data subdirectory: { u }, { token }, { texBase }")
                     break
 
                 currentDir = os.path.dirname(currentDir)
-        
+
         result = texMatchDownward(state.rs2DataDir, texBase, ddsBase)
         if result: return result
-        
+
         if state.rs2DataDir:
             self.report({ 'INFO' }, f"GZRS2: Texture search failed, no downward match: { texBase }")
         else:
@@ -201,7 +201,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
 
         if texBase in state.rs3DataDict: return state.rs3DataDict[texBase]
         elif ddsBase in state.rs3DataDict: return state.rs3DataDict[ddsBase]
-        
+
         self.report({ 'INFO' }, f"GZRS2: Texture search failed, no entry in data dictionary: { texBase }")
 
 def resourceSearch(self, resourcename, state):
@@ -272,17 +272,17 @@ def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, sha
     if not texname:
         self.report({ 'INFO' }, f"GZRS2: Bsp material with empty texture name: { m }, { name }")
         return
-    
+
     if not isValidTextureName(texname):
         self.report({ 'INFO' }, f"GZRS2: Bsp material with invalid texture name, must not be a directory: { m }, { name }, { texname }")
         return
-    
+
     texpath = textureSearch(self, texname, '', False, state)
 
     if texpath is None:
         self.report({ 'INFO' }, f"GZRS2: Texture not found for bsp material: { m }, { name }, { texname }")
         return
-    
+
     texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
 
     if state.doLightmap:
@@ -368,13 +368,13 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
     if not isValidTextureName(texname):
         self.report({ 'INFO' }, f"GZRS2: .elu.xml material with invalid texture name, must not be a directory: { texname }, { textype }")
         return
-    
+
     texpath = textureSearch(self, texname, '', True, state)
 
     if texpath is None:
         self.report({ 'INFO' }, f"GZRS2: Texture not found for .elu.xml material: { texname }, { textype }")
         return
-    
+
     if textype == 'DIFFUSEMAP':
         texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
         tree.links.new(texture.outputs[0], shader.inputs[0]) # Base Color
@@ -453,7 +453,7 @@ def setupEluMat(self, eluMat, state):
 
         state.blEluMats.setdefault(elupath, {})[matID] = blMat2
         return
-    
+
     matName = texName or f"Material_{ matID }_{ subMatID }"
     blMat = bpy.data.materials.new(matName)
     blMat.use_nodes = True
@@ -697,7 +697,6 @@ def setupRsMesh(self, m, blMesh, state):
 
     blMesh.from_pydata(meshVerts, [], meshFaces)
 
-    blMesh.use_auto_smooth = True
     blMesh.normals_split_custom_set_from_vertices(meshNorms)
 
     uvLayer1 = blMesh.uv_layers.new()
@@ -757,7 +756,6 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     blMesh.from_pydata(meshVerts, [], meshFaces)
 
     if doNorms:
-        blMesh.use_auto_smooth = True
         blMesh.normals_split_custom_set_from_vertices(meshNorms)
 
     if doUV1:
@@ -873,7 +871,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
         def cleanupFunc():
             bpy.ops.object.select_all(action = 'DESELECT')
             blMeshObj.select_set(True)
-            bpy.ops.object.shade_smooth(use_auto_smooth = doNorms)
+            bpy.ops.object.shade_smooth()
             bpy.ops.object.select_all(action = 'DESELECT')
 
             bpy.ops.object.mode_set(mode = 'EDIT')

@@ -4,8 +4,8 @@ from . import export_rselu, export_rslm
 bl_info = {
     "name": "GZRS2/3 Format",
     "author": "Krunklehorn",
-    "version": (0, 9, 2),
-    "blender": (3, 6, 2),
+    "version": (0, 9, 3),
+    "blender": (4, 1, 0),
     "location": "File > Import-Export",
     "description": "GunZ: The Duel RealSpace2/3 content importer.",
     "category": "Import-Export",

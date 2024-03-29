@@ -1,38 +1,24 @@
 # ***io_scene_gzrs2***
 
-GunZ: The Duel RealSpace2/3 content importer for Blender 3.6.2 and up.  
+GunZ: The Duel RealSpace2/3 content importer for Blender 4.1 and up.
 Intended for users wishing to visualize and modify GunZ content or prepare the data for a modern game engine.
 
 Please report bugs and unimplemented features to: ***Krunk#6051***
 
 RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-map-1204327/***
 
-[***DOWNLOAD v0.9.2.1***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.9.2/io_scene_gzrs2_v0.9.2.1.zip)
-
 
 # Latest Update
 
-* NEW: .elu version 0x0 and 0x11 import support
-* NEW: .elu export support
-* Elu meshes now support multiple material slots
-* Elu meshes now include cloth physics data as color attributes
-* Elu materials now include...
-	* empty texture nodes for missing textures
-	* value nodes for material ID, sub-material ID and sub-material count
-	* RGB nodes for ambient, diffuse and specular colors
-* Elu logging now includes extra min/max information for some fields
-* Users are now warned if an .rs, .elu, .col or .lm file has bytes remaining after a successful read
-* Naming conventions are a bit tidier
+[***DOWNLOAD v0.9.3 -- UPDATE YOUR BLENDER TO 4.1 FIRST!!***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.9.3/io_scene_gzrs2_v0.9.3.zip)
 
-***Latest hotfix: v0.9.2.1***
-
-* Experimental: compiled C library adds multithreading support during lightmap export
-  * compiler -> gcc
-  * triplet -> x86_64-w64-mingw32
-  * should automatically catch and fallback to Python if anything goes wrong
-* Smarter and faster texture search now successfully finds even more textures
-* Fix for invalid xml textures (Snow Town)
-* Other minor fixes and tweaks
+* NEW: Blender 4.1 support!
+* NEW: GunZ 2 retail .elu import support! 0x5012, 0x5013 and 0x5014
+  * Not guaranteed to work with RaiderZ content
+* Fixed a hang when loading some .elus without logging enabled
+* Fixed return handling for .elu versions < 0x500D
+* Split upward directory search limits
+* Other minor bug fixes
 
 
 # Current Import Features
@@ -179,9 +165,9 @@ The plugin will automatically truncate and verify the result for you. It will al
 
 # Special Thanks
 
-[three-gunz](https://github.com/LostMyCode/three-gunz)  
-[open-gunz](https://github.com/open-gunz/ogz-source)  
-[rahulshekhawat](https://github.com/rahulshekhawat/blender-elu-ani-importer)  
-[x1nixmzeng](https://github.com/x1nixmzeng/z3ResEx)  
-[Nayr438](https://github.com/Nayr438)  
-[DeffJay](https://github.com/Jetman823)  
+[three-gunz](https://github.com/LostMyCode/three-gunz)
+[open-gunz](https://github.com/open-gunz/ogz-source)
+[rahulshekhawat](https://github.com/rahulshekhawat/blender-elu-ani-importer)
+[x1nixmzeng](https://github.com/x1nixmzeng/z3ResEx)
+[Nayr438](https://github.com/Nayr438)
+[DeffJay](https://github.com/Jetman823)

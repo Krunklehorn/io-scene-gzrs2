@@ -422,7 +422,7 @@ def exportElu(self, context):
             faces = []
             slotIDs = set()
 
-            useCustomNormals = blMesh.has_custom_normals and blMesh.use_auto_smooth
+            useCustomNormals = blMesh.has_custom_normals
 
             for triangle in blMesh.loop_triangles:
                 indices = tuple(reversed(triangle.vertices))
