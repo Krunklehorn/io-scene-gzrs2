@@ -71,7 +71,7 @@ def texMatchDownward(root, texBase, ddsBase):
             if filename == texBase or filename == ddsBase:
                 return os.path.join(dirpath, filename)
 
-def matchRS2DataDirectory(self, dirpath, dirbase, tokens, state):
+def matchRS2DataDirectory(self, dirpath, dirbase, state):
     _, dirnames, _ = next(os.walk(dirpath))
 
     for token in RS2_VALID_DATA_SUBDIRS:
@@ -184,7 +184,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
                 currentBase = os.path.basename(currentDir)
 
                 if matchRS2DataDirectory(self, currentDir, currentBase, state):
-                    self.report({ 'INFO' }, f"GZRS2: Upward directory search found a valid data subdirectory: { u }, { token }, { texBase }")
+                    self.report({ 'INFO' }, f"GZRS2: Upward directory search found a valid data subdirectory: { u }, { texBase }")
                     break
 
                 currentDir = os.path.dirname(currentDir)
