@@ -165,9 +165,10 @@ The plugin will automatically truncate and verify the result for you. It will al
 
 # Special Thanks
 
-[three-gunz](https://github.com/LostMyCode/three-gunz)
-[open-gunz](https://github.com/open-gunz/ogz-source)
-[rahulshekhawat](https://github.com/rahulshekhawat/blender-elu-ani-importer)
-[x1nixmzeng](https://github.com/x1nixmzeng/z3ResEx)
-[Nayr438](https://github.com/Nayr438)
-[DeffJay](https://github.com/Jetman823)
+[three-gunz](https://github.com/LostMyCode/three-gunz)  
+[open-gunz](https://github.com/open-gunz/ogz-source)  
+[rahulshekhawat](https://github.com/rahulshekhawat/blender-elu-ani-importer)  
+[x1nixmzeng](https://github.com/x1nixmzeng/z3ResEx)  
+[Nayr438](https://github.com/Nayr438)  
+[DeffJay](https://github.com/Jetman823)  
+[HeroBanana](https://github.com/HeroBanana)  
