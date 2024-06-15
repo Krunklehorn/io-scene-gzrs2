@@ -110,7 +110,7 @@ def exportElu(self, context):
                 object.update_from_editmode()
                 object.data.calc_normals_split()
 
-                modifier = object.modifiers.get("Armature", None)
+                modifier = getModifierByType(self, object.modifiers, 'ARMATURE')
                 blArmatureObj = modifier.object if modifier is not None and modifier.object.type == 'ARMATURE' else None
                 blArmature = blArmatureObj.data if blArmatureObj is not None else None
 
@@ -219,10 +219,10 @@ def exportElu(self, context):
             self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
             return { 'CANCELLED' }
 
-        output = nodes.get('Material Output')
-        shader = nodes.get('Principled BSDF')
-        add = nodes.get('Add Shader')
-        transparent = nodes.get('Transparent BSDF')
+        output          = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
+        shader          = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
+        add             = getShaderNodeByID(self, nodes, 'ShaderNodeAddShader')
+        transparent     = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfTransparent')
 
         shaderValid =       False if shader         is not None     else None
         addValid =          False if add            is not None     else None
@@ -400,7 +400,7 @@ def exportElu(self, context):
             color1 = blMesh.color_attributes[0] if len(blMesh.color_attributes) > 0 else None
             vertexGroups = blObj.vertex_groups if len(blObj.vertex_groups) > 0 else None
 
-            modifier = blObj.modifiers.get("Armature", None)
+            modifier = getModifierByType(self, blObj.modifiers, 'ARMATURE')
             blArmatureObj = modifier.object if modifier is not None and modifier.object.type == 'ARMATURE' else None
             blArmature = blArmatureObj.data if blArmatureObj is not None else None
 

@@ -85,12 +85,14 @@ def importCol(self, context):
 
     tree = blColMat.node_tree
     nodes = tree.nodes
-    nodes.remove(nodes.get('Principled BSDF'))
+    nodes.remove(getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled'))
+
+    output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
 
     transparent = nodes.new('ShaderNodeBsdfTransparent')
     transparent.location = (120, 300)
 
-    tree.links.new(transparent.outputs[0], nodes.get('Material Output').inputs[0])
+    tree.links.new(transparent.outputs[0], output.inputs[0])
 
     blColGeo = bpy.data.meshes.new(name)
     blColObj = bpy.data.objects.new(name, blColGeo)

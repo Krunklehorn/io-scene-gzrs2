@@ -243,6 +243,16 @@ def getTexImage(bpy, texpath, alphamode, state):
 
     return texImages[alphamode]
 
+def getShaderNodeByID(self, nodes, id):
+    for node in nodes.values():
+        if node.bl_idname == id:
+            return node
+
+def getModifierByType(self, modifiers, type):
+    for modifier in modifiers.values():
+        if modifier.type == type:
+            return modifier
+
 def getMatNode(bpy, blMat, nodes, texpath, alphamode, x, y, state):
     if texpath is None:
         texture = nodes.new('ShaderNodeTexImage')
@@ -335,6 +345,8 @@ def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, sha
         blMat.show_transparent_back = True
         blMat.use_backface_culling = False
 
+        output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
+
         add = nodes.new('ShaderNodeAddShader')
         transparent = nodes.new('ShaderNodeBsdfTransparent')
 
@@ -351,7 +363,7 @@ def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, sha
 
         tree.links.new(shader.outputs[0], add.inputs[0])
         tree.links.new(transparent.outputs[0], add.inputs[1])
-        tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
+        tree.links.new(add.outputs[0], output.inputs[0])
 
 def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alphatest, state):
     textype = texlayer['type']
@@ -496,14 +508,15 @@ def setupEluMat(self, eluMat, state):
     diffuseNode.outputs[0].default_value = (diffuse[0], diffuse[1], diffuse[2], 1.0)
     specularNode.outputs[0].default_value = (specular[0], specular[1], specular[2], 1.0)
 
-    shader = nodes.get('Principled BSDF')
+    output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
+    shader = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
     shader.location = (20, 300)
     shader.select = False
     shader.inputs[12].default_value = 0.0 # Specular IOR Level
     shader.inputs[2].default_value = 1.0 - (power / 100.0) # Roughness
 
     nodes.active = shader
-    nodes.get('Material Output').select = False
+    output.select = False
 
     if texBase and isValidTextureName(texBase):
         texpath = textureSearch(self, texBase, texDir, False, state)
@@ -560,7 +573,7 @@ def setupEluMat(self, eluMat, state):
             emitLink.is_muted = texpath is None
             tree.links.new(shader.outputs[0], add.inputs[0])
             tree.links.new(transparent.outputs[0], add.inputs[1])
-            tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
+            tree.links.new(add.outputs[0], output.inputs[0])
 
     state.blEluMats.setdefault(elupath, {})[matID] = blMat
     state.blEluMatPairs.append((eluMat, blMat))
@@ -607,14 +620,15 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     tree = blMat.node_tree
     nodes = tree.nodes
 
-    shader = nodes.get('Principled BSDF')
+    output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
+    shader = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
     shader.location = (20, 300)
     shader.select = False
     shader.inputs[6].default_value = glossiness / 100.0 # Metallic
     shader.inputs[12].default_value = specular / 100.0 # Specular IOR Level
 
     nodes.active = shader
-    nodes.get('Material Output').select = False
+    output.select = False
 
     for texlayer in xmlEluMat['textures']:
         processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alphatest, state)
@@ -634,7 +648,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
 
         tree.links.new(shader.outputs[0], add.inputs[0])
         tree.links.new(transparent.outputs[0], add.inputs[1])
-        tree.links.new(add.outputs[0], nodes.get('Material Output').inputs[0])
+        tree.links.new(add.outputs[0], output.inputs[0])
 
     state.blXmlEluMats.setdefault(elupath, []).append(blMat)
     state.blXmlEluMatPairs.append((xmlEluMat, blMat))

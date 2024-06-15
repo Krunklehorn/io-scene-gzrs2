@@ -239,7 +239,7 @@ def importElu(self, context):
                 self.report({ 'INFO' }, f"GZRS2: Bone parent not found for .elu child mesh or dummy: { child.meshName }, { child.parentName }, { child.isDummy }")
 
         for blMeshObj in state.blMeshObjs:
-            modifier = blMeshObj.modifiers.get("Armature", None)
+            modifier = getModifierByType(self, blMeshObj.modifiers, 'ARMATURE')
 
             if modifier:
                 modifier.object = state.blArmatureObj

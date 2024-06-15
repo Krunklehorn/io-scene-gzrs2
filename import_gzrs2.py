@@ -114,7 +114,7 @@ def importRS2(self, context):
         state.doOcclusion = False
         state.doFog = False
         state.doSounds = False
-        self.report({ 'ERROR' }, "Map xml not found, no materials or objects to generate!")
+        self.report({ 'ERROR' }, "GZRS2: Map xml not found, no materials or objects to generate!")
 
     xmlSpawn = False
     spawnxmlpath = os.path.join(state.directory, "spawn.xml")
@@ -269,13 +269,14 @@ def importRS2(self, context):
         tree = blMat.node_tree
         nodes = tree.nodes
 
-        shader = nodes.get('Principled BSDF')
+        output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
+        shader = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
         shader.location = (20, 300)
         shader.select = False
         shader.inputs[12].default_value = 0.0 # Specular IOR Level
 
         nodes.active = shader
-        nodes.get('Material Output').select = False
+        output.select = False
 
         texname = xmlRsMat.get('DIFFUSEMAP')
 
@@ -548,12 +549,14 @@ def importRS2(self, context):
 
             tree = blColMat.node_tree
             nodes = tree.nodes
-            nodes.remove(nodes.get('Principled BSDF'))
+            nodes.remove(getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled'))
+
+            output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
 
             transparent = nodes.new('ShaderNodeBsdfTransparent')
             transparent.location = (120, 300)
 
-            tree.links.new(transparent.outputs[0], nodes.get('Material Output').inputs[0])
+            tree.links.new(transparent.outputs[0], output.inputs[0])
 
             blColGeo = bpy.data.meshes.new(name)
             blColObj = bpy.data.objects.new(name, blColGeo)
@@ -592,12 +595,14 @@ def importRS2(self, context):
 
             tree = blOccMat.node_tree
             nodes = tree.nodes
-            nodes.remove(nodes.get('Principled BSDF'))
+            nodes.remove(getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled'))
+
+            output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
 
             transparent = nodes.new('ShaderNodeBsdfTransparent')
             transparent.location = (120, 300)
 
-            tree.links.new(transparent.outputs[0], nodes.get('Material Output').inputs[0])
+            tree.links.new(transparent.outputs[0], output.inputs[0])
 
             occVerts = []
             occFaces = []
@@ -675,7 +680,9 @@ def importRS2(self, context):
             tree = blFogMat.node_tree
             nodes = tree.nodes
 
-            nodes.remove(nodes.get('Principled BSDF'))
+            nodes.remove(getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled'))
+
+            output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
 
             if min(color[:3]) > 0.5:
                 shader = nodes.new('ShaderNodeVolumeScatter')
@@ -689,10 +696,10 @@ def importRS2(self, context):
             shader.location = (120, 300)
             shader.select = False
 
-            tree.links.new(shader.outputs[0], nodes.get('Material Output').inputs[1])
+            tree.links.new(shader.outputs[0], output.inputs[1])
 
             nodes.active = shader
-            nodes.get('Material Output').select = False
+            output.select = False
 
             bpy.ops.mesh.primitive_cube_add(location = center, scale = hdims)
             blFogObj = context.active_object
