@@ -10,7 +10,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 # Latest Update
 
-[***DOWNLOAD v0.9.3 -- UPDATE YOUR BLENDER TO 4.1 FIRST!!***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/download/v0.9.3/io_scene_gzrs2_v0.9.3.zip)
+[***DOWNLOAD v0.9.3 -- UPDATE YOUR BLENDER TO 4.1 FIRST!!***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.3)
 
 * NEW: Blender 4.1 support!
 * NEW: GunZ 2 retail .elu import support! 0x5012, 0x5013 and 0x5014
@@ -165,10 +165,10 @@ The plugin will automatically truncate and verify the result for you. It will al
 
 # Special Thanks
 
-[three-gunz](https://github.com/LostMyCode/three-gunz)  
-[open-gunz](https://github.com/open-gunz/ogz-source)  
-[rahulshekhawat](https://github.com/rahulshekhawat/blender-elu-ani-importer)  
-[x1nixmzeng](https://github.com/x1nixmzeng/z3ResEx)  
-[Nayr438](https://github.com/Nayr438)  
-[DeffJay](https://github.com/Jetman823)  
-[HeroBanana](https://github.com/HeroBanana)  
+[three-gunz](https://github.com/LostMyCode/three-gunz)
+[open-gunz](https://github.com/open-gunz/ogz-source)
+[rahulshekhawat](https://github.com/rahulshekhawat/blender-elu-ani-importer)
+[x1nixmzeng](https://github.com/x1nixmzeng/z3ResEx)
+[Nayr438](https://github.com/Nayr438)
+[DeffJay](https://github.com/Jetman823)
+[HeroBanana](https://github.com/HeroBanana)
