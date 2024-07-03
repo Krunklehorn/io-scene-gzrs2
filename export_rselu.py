@@ -91,7 +91,7 @@ def exportElu(self, context):
 
     blObjs = []
     blArmatureObjs = []
-    blBoneNames = []
+    blBoneNames = [] # TODO: Mesh objects with identical bone names are created during import, need to use the bone's matrix then skip the bone
 
     foundValid = False
     foundInvalid = False
@@ -108,7 +108,6 @@ def exportElu(self, context):
 
             if object.type == 'MESH':
                 object.update_from_editmode()
-                object.data.calc_normals_split()
 
                 modifier = getModifierByType(self, object.modifiers, 'ARMATURE')
                 blArmatureObj = modifier.object if modifier is not None and modifier.object.type == 'ARMATURE' else None
@@ -246,7 +245,7 @@ def exportElu(self, context):
             self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
             return { 'CANCELLED' }
 
-        bsdfPower = (1 - shader.inputs[9].default_value) * 100
+        bsdfPower = (1 - shader.inputs[2].default_value) * 100
         if version <= ELU_5002:
             power = 20 if bsdfPower == 0 else bsdfPower
         else:
@@ -264,8 +263,8 @@ def exportElu(self, context):
 
             if link.to_node == shader and isValidEluImageNode(node, link.is_muted):
                 if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[0]: texture = node
-                if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[19]: emission = node
-                if link.from_socket == node.outputs[1] and link.to_socket == shader.inputs[21]: alpha = node
+                if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[26]: emission = node
+                if link.from_socket == node.outputs[1] and link.to_socket == shader.inputs[4]: alpha = node
 
         if texture is not None:
             if texture.label == '':
@@ -523,7 +522,7 @@ def exportElu(self, context):
                 meshName = blBone.name
                 parentName = blBone.parent.name if blBone.parent is not None and blBone.parent.name in blBoneNames else ''
                 transform = reorientWorld @ eluMatrices[m]
-                apScale, rotAA, scaleAA, etcMatrix = calcEtcData(version, transform)
+                apScale, rotAA, scaleAA, etcMatrix = calcEtcData(version, transform) # TODO
 
                 m += 1
                 eluMeshes.append(EluMeshNodeExport(meshName, parentName, transform,
