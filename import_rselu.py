@@ -89,8 +89,8 @@ def importElu(self, context):
 
     setupErrorMat(state)
 
-    for eluMat in state.eluMats:
-        setupEluMat(self, eluMat, state)
+    for m, eluMat in enumerate(state.eluMats):
+        setupEluMat(self, m, eluMat, state)
 
     if eluxmlpath:
         for xmlEluMat in state.xmlEluMats[elupath]:

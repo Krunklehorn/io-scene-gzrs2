@@ -427,7 +427,7 @@ def setupErrorMat(state):
 
     state.blErrorMat = blErrorMat
 
-def setupEluMat(self, eluMat, state):
+def setupEluMat(self, m, eluMat, state):
     elupath = eluMat.elupath
     matID = eluMat.matID
 
@@ -466,7 +466,7 @@ def setupEluMat(self, eluMat, state):
         state.blEluMats.setdefault(elupath, {})[matID] = blMat2
         return
 
-    matName = texName or f"Material_{ matID }_{ subMatID }"
+    matName = texName or f"Material_{ m }"
     blMat = bpy.data.materials.new(matName)
     blMat.use_nodes = True
 
@@ -614,7 +614,8 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
             state.blXmlEluMats.setdefault(elupath, []).append(blMat2)
             return
 
-    blMat = bpy.data.materials.new(f"{ state.filename }_{ xmlEluMat['name'] }")
+    matName = xmlEluMat['name']
+    blMat = bpy.data.materials.new(matName)
     blMat.use_nodes = True
 
     tree = blMat.node_tree

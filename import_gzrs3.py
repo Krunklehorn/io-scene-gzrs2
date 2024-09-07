@@ -165,8 +165,8 @@ def importRS3(self, context):
 
     setupErrorMat(state)
 
-    for eluMat in state.eluMats:
-        setupEluMat(self, eluMat, state)
+    for m, eluMat in enumerate(state.eluMats):
+        setupEluMat(self, m, eluMat, state)
 
     if state.xmlEluMats:
         for elupath, materials in state.xmlEluMats.items():

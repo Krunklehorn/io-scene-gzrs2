@@ -74,9 +74,9 @@ def importCol(self, context):
         print("=== Col Mesh Cleanup ===")
         print()
 
-    name = f"{ state.filename }_Collision"
+    colName = f"{ state.filename }_Collision"
 
-    blColMat = bpy.data.materials.new(name)
+    blColMat = bpy.data.materials.new(colName)
     blColMat.use_nodes = True
     blColMat.diffuse_color = (1.0, 0.0, 1.0, 0.25)
     blColMat.roughness = 1.0
@@ -94,8 +94,8 @@ def importCol(self, context):
 
     tree.links.new(transparent.outputs[0], output.inputs[0])
 
-    blColGeo = bpy.data.meshes.new(name)
-    blColObj = bpy.data.objects.new(name, blColGeo)
+    blColGeo = bpy.data.meshes.new(colName)
+    blColObj = bpy.data.objects.new(colName, blColGeo)
 
     blColGeo.from_pydata(state.colVerts, [], [tuple(range(i, i + 3)) for i in range(0, len(state.colVerts), 3)])
     blColGeo.update()

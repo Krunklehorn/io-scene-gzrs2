@@ -261,9 +261,9 @@ def importRS2(self, context):
         state.blMeshObjs.append(blMeshObj)
 
     for m, xmlRsMat in enumerate(state.xmlRsMats):
-        name = xmlRsMat.get('name', f"Material_{ m }")
+        xmlRsMatName = xmlRsMat.get('name', f"Material_{ m }")
 
-        blMat = bpy.data.materials.new(name)
+        blMat = bpy.data.materials.new(xmlRsMatName)
         blMat.use_nodes = True
 
         tree = blMat.node_tree
@@ -280,13 +280,13 @@ def importRS2(self, context):
 
         texname = xmlRsMat.get('DIFFUSEMAP')
 
-        processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, shader, state)
+        processRS2Texlayer(self, m, xmlRsMatName, texname, blMat, xmlRsMat, tree, nodes, shader, state)
 
         state.blXmlRsMats.append(blMat)
 
         if state.meshMode == 'STANDARD':
-            blMesh = bpy.data.meshes.new(name)
-            blMeshObj = bpy.data.objects.new(name, blMesh)
+            blMesh = bpy.data.meshes.new(xmlRsMatName)
+            blMeshObj = bpy.data.objects.new(xmlRsMatName, blMesh)
 
             state.blMeshes.append(blMesh)
             state.blMeshObjs.append(blMeshObj)
@@ -416,8 +416,8 @@ def importRS2(self, context):
                     if dummy['name'] == propName:
                         propDums.append(d)
 
-        for eluMat in state.eluMats:
-            setupEluMat(self, eluMat, state)
+        for m, eluMat in enumerate(state.eluMats):
+            setupEluMat(self, m, eluMat, state)
 
         if state.xmlEluMats:
             for elupath, materials in state.xmlEluMats.items():
@@ -538,9 +538,9 @@ def importRS2(self, context):
         #####
 
         if state.doCollision:
-            name = f"{ state.filename }_Collision"
+            colName = f"{ state.filename }_Collision"
 
-            blColMat = bpy.data.materials.new(name)
+            blColMat = bpy.data.materials.new(colName)
             blColMat.use_nodes = True
             blColMat.diffuse_color = (1.0, 0.0, 1.0, 0.25)
             blColMat.roughness = 1.0
@@ -558,8 +558,8 @@ def importRS2(self, context):
 
             tree.links.new(transparent.outputs[0], output.inputs[0])
 
-            blColGeo = bpy.data.meshes.new(name)
-            blColObj = bpy.data.objects.new(name, blColGeo)
+            blColGeo = bpy.data.meshes.new(colName)
+            blColObj = bpy.data.objects.new(colName, blColGeo)
 
             blColGeo.from_pydata(state.colVerts, [], [tuple(range(i, i + 3)) for i in range(0, len(state.colVerts), 3)])
             blColGeo.update()
@@ -584,9 +584,9 @@ def importRS2(self, context):
                 blColObj.hide_set(True, view_layer = viewLayer)
 
         if state.doOcclusion:
-            name = f"{ state.filename }_Occlusion"
+            occName = f"{ state.filename }_Occlusion"
 
-            blOccMat = bpy.data.materials.new(name)
+            blOccMat = bpy.data.materials.new(occName)
             blOccMat.use_nodes = True
             blOccMat.diffuse_color = (0.0, 1.0, 1.0, 0.25)
             blOccMat.roughness = 1.0
@@ -618,8 +618,8 @@ def importRS2(self, context):
                 occFaces.append(tuple(range(index, index + occVertexCount)))
                 index += occVertexCount
 
-            blOccGeo = bpy.data.meshes.new(name)
-            blOccObj = bpy.data.objects.new(name, blOccGeo)
+            blOccGeo = bpy.data.meshes.new(occName)
+            blOccObj = bpy.data.objects.new(occName, blOccGeo)
 
             blOccGeo.from_pydata(occVerts, [], occFaces)
             blOccGeo.update()
@@ -675,7 +675,9 @@ def importRS2(self, context):
             hdims = (p2 - p1) / 2
             center = p1 + hdims
 
-            blFogMat = bpy.data.materials.new(name = f"{ state.filename }_Fog")
+            fogName = f"{ state.filename }_Fog"
+
+            blFogMat = bpy.data.materials.new(fogName)
             blFogMat.use_nodes = True
             tree = blFogMat.node_tree
             nodes = tree.nodes
@@ -704,7 +706,7 @@ def importRS2(self, context):
             bpy.ops.mesh.primitive_cube_add(location = center, scale = hdims)
             blFogObj = context.active_object
             blFogMesh = blFogObj.data
-            blFogObj.name = blFogMesh.name = f"{ state.filename }_Fog"
+            blFogObj.name = blFogMesh.name = fogName
             blFogObj.display_type = 'WIRE'
 
             state.blFogMat = blFogMat
