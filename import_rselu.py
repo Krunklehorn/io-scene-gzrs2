@@ -35,6 +35,7 @@
 import bpy, os, math
 import xml.dom.minidom as minidom
 
+from contextlib import redirect_stdout
 from mathutils import Vector, Matrix
 
 from .constants_gzrs2 import *
@@ -186,11 +187,14 @@ def importElu(self, context):
                 editBone.use_connect = True
 
         if state.doBoneRolls:
-            bpy.ops.armature.select_all(action = 'SELECT')
-            bpy.ops.armature.calculate_roll(type = 'GLOBAL_POS_Z')
-            bpy.ops.armature.select_all(action = 'DESELECT')
+            with redirect_stdout(state.silentIO):
+                bpy.ops.armature.select_all(action = 'SELECT')
+                bpy.ops.armature.calculate_roll(type = 'GLOBAL_POS_Z')
+                bpy.ops.armature.select_all(action = 'DESELECT')
+            deleteInfoReports(3, context)
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
+        deleteInfoReports(1, context)
 
         blPoseBones = state.blArmatureObj.pose.bones
 
@@ -245,5 +249,6 @@ def importElu(self, context):
                 modifier.object = state.blArmatureObj
 
     bpy.ops.object.select_all(action = 'DESELECT')
+    deleteInfoReports(1, context)
 
     return { 'FINISHED' }

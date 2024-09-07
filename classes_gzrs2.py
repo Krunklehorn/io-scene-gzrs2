@@ -6,7 +6,7 @@ from mathutils import Vector, Matrix
 
 @dataclass
 class GZRS2State:
-    silence:            StringIO = field(default_factory = StringIO)
+    silentIO:           StringIO = field(default_factory = StringIO)
     filename:           str = ""
     directory:          str = ""
 
@@ -46,11 +46,11 @@ class GZRS2State:
     logVerboseIndices:  bool = False
     logVerboseWeights:  bool = False
     logCleanup:         bool = False
-    
+
     gzrsValidBones:     set = field(default_factory = set)
     blTexImages:        dict = field(default_factory = dict)
     blMatNodes:         dict = field(default_factory = dict)
-    
+
     rs2DataDir:         str = ""
     rs3DataDir:         str = ""
     rs3DataDict:        dict = field(default_factory = dict)

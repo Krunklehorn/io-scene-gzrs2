@@ -36,6 +36,7 @@ import bpy, os, math
 import xml.dom.minidom as minidom
 import re as regex
 
+from contextlib import redirect_stdout
 from mathutils import Matrix
 
 from .constants_gzrs2 import *
@@ -281,5 +282,6 @@ def importRS3(self, context):
         processRS3Node(node)
 
     bpy.ops.object.select_all(action = 'DESELECT')
+    deleteInfoReports(1, context)
 
     return { 'FINISHED' }

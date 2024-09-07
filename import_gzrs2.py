@@ -36,7 +36,6 @@ import bpy, os, math
 import xml.dom.minidom as minidom
 
 from contextlib import redirect_stdout
-
 from mathutils import Vector, Matrix
 
 from .constants_gzrs2 import *
@@ -332,8 +331,10 @@ def importRS2(self, context):
                     cleanupFunc()
                     print()
                 else:
-                    with redirect_stdout(state.silence):
+                    with redirect_stdout(state.silentIO):
                         cleanupFunc()
+
+                deleteInfoReports(9, context)
     elif state.meshMode == 'BAKE':
         blMesh = state.blMeshes[0]
         blMeshObj = state.blMeshObjs[0]
@@ -351,7 +352,7 @@ def importRS2(self, context):
         for viewLayer in context.scene.view_layers:
             viewLayer.objects.active = blMeshObj
 
-        with redirect_stdout(state.silence):
+        with redirect_stdout(state.silentIO):
             bpy.ops.object.select_all(action = 'DESELECT')
             blMeshObj.select_set(True)
             bpy.ops.object.material_slot_remove_unused()
@@ -363,6 +364,8 @@ def importRS2(self, context):
             bpy.ops.mesh.select_all(action = 'DESELECT')
 
             bpy.ops.object.mode_set(mode = 'OBJECT')
+
+        deleteInfoReports(5, context)
 
     if state.doLights:
         for light in state.xmlLits:
@@ -704,6 +707,8 @@ def importRS2(self, context):
             output.select = False
 
             bpy.ops.mesh.primitive_cube_add(location = center, scale = hdims)
+            deleteInfoReports(1, context)
+
             blFogObj = context.active_object
             blFogMesh = blFogObj.data
             blFogObj.name = blFogMesh.name = fogName
@@ -753,5 +758,6 @@ def importRS2(self, context):
             rootExtras.objects.link(driverObj)
 
     bpy.ops.object.select_all(action = 'DESELECT')
+    deleteInfoReports(1, context)
 
     return { 'FINISHED' }

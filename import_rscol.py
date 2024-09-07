@@ -33,6 +33,7 @@
 #####
 
 import bpy, os
+
 from contextlib import redirect_stdout
 
 from .constants_gzrs2 import *
@@ -122,6 +123,8 @@ def importCol(self, context):
     if state.doCleanup:
         if state.logCleanup: print(eluMesh.meshName)
 
+        reportCount = 0
+
         bpy.ops.object.select_all(action = 'DESELECT')
         blColObj.select_set(True)
         bpy.ops.object.select_all(action = 'DESELECT')
@@ -131,43 +134,56 @@ def importCol(self, context):
         bpy.ops.mesh.select_mode(type = 'VERT')
         bpy.ops.mesh.select_all(action = 'SELECT')
 
+        reportCount += 3
+
         def subCleanup():
+            nonlocal reportCount
+
             for _ in range(10):
                 bpy.ops.mesh.dissolve_degenerate()
                 bpy.ops.mesh.delete_loose()
                 bpy.ops.mesh.select_all(action = 'SELECT')
                 bpy.ops.mesh.remove_doubles(threshold = 0.0001)
+                reportCount += 4
 
         def cleanupFunc():
+            nonlocal reportCount
+
             if extension == 'col':
                 bpy.ops.mesh.intersect(mode = 'SELECT', separate_mode = 'ALL', threshold = 0.0001, solver = 'FAST')
                 bpy.ops.mesh.select_all(action = 'SELECT')
+                reportCount += 2
 
                 subCleanup()
 
                 bpy.ops.mesh.intersect(mode = 'SELECT', separate_mode = 'ALL')
                 bpy.ops.mesh.select_all(action = 'SELECT')
+                reportCount += 2
 
                 subCleanup()
 
                 for _ in range(10):
                     bpy.ops.mesh.fill_holes(sides = 0)
                     bpy.ops.mesh.tris_convert_to_quads(face_threshold = 0.0174533, shape_threshold = 0.0174533)
+                    reportCount += 2
 
                     subCleanup()
 
                 bpy.ops.mesh.vert_connect_nonplanar(angle_limit = 0.0174533)
+                reportCount += 1
 
                 subCleanup()
             elif extension == 'cl2':
                 bpy.ops.mesh.remove_doubles(threshold = 0.0001, use_sharp_edge_from_normals = True)
                 bpy.ops.mesh.tris_convert_to_quads(face_threshold = 0.0174533, shape_threshold = 0.0174533)
+                reportCount += 2
 
             bpy.ops.mesh.dissolve_limited(angle_limit = 0.0174533)
             bpy.ops.mesh.delete_loose(use_faces = True)
             bpy.ops.mesh.select_all(action = 'SELECT')
             bpy.ops.mesh.normals_make_consistent(inside = True)
             bpy.ops.mesh.select_all(action = 'DESELECT')
+            reportCount += 5
 
             bpy.ops.object.mode_set(mode = 'OBJECT')
 
@@ -175,9 +191,12 @@ def importCol(self, context):
             cleanupFunc()
             print()
         else:
-            with redirect_stdout(state.silence):
+            with redirect_stdout(state.silentIO):
                 cleanupFunc()
 
+        deleteInfoReports(reportCount, context)
+
     bpy.ops.object.select_all(action = 'DESELECT')
+    deleteInfoReports(1, context)
 
     return { 'FINISHED' }

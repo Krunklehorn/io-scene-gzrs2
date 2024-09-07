@@ -730,6 +730,32 @@ def setupRsMesh(self, m, blMesh, state):
     if state.meshMode == 'STANDARD': return True
     elif state.meshMode == 'BAKE': return tuple(meshMatIDs)
 
+def deleteInfoReports(num, context):
+    # This only works if the user has an Info area open somewhere
+    # Luckily, the Scripting layout has one by default
+
+    for workspace in bpy.data.workspaces:
+        for screen in workspace.screens:
+            for area in screen.areas:
+                if area.ui_type == 'INFO':
+                    for region in area.regions:
+                        if region.type == 'WINDOW':
+                            with context.temp_override(screen = screen, area = area, region = region):
+                                # Info operations don't support negative indices, so we count until select_pick() fails
+                                infoCount = 0
+
+                                while bpy.ops.info.select_pick(report_index = infoCount) != { 'CANCELLED' }:
+                                    infoCount += 1
+
+                                bpy.ops.info.select_all(action = 'DESELECT')
+
+                                # Start at the last and count backward
+                                for i in range(infoCount - 1, max(-1, infoCount - 1 - num), -1):
+                                    bpy.ops.info.select_pick(report_index = i, extend = True)
+
+                                bpy.ops.info.report_delete()
+                                return
+
 def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     meshName = eluMesh.meshName
 
@@ -898,14 +924,16 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
             bpy.ops.mesh.remove_doubles(use_sharp_edge_from_normals = True)
             bpy.ops.mesh.select_all(action = 'DESELECT')
 
+            bpy.ops.object.mode_set(mode = 'OBJECT')
+
         if state.logCleanup:
             cleanupFunc()
             print()
         else:
-            with redirect_stdout(state.silence):
+            with redirect_stdout(state.silentIO):
                 cleanupFunc()
 
-    bpy.ops.object.mode_set(mode = 'OBJECT')
+        deleteInfoReports(9, context)
 
     state.blMeshes.append(blMesh)
     state.blMeshObjs.append(blMeshObj)
