@@ -126,7 +126,7 @@ def importRS2(self, context):
                 xmlSpawn = minidom.parse(spawnxmlpath)
                 break
 
-        if not spawnxmlpath: self.report({ 'INFO' }, "Items requested but spawn.xml not found, no items to generate.")
+        if not spawnxmlpath: self.report({ 'INFO' }, "GZRS2: Items requested but spawn.xml not found, no items to generate.")
 
     if xmlRs:
         state.xmlRsMats = parseRsXML(self, xmlRs, 'MATERIAL', state)
@@ -160,7 +160,7 @@ def importRS2(self, context):
 
         if not colpath:
             state.doCollision = False
-            self.report({ 'INFO' }, "Collision mesh requested but .col file not found, no collision mesh to generate.")
+            self.report({ 'INFO' }, "GZRS2: Collision mesh requested but .col file not found, no collision mesh to generate.")
 
     if state.doLightmap:
         lmpath = pathExists(f"{ rspath }.lm")
@@ -171,7 +171,7 @@ def importRS2(self, context):
             setupLmMixGroup(state)
         else:
             state.doLightmap = False
-            self.report({ 'INFO' }, "Lightmaps requested but .lm file not found, no lightmaps to generate.")
+            self.report({ 'INFO' }, "GZRS2: Lightmaps requested but .lm file not found, no lightmaps to generate.")
 
     if state.doProps:
         for p, prop in enumerate(state.xmlObjs):
@@ -188,7 +188,7 @@ def importRS2(self, context):
 
     if state.doFog and not state.doLights:
         state.doFog = False
-        self.report({ 'INFO' }, "Fog data but no lights, fog volume will not be generated.")
+        self.report({ 'INFO' }, "GZRS2: Fog data but no lights, fog volume will not be generated.")
 
     state.doLightDrivers =   state.doLightDrivers and state.doLights
     state.doFogDriver =      state.doFogDriver and state.doFog
@@ -228,10 +228,10 @@ def importRS2(self, context):
         rootLightsHard.children.link(rootLightsHardAmbient)
         rootLightsHard.children.link(rootLightsHardCasters)
 
-    if state.doProps:        rootMap.children.link(rootProps)
-    if state.doDummies:      rootMap.children.link(rootDummies)
-    if state.doSounds:       rootMap.children.link(rootSounds)
-    if state.doItems:        rootMap.children.link(rootItems)
+    if state.doProps:       rootMap.children.link(rootProps)
+    if state.doDummies:     rootMap.children.link(rootDummies)
+    if state.doSounds:      rootMap.children.link(rootSounds)
+    if state.doItems:       rootMap.children.link(rootItems)
     if doExtras:            rootMap.children.link(rootExtras)
     if state.doBspBounds:
         rootExtras.children.link(rootBspBounds)
