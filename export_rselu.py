@@ -245,7 +245,7 @@ def exportElu(self, context):
             self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
             return { 'CANCELLED' }
 
-        bsdfPower = (1 - shader.inputs[2].default_value) * 100
+        bsdfPower = (1 - shader.inputs[2].default_value) * 100 # Roughness
         if version <= ELU_5002:
             power = 20 if bsdfPower == 0 else bsdfPower
         else:
@@ -300,14 +300,19 @@ def exportElu(self, context):
         additive = False
         alphatest = 0
 
-        if blMat.blend_method == 'BLEND':
+        # if blMat.blend_method == 'BLEND':
+        if blMat.surface_render_method == 'BLENDED':
             additive = emission is not None
-        elif blMat.blend_method == 'CLIP' or blMat.blend_method == 'HASHED':
+        # elif blMat.blend_method == 'CLIP' or blMat.blend_method == 'HASHED':
+        elif blMat.surface_render_method == 'DITHERED':
             if alpha is None:
                 self.report({ 'ERROR' }, f"GZRS2: Invalid alpha node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
                 return { 'CANCELLED' }
 
-            alphatest = int((1 - blMat.alpha_threshold) * 100) if blMat.blend_method == 'CLIP' else 0
+            # alphatest = int((1 - blMat.alpha_threshold) * 100) if blMat.blend_method == 'CLIP' else 0
+            alphatest = int((1 - blMat.alpha_threshold) * 100)
+
+            # TODO: READ ALPHATEST FROM MATH NODE
 
         if state.logEluMats:
             print(f"===== Material { m + 1 } =====")

@@ -547,8 +547,13 @@ def importRS2(self, context):
             blColMat.use_nodes = True
             blColMat.diffuse_color = (1.0, 0.0, 1.0, 0.25)
             blColMat.roughness = 1.0
-            blColMat.blend_method = 'BLEND'
+            # blColMat.blend_method = 'BLEND'
+            blColMat.surface_render_method = 'BLENDED'
             blColMat.shadow_method = 'NONE'
+            blColMat.use_transparency_overlap = True
+            blColMat.use_backface_culling = False
+            blColMat.use_backface_culling_shadow = False
+            blColMat.use_backface_culling_lightprobe_volume = False
 
             tree = blColMat.node_tree
             nodes = tree.nodes
@@ -593,8 +598,13 @@ def importRS2(self, context):
             blOccMat.use_nodes = True
             blOccMat.diffuse_color = (0.0, 1.0, 1.0, 0.25)
             blOccMat.roughness = 1.0
-            blOccMat.blend_method = 'BLEND'
+            # blOccMat.blend_method = 'BLEND'
+            blOccMat.surface_render_method = 'BLENDED'
             blOccMat.shadow_method = 'NONE'
+            blOccMat.use_transparency_overlap = True
+            blOccMat.use_backface_culling = False
+            blOccMat.use_backface_culling_shadow = False
+            blOccMat.use_backface_culling_lightprobe_volume = False
 
             tree = blOccMat.node_tree
             nodes = tree.nodes

@@ -293,7 +293,7 @@ def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, sha
         self.report({ 'ERROR' }, f"GZRS2: Texture not found for bsp material: { m }, { name }, { texname }")
         return
 
-    texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
+    texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, state)
 
     if state.doLightmap:
         lightmap = nodes.new('ShaderNodeTexImage')
@@ -304,7 +304,6 @@ def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, sha
         uvmap.uv_map = 'UVMap.002'
         mix.node_tree = state.lmMixGroup
 
-        texture.location = (-440, 300)
         lightmap.location = (-440, -20)
         uvmap.location = (-640, -20)
         mix.location = (-160, 300)
@@ -324,26 +323,36 @@ def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, sha
         tree.links.new(texture.outputs[0], shader.inputs[0]) # Base Color
         nodes.active = texture
 
-    blMat.use_backface_culling = not xmlRsMat.get('TWOSIDED', False)
+    usealphatest = xmlRsMat['USEALPHATEST']
+    alphatest = xmlRsMat['ALPHATESTVALUE'] / 255.0
+    useopacity = xmlRsMat['USEOPACITY']
+    additive = xmlRsMat['ADDITIVE']
+    twosided = xmlRsMat['TWOSIDED']
 
-    if xmlRsMat.get('USEALPHATEST'):
-        blMat.blend_method = 'CLIP'
+    if usealphatest:
+        # blMat.blend_method = 'CLIP'
+        blMat.surface_render_method = 'DITHERED'
         blMat.shadow_method = 'CLIP'
+        blMat.alpha_threshold = 1.0 - alphatest
 
-    elif xmlRsMat.get('USEOPACITY'):
-        blMat.blend_method = 'HASHED'
+        clip = nodes.new('ShaderNodeMath')
+        clip.operation = 'LESS_THAN'
+        clip.location = (-160, 160)
+        clip.select = False
+        tree.links.new(texture.outputs[1], clip.inputs[0])
+        tree.links.new(clip.outputs[0], shader.inputs[4]) # Alpha
+        clip.inputs[1].default_value = alphatest
+    elif useopacity:
+        # blMat.blend_method = 'HASHED'
+        blMat.surface_render_method = 'DITHERED'
         blMat.shadow_method = 'HASHED'
-
-    if xmlRsMat.get('USEALPHATEST') or xmlRsMat.get('USEOPACITY'):
-        blMat.use_transparency_overlap = True
-        blMat.use_backface_culling = False
 
         tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
 
-    if xmlRsMat.get('ADDITIVE'):
-        blMat.blend_method = 'BLEND'
-        blMat.use_transparency_overlap = True
-        blMat.use_backface_culling = False
+    if additive:
+        # blMat.blend_method = 'BLEND'
+        blMat.surface_render_method = 'BLENDED'
+        blMat.shadow_method = 'NONE'
 
         output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
 
@@ -364,6 +373,16 @@ def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, sha
         tree.links.new(shader.outputs[0], add.inputs[0])
         tree.links.new(transparent.outputs[0], add.inputs[1])
         tree.links.new(add.outputs[0], output.inputs[0])
+
+    if usealphatest or useopacity or additive:
+        blMat.use_transparency_overlap = True
+        blMat.use_backface_culling = False
+        blMat.use_backface_culling_shadow = False
+        blMat.use_backface_culling_lightprobe_volume = False
+    else:
+        blMat.use_backface_culling = not twosided
+        blMat.use_backface_culling_shadow = not twosided
+        blMat.use_backface_culling_lightprobe_volume = not twosided
 
 def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alphatest, state):
     textype = texlayer['type']
@@ -389,31 +408,61 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
 
     if textype == 'DIFFUSEMAP':
         texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
+        texture.select = False
+
         tree.links.new(texture.outputs[0], shader.inputs[0]) # Base Color
     elif textype == 'SPECULARMAP':
         texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 0, state)
+        texture.select = False
+
         invert = nodes.new('ShaderNodeInvert')
         invert.location = (texture.location.x + 280, texture.location.y)
+        invert.select = False
 
-        tree.links.new(texture.outputs[0], shader.inputs[13]) # Specular Tint
+        # TODO: specular data is sometimes found in the alpha channel of the diffuse or normal maps
         tree.links.new(texture.outputs[0], invert.inputs[1])
         tree.links.new(invert.outputs[0], shader.inputs[2]) # Roughness
     elif textype == 'SELFILLUMINATIONMAP':
         texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, -300, state)
+        texture.select = False
+
         tree.links.new(texture.outputs[0], shader.inputs[26]) # Emission Color
+
         shader.inputs[27].default_value = emission # Emission Strength
     elif textype == 'OPACITYMAP':
         texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
-        tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
+        texture.select = False
 
-        blMat.blend_method = 'CLIP'
-        blMat.shadow_method = 'CLIP'
-        blMat.alpha_threshold = alphatest / 255.0
+        if alphatest > 0:
+            # blMat.blend_method = 'CLIP'
+            blMat.surface_render_method = 'DITHERED'
+            blMat.shadow_method = 'CLIP'
+            blMat.alpha_threshold = alphatest
+
+            clip = nodes.new('ShaderNodeMath')
+            clip.operation = 'GREATER_THAN'
+            clip.location = (-160, 160)
+            clip.select = False
+
+            tree.links.new(texture.outputs[1], clip.inputs[0])
+            tree.links.new(clip.outputs[0], shader.inputs[4]) # Alpha
+
+            clip.inputs[1].default_value = alphatest
+        else:
+            # blMat.blend_method = 'HASHED'
+            blMat.surface_render_method = 'DITHERED'
+            blMat.shadow_method = 'HASHED'
+
+            tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
     elif textype == 'NORMALMAP':
         texture = getMatNode(bpy, blMat, nodes, texpath, 'NONE', -540, -600, state)
         texture.image.colorspace_settings.name = 'Non-Color'
+        texture.select = False
+
         normal = nodes.new('ShaderNodeNormalMap')
         normal.location = (-260, -600)
+        normal.select = False
+
         tree.links.new(texture.outputs[0], normal.inputs[1])
         tree.links.new(normal.outputs[0], shader.inputs[5]) # Normal
 
@@ -422,8 +471,13 @@ def setupErrorMat(state):
     blErrorMat.use_nodes = False
     blErrorMat.diffuse_color = (1.0, 0.0, 1.0, 1.0)
     blErrorMat.roughness = 1.0
-    blErrorMat.blend_method = 'BLEND'
+    # blErrorMat.blend_method = 'BLEND'
+    blErrorMat.surface_render_method = 'BLENDED'
     blErrorMat.shadow_method = 'NONE'
+    blColMat.use_transparency_overlap = True
+    blColMat.use_backface_culling = False
+    blColMat.use_backface_culling_shadow = False
+    blColMat.use_backface_culling_lightprobe_volume = False
 
     state.blErrorMat = blErrorMat
 
@@ -439,15 +493,15 @@ def setupEluMat(self, m, eluMat, state):
     power = eluMat.power
     alphatest = eluMat.alphatest
     useopacity = eluMat.useopacity
-    twosided = eluMat.twosided
     additive = eluMat.additive
+    twosided = eluMat.twosided
     texName = eluMat.texName
     texBase = eluMat.texBase
     texDir = eluMat.texDir
 
     for eluMat2, blMat2 in state.blEluMatPairs:
-        if subMatID !=       eluMat2.subMatID:       continue
-        if subMatCount !=    eluMat2.subMatCount:    continue
+        if subMatID     !=  eluMat2.subMatID:       continue
+        if subMatCount  !=  eluMat2.subMatCount:    continue
 
         if not compareColors(ambient,    eluMat2.ambient):   continue
         if not compareColors(diffuse,    eluMat2.diffuse):   continue
@@ -456,12 +510,12 @@ def setupEluMat(self, m, eluMat, state):
         if not math.isclose(power,       eluMat2.power,      rel_tol = 0.01): continue
         if not math.isclose(alphatest,   eluMat2.alphatest,  rel_tol = 0.01): continue
 
-        if not useopacity    == eluMat2.useopacity:  continue
-        if not twosided      == eluMat2.twosided:    continue
-        if not additive      == eluMat2.additive:    continue
-        if not texName       == eluMat2.texName:     continue
-        if not texBase       == eluMat2.texBase:     continue
-        if not texDir        == eluMat2.texDir:      continue
+        if useopacity   != eluMat2.useopacity:  continue
+        if additive     != eluMat2.additive:    continue
+        if twosided     != eluMat2.twosided:    continue
+        if texName      != eluMat2.texName:     continue
+        if texBase      != eluMat2.texBase:     continue
+        if texDir       != eluMat2.texDir:      continue
 
         state.blEluMats.setdefault(elupath, {})[matID] = blMat2
         return
@@ -524,7 +578,7 @@ def setupEluMat(self, m, eluMat, state):
         if texpath is None:
             self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu material: { texBase }")
 
-        texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, state)
         datapath = makeRS2DataPath(texpath)
 
         if texDir == '':
@@ -537,27 +591,35 @@ def setupEluMat(self, m, eluMat, state):
         diffuseLink = tree.links.new(texture.outputs[0], shader.inputs[0]) # Base Color
         diffuseLink.is_muted = texpath is None
         nodes.active = texture
-        blMat.use_backface_culling = not twosided
+
+        alphatest = alphatest / 100.0
 
         if alphatest > 0:
-            blMat.blend_method = 'CLIP'
+            # blMat.blend_method = 'CLIP'
+            blMat.surface_render_method = 'DITHERED'
             blMat.shadow_method = 'CLIP'
-            blMat.alpha_threshold = 1.0 - (alphatest / 100.0)
-        elif useopacity:
-            blMat.blend_method = 'HASHED'
-            blMat.shadow_method = 'HASHED'
+            blMat.alpha_threshold = 1.0 - alphatest
 
-        if alphatest > 0 or useopacity:
-            blMat.use_transparency_overlap = True
-            blMat.use_backface_culling = False
+            clip = nodes.new('ShaderNodeMath')
+            clip.operation = 'LESS_THAN'
+            clip.location = (-160, 160)
+            clip.select = False
+            tree.links.new(texture.outputs[1], clip.inputs[0])
+            alphaLink = tree.links.new(clip.outputs[0], shader.inputs[4]) # Alpha
+            alphaLink.is_muted = texpath is None
+            clip.inputs[1].default_value = alphatest
+        elif useopacity:
+            # blMat.blend_method = 'HASHED'
+            blMat.surface_render_method = 'DITHERED'
+            blMat.shadow_method = 'HASHED'
 
             alphaLink = tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
             alphaLink.is_muted = texpath is None
 
         if additive:
-            blMat.blend_method = 'BLEND'
-            blMat.use_transparency_overlap = True
-            blMat.use_backface_culling = False
+            # blMat.blend_method = 'BLEND'
+            blMat.surface_render_method = 'BLENDED'
+            blMat.shadow_method = 'NONE'
 
             add = nodes.new('ShaderNodeAddShader')
             transparent = nodes.new('ShaderNodeBsdfTransparent')
@@ -571,9 +633,20 @@ def setupEluMat(self, m, eluMat, state):
             emitLink = tree.links.new(texture.outputs[0], shader.inputs[26]) # Emission Color
             shader.inputs[27].default_value = 1.0 # Emission Strength
             emitLink.is_muted = texpath is None
+
             tree.links.new(shader.outputs[0], add.inputs[0])
             tree.links.new(transparent.outputs[0], add.inputs[1])
             tree.links.new(add.outputs[0], output.inputs[0])
+
+        if alphatest > 0 or useopacity or additive:
+            blMat.use_transparency_overlap = True
+            blMat.use_backface_culling = False
+            blMat.use_backface_culling_shadow = False
+            blMat.use_backface_culling_lightprobe_volume = False
+        else:
+            blMat.use_backface_culling = not twosided
+            blMat.use_backface_culling_shadow = not twosided
+            blMat.use_backface_culling_lightprobe_volume = not twosided
 
     state.blEluMats.setdefault(elupath, {})[matID] = blMat
     state.blEluMatPairs.append((eluMat, blMat))
@@ -583,16 +656,18 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     glossiness = xmlEluMat['GLOSSINESS']
     emission = xmlEluMat['SELFILLUSIONSCALE']
     alphatest = xmlEluMat['ALPHATESTVALUE']
-    twosided = xmlEluMat['TWOSIDED']
     additive = xmlEluMat['ADDITIVE']
+    twosided = xmlEluMat['TWOSIDED']
 
     for xmlEluMat2, blMat2 in state.blXmlEluMatPairs:
-        if not math.isclose(specular, xmlEluMat2['SPECULAR_LEVEL'], rel_tol = 0.01): continue
-        if not math.isclose(glossiness, xmlEluMat2['GLOSSINESS'], rel_tol = 0.01): continue
-        if not math.isclose(emission, xmlEluMat2['SELFILLUSIONSCALE'], rel_tol = 0.01): continue
-        if not math.isclose(alphatest, xmlEluMat2['ALPHATESTVALUE'], rel_tol = 0.01): continue
-        if not twosided == xmlEluMat2['TWOSIDED'] and additive == xmlEluMat2['ADDITIVE']: continue
-        if not len(xmlEluMat['textures']) == len(xmlEluMat2['textures']): continue
+        if not math.isclose(specular,       xmlEluMat2['SPECULAR_LEVEL'],       rel_tol = 0.01): continue
+        if not math.isclose(glossiness,     xmlEluMat2['GLOSSINESS'],           rel_tol = 0.01): continue
+        if not math.isclose(emission,       xmlEluMat2['SELFILLUSIONSCALE'],    rel_tol = 0.01): continue
+        if not math.isclose(alphatest,      xmlEluMat2['ALPHATESTVALUE'],       rel_tol = 0.01): continue
+
+        if additive != xmlEluMat2['ADDITIVE']: continue
+        if twosided != xmlEluMat2['TWOSIDED']: continue
+        if len(xmlEluMat['textures']) != len(xmlEluMat2['textures']): continue
 
         match = True
 
@@ -631,25 +706,38 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     nodes.active = shader
     output.select = False
 
+    alphatest = alphatest / 255.0
+
     for texlayer in xmlEluMat['textures']:
         processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alphatest, state)
 
-    blMat.use_backface_culling = not twosided
-
     if additive:
-        blMat.blend_method = 'BLEND'
-        blMat.use_transparency_overlap = True
-        blMat.use_backface_culling = False
+        # blMat.blend_method = 'BLEND'
+        blMat.surface_render_method = 'BLENDED'
+        blMat.shadow_method = 'NONE'
 
         add = nodes.new('ShaderNodeAddShader')
-        add.location = (300, 140)
-
         transparent = nodes.new('ShaderNodeBsdfTransparent')
+
+        add.location = (300, 140)
         transparent.location = (300, 20)
+
+        add.select = False
+        transparent.select = False
 
         tree.links.new(shader.outputs[0], add.inputs[0])
         tree.links.new(transparent.outputs[0], add.inputs[1])
         tree.links.new(add.outputs[0], output.inputs[0])
+
+    if alphatest > 0 or additive:
+        blMat.use_transparency_overlap = True
+        blMat.use_backface_culling = False
+        blMat.use_backface_culling_shadow = False
+        blMat.use_backface_culling_lightprobe_volume = False
+    else:
+        blMat.use_backface_culling = not twosided
+        blMat.use_backface_culling_shadow = not twosided
+        blMat.use_backface_culling_lightprobe_volume = not twosided
 
     state.blXmlEluMats.setdefault(elupath, []).append(blMat)
     state.blXmlEluMatPairs.append((xmlEluMat, blMat))

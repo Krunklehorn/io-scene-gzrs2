@@ -81,8 +81,13 @@ def importCol(self, context):
     blColMat.use_nodes = True
     blColMat.diffuse_color = (1.0, 0.0, 1.0, 0.25)
     blColMat.roughness = 1.0
-    blColMat.blend_method = 'BLEND'
+    # blColMat.blend_method = 'BLEND'
+    blColMat.surface_render_method = 'BLENDED'
     blColMat.shadow_method = 'NONE'
+    blColMat.use_transparency_overlap = True
+    blColMat.use_backface_culling = False
+    blColMat.use_backface_culling_shadow = False
+    blColMat.use_backface_culling_lightprobe_volume = False
 
     tree = blColMat.node_tree
     nodes = tree.nodes
