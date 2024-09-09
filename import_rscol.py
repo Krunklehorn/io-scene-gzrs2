@@ -121,7 +121,7 @@ def importCol(self, context):
         viewLayer.objects.active = blColObj
 
     if state.doCleanup:
-        if state.logCleanup: print(eluMesh.meshName)
+        if state.logCleanup: print(colName)
 
         reportCount = 0
 

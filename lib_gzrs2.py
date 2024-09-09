@@ -737,24 +737,26 @@ def deleteInfoReports(num, context):
     for workspace in bpy.data.workspaces:
         for screen in workspace.screens:
             for area in screen.areas:
-                if area.ui_type == 'INFO':
-                    for region in area.regions:
-                        if region.type == 'WINDOW':
-                            with context.temp_override(screen = screen, area = area, region = region):
-                                # Info operations don't support negative indices, so we count until select_pick() fails
-                                infoCount = 0
+                if area.ui_type != 'INFO': continue
 
-                                while bpy.ops.info.select_pick(report_index = infoCount) != { 'CANCELLED' }:
-                                    infoCount += 1
+                for region in area.regions:
+                    if region.type != 'WINDOW': continue
 
-                                bpy.ops.info.select_all(action = 'DESELECT')
+                    with context.temp_override(screen = screen, area = area, region = region):
+                        # Info operations don't support negative indices, so we count until select_pick() fails
+                        infoCount = 0
 
-                                # Start at the last and count backward
-                                for i in range(infoCount - 1, max(-1, infoCount - 1 - num), -1):
-                                    bpy.ops.info.select_pick(report_index = i, extend = True)
+                        while bpy.ops.info.select_pick(report_index = infoCount) != { 'CANCELLED' }:
+                            infoCount += 1
 
-                                bpy.ops.info.report_delete()
-                                return
+                        bpy.ops.info.select_all(action = 'DESELECT')
+
+                        # Start at the last and count backward
+                        for i in range(infoCount - 1, max(-1, infoCount - 1 - num), -1):
+                            bpy.ops.info.select_pick(report_index = i, extend = True)
+
+                        bpy.ops.info.report_delete()
+                        return
 
 def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     meshName = eluMesh.meshName
