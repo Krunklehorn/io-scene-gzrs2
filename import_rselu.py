@@ -183,7 +183,7 @@ def importElu(self, context):
             elif editBone.parent is not None:
                 editBone.length = editBone.parent.length / 2
 
-            if editBone.parent is not None and (Vector(editBone.parent.tail) - Vector(editBone.head)).length < 0.0001:
+            if editBone.parent is not None and (Vector(editBone.parent.tail) - Vector(editBone.head)).length < 0.001:
                 editBone.use_connect = True
 
         if state.doBoneRolls:
