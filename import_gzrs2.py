@@ -246,7 +246,7 @@ def importRS2(self, context):
                             if lcBspBounds.collection is rootBspBounds:
                                 lcBspBounds.hide_viewport = True
             else:
-                self.report({ 'INFO' }, f"GZRS2: Unable to find root collection in view layer: { viewLayer }")
+                self.report({ 'WARNING' }, f"GZRS2: Unable to find root collection in view layer: { viewLayer }")
 
     setupErrorMat(state)
 
@@ -514,7 +514,7 @@ def importRS2(self, context):
             rootSounds.objects.link(blSoundObj)
 
     if len(skippedSounds) > 0:
-        self.report({ 'INFO' }, f"GZRS2: Skipped sounds with missing attributes: { skippedSounds }")
+        self.report({ 'WARNING' }, f"GZRS2: Skipped sounds with missing attributes: { skippedSounds }")
 
     if state.doItems:
         for gametype in state.xmlItms:

@@ -168,7 +168,7 @@ def importElu(self, context):
                     break
 
             if not found:
-                self.report({ 'INFO' }, f"GZRS2: Parent not found for elu child bone: { child.meshName }, { child.parentName }")
+                self.report({ 'WARNING' }, f"GZRS2: Parent not found for elu child bone: { child.meshName }, { child.parentName }")
 
         for eluMesh, editBone in state.blBonePairs:
             if editBone.name == 'Bip01':
@@ -240,7 +240,7 @@ def importElu(self, context):
                     break
 
             if not found:
-                self.report({ 'INFO' }, f"GZRS2: Bone parent not found for .elu child mesh or dummy: { child.meshName }, { child.parentName }, { child.isDummy }")
+                self.report({ 'ERROR' }, f"GZRS2: Bone parent not found for .elu child mesh or dummy: { child.meshName }, { child.parentName }, { child.isDummy }")
 
         for blMeshObj in state.blMeshObjs:
             modifier = getModifierByType(self, blMeshObj.modifiers, 'ARMATURE')

@@ -217,7 +217,7 @@ def readLm(self, path, state):
         bytesRemaining = fileSize - file.tell() if state.rsVertexCount > 0 else 0
 
         if bytesRemaining > 0:
-            self.report({ 'INFO' }, f"GZRS2: LM import finished with bytes remaining! { path }, { hex(id) }, { hex(version) }")
+            self.report({ 'ERROR' }, f"GZRS2: LM import finished with bytes remaining! { path }, { hex(id) }, { hex(version) }")
 
         print(f"Bytes Remaining:    { bytesRemaining }")
         print()

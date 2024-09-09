@@ -193,7 +193,7 @@ def importRS3(self, context):
                         if lcChild.collection is blActorRoot:
                             lcChild.hide_viewport = True
                 else:
-                    self.report({ 'INFO' }, f"GZRS2: Unable to find root collection in view layer: { viewLayer }")
+                    self.report({ 'WARNING' }, f"GZRS2: Unable to find root collection in view layer: { viewLayer }")
         else:
             blActorRoot = state.blActorRoots[eluMesh.elupath]
 

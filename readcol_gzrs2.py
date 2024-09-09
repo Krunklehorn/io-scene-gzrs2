@@ -179,7 +179,7 @@ def readCol(self, path, state):
         bytesRemaining = fileSize - file.tell()
 
         if bytesRemaining > 0:
-            self.report({ 'INFO' }, f"GZRS2: COL import finished with bytes remaining! { path }, { hex(id) }, { hex(version) }")
+            self.report({ 'ERROR' }, f"GZRS2: COL import finished with bytes remaining! { path }, { hex(id) }, { hex(version) }")
 
         print(f"Bytes Remaining:    { bytesRemaining }")
         print()

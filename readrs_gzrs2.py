@@ -138,8 +138,8 @@ def readRs(self, path, state):
 
                 skipBytes(file, 4 * 3) # skip plane normal
 
-                if not (0 <= leafMatID < len(state.xmlRsMats)):
-                    self.report({ 'INFO' }, f"GZRS2: Material ID out of bounds, setting to 0 and continuing. { leafMatID }, { len(state.xmlRsMats) }")
+                if not (0 <= leafMatID < len(state.xmlRsMats)): # Perhaps we should wait and assign the error material instead...
+                    self.report({ 'WARNING' }, f"GZRS2: Material ID out of bounds, setting to 0 and continuing. { leafMatID }, { len(state.xmlRsMats) }")
                     leafMatID = 0
 
                 state.rsLeaves.append(RsLeaf(leafMatID, drawFlags, leafVertexCount, vertexOffset))
@@ -302,7 +302,7 @@ def readRs(self, path, state):
         bytesRemaining = fileSize - file.tell()
 
         if bytesRemaining > 0:
-            self.report({ 'INFO' }, f"GZRS2: RS import finished with bytes remaining! { path }, { hex(id) }, { hex(version) }")
+            self.report({ 'ERROR' }, f"GZRS2: RS import finished with bytes remaining! { path }, { hex(id) }, { hex(version) }")
 
         print(f"Bytes Remaining:    { bytesRemaining }")
         print()

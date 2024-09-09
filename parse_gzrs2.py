@@ -34,7 +34,7 @@ def parseXYZ(node, nodeName, convertUnits, flipY):
 
 def parseUnknown(self, data, nodeName, xmlName, tagName):
     if data is not None:
-        self.report({ 'INFO' }, f"GZRS2: No rule yet for { tagName } tag found in { xmlName }, it may contain useful data: { nodeName }, { data }")
+        self.report({ 'INFO' }, f"GZRS2: No rule yet for { tagName } tag found in { xmlName }, it may contain useful data: { nodeName }, { data.strip() }")
 
     return True
 

@@ -108,7 +108,7 @@ def ensureRS3DataDirectory(self, state):
         currentDir = os.path.dirname(currentDir)
 
     if not state.rs3DataDir:
-        self.report({ 'INFO' }, f"GZRS2: Failed to find RS3 data directory!")
+        self.report({ 'ERROR' }, f"GZRS2: Failed to find RS3 data directory!")
         return
 
     for dirpath, _, filenames in os.walk(state.rs3DataDir):
@@ -119,12 +119,12 @@ def ensureRS3DataDirectory(self, state):
                 resourcepath = pathExists(os.path.join(dirpath, filename))
 
                 if resourcepath: state.rs3DataDict[filename] = resourcepath
-                else: self.report({ 'INFO' }, f"GZRS2: Resource found but pathExists() failed, potential case sensitivity issue: { filename }")
+                else: self.report({ 'ERROR' }, f"GZRS2: Resource found but pathExists() failed, potential case sensitivity issue: { filename }")
 
 
 def textureSearch(self, texBase, texDir, isRS3, state):
     if not isValidTextureName(texBase):
-        self.report({ 'INFO' }, f"GZRS2: textureSearch() called with an invalid texture path, must not be a directory: { texBase }")
+        self.report({ 'ERROR' }, f"GZRS2: textureSearch() called with an invalid texture path, must not be a directory: { texBase }")
         return
 
     ddsBase = f"{ texBase }.dds".replace('.dds.dds', '.dds')
@@ -169,7 +169,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
 
             parentDir = os.path.dirname(parentDir)
 
-        self.report({ 'INFO' }, f"GZRS2: Texture search failed, directory not found: { texBase }, { texDir }")
+        self.report({ 'ERROR' }, f"GZRS2: Texture search failed, directory not found: { texBase }, { texDir }")
     elif not isRS3:
         result = texMatchDownward(state.directory, texBase, ddsBase)
         if result: return result
@@ -184,7 +184,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
                 currentBase = os.path.basename(currentDir)
 
                 if matchRS2DataDirectory(self, currentDir, currentBase, state):
-                    self.report({ 'INFO' }, f"GZRS2: Upward directory search found a valid data subdirectory: { u }, { texBase }")
+                    self.report({ 'INFO' }, f"GZRS2: Upward directory search found a valid data subdirectory: { u }, { currentDir }")
                     break
 
                 currentDir = os.path.dirname(currentDir)
@@ -193,16 +193,16 @@ def textureSearch(self, texBase, texDir, isRS3, state):
         if result: return result
 
         if state.rs2DataDir:
-            self.report({ 'INFO' }, f"GZRS2: Texture search failed, no downward match: { texBase }")
+            self.report({ 'ERROR' }, f"GZRS2: Texture search failed, no downward match: { texBase }")
         else:
-            self.report({ 'INFO' }, f"GZRS2: Texture search failed, no downward match and no data directory: { texBase }")
+            self.report({ 'ERROR' }, f"GZRS2: Texture search failed, no downward match and no data directory: { texBase }")
     else:
         ensureRS3DataDirectory(self, state)
 
         if texBase in state.rs3DataDict: return state.rs3DataDict[texBase]
         elif ddsBase in state.rs3DataDict: return state.rs3DataDict[ddsBase]
 
-        self.report({ 'INFO' }, f"GZRS2: Texture search failed, no entry in data dictionary: { texBase }")
+        self.report({ 'ERROR' }, f"GZRS2: Texture search failed, no entry in data dictionary: { texBase }")
 
 def resourceSearch(self, resourcename, state):
     resourcepath = os.path.join(state.directory, resourcename)
@@ -218,10 +218,10 @@ def resourceSearch(self, resourcename, state):
     if splitname[-1].lower() in ['xml'] and splitname[-2].lower() in ['scene', 'prop']:
         eluname = f"{ splitname[0] }.elu"
         if eluname in state.rs3DataDict:
-            self.report({ 'INFO' }, f"GZRS2: Resource found after missing scene.xml or prop.xml: { resourcename }, { eluname }")
+            self.report({ 'ERROR' }, f"GZRS2: Resource found after missing scene.xml or prop.xml: { resourcename }, { eluname }")
             return state.rs3DataDict[eluname]
 
-    self.report({ 'INFO' }, f"GZRS2: Resource search failed: { resourcename }")
+    self.report({ 'ERROR' }, f"GZRS2: Resource search failed: { resourcename }")
 
 def lcFindRoot(lc, collection):
     if lc.collection is collection: return lc
@@ -280,17 +280,17 @@ def getMatNode(bpy, blMat, nodes, texpath, alphamode, x, y, state):
 
 def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, shader, state):
     if not texname:
-        self.report({ 'INFO' }, f"GZRS2: Bsp material with empty texture name: { m }, { name }")
+        self.report({ 'ERROR' }, f"GZRS2: Bsp material with empty texture name: { m }, { name }")
         return
 
     if not isValidTextureName(texname):
-        self.report({ 'INFO' }, f"GZRS2: Bsp material with invalid texture name, must not be a directory: { m }, { name }, { texname }")
+        self.report({ 'ERROR' }, f"GZRS2: Bsp material with invalid texture name, must not be a directory: { m }, { name }, { texname }")
         return
 
     texpath = textureSearch(self, texname, '', False, state)
 
     if texpath is None:
-        self.report({ 'INFO' }, f"GZRS2: Texture not found for bsp material: { m }, { name }, { texname }")
+        self.report({ 'ERROR' }, f"GZRS2: Texture not found for bsp material: { m }, { name }, { texname }")
         return
 
     texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
@@ -370,21 +370,21 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
     texname = texlayer['name']
 
     if not textype in XMLELU_TEXTYPES:
-        self.report({ 'INFO' }, f"GZRS2: Unsupported texture type for .elu.xml material: { texname }, { textype }")
+        self.report({ 'ERROR' }, f"GZRS2: Unsupported texture type for .elu.xml material: { texname }, { textype }")
         return
 
     if not texname:
-        self.report({ 'INFO' }, f"GZRS2: .elu.xml material with empty texture name: { texname }, { textype }")
+        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with empty texture name: { texname }, { textype }")
         return
 
     if not isValidTextureName(texname):
-        self.report({ 'INFO' }, f"GZRS2: .elu.xml material with invalid texture name, must not be a directory: { texname }, { textype }")
+        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with invalid texture name, must not be a directory: { texname }, { textype }")
         return
 
     texpath = textureSearch(self, texname, '', True, state)
 
     if texpath is None:
-        self.report({ 'INFO' }, f"GZRS2: Texture not found for .elu.xml material: { texname }, { textype }")
+        self.report({ 'ERROR' }, f"GZRS2: Texture not found for .elu.xml material: { texname }, { textype }")
         return
 
     if textype == 'DIFFUSEMAP':
@@ -522,7 +522,7 @@ def setupEluMat(self, m, eluMat, state):
         texpath = textureSearch(self, texBase, texDir, False, state)
 
         if texpath is None:
-            self.report({ 'INFO' }, f"GZRS2: Texture not found for .elu material: { texBase }")
+            self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu material: { texBase }")
 
         texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -260, 300, state)
         datapath = makeRS2DataPath(texpath)
@@ -873,32 +873,32 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
             if eluMatID in state.blEluMats[elupath]:
                 for _ in range(slotCount): blMesh.materials.append(state.blEluMats[elupath][eluMatID])
             else:
-                self.report({ 'INFO' }, f"GZRS2: Missing .elu material by index: { meshName }, { eluMatID }")
+                self.report({ 'WARNING' }, f"GZRS2: Missing .elu material by index: { meshName }, { eluMatID }")
                 for _ in range(slotCount): blMesh.materials.append(state.blErrorMat)
         else:
-            self.report({ 'INFO' }, f"GZRS2: No .elu materials available for mesh: { meshName }, { eluMatID }")
+            self.report({ 'WARNING' }, f"GZRS2: No .elu materials available for mesh: { meshName }, { eluMatID }")
             for _ in range(slotCount): blMesh.materials.append(state.blErrorMat)
     else:
         if eluMatID < 0:
             if -1 in slotIDs:
                 if not eluMesh.drawFlags & RM_FLAG_HIDE:
-                    self.report({ 'INFO' }, f"GZRS2: Double negative material index: { meshName }, { eluMatID }, { slotIDs }")
+                    self.report({ 'WARNING' }, f"GZRS2: Double negative material index: { meshName }, { eluMatID }, { slotIDs }")
                     blMesh.materials.append(state.blErrorMat)
             elif elupath in state.blXmlEluMats:
                 for blXmlEluMat in state.blXmlEluMats[elupath]:
                     blMesh.materials.append(blXmlEluMat)
             else:
-                self.report({ 'INFO' }, f"GZRS2: No .elu.xml material available after negative index: { meshName }, { eluMatID }")
+                self.report({ 'WARNING' }, f"GZRS2: No .elu.xml material available after negative index: { meshName }, { eluMatID }")
                 blMesh.materials.append(state.blErrorMat)
         else:
             if elupath in state.blXmlEluMats:
                 if len(state.blXmlEluMats[elupath]) > eluMatID:
                     blMesh.materials.append(state.blXmlEluMats[elupath][eluMatID])
                 else:
-                    self.report({ 'INFO' }, f"GZRS2: Missing .elu.xml material by index: { meshName }, { eluMatID }")
+                    self.report({ 'WARNING' }, f"GZRS2: Missing .elu.xml material by index: { meshName }, { eluMatID }")
                     blMesh.materials.append(state.blErrorMat)
             else:
-                self.report({ 'INFO' }, f"GZRS2: No .elu.xml materials available for mesh: { meshName }, { eluMatID }")
+                self.report({ 'WARNING' }, f"GZRS2: No .elu.xml materials available for mesh: { meshName }, { eluMatID }")
                 blMesh.materials.append(state.blErrorMat)
 
     collection.objects.link(blMeshObj)
@@ -965,7 +965,7 @@ def processEluHeirarchy(self, state):
                 break
 
         if not found:
-            self.report({ 'INFO' }, f"GZRS2: Parent not found for .elu child mesh: { child.meshName }, { child.parentName }")
+            self.report({ 'WARNING' }, f"GZRS2: Parent not found for .elu child mesh: { child.meshName }, { child.parentName }")
 
 def isValidEluImageNode(node, muted):
     if node is None: return False

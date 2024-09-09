@@ -94,7 +94,7 @@ def exportElu(self, context):
     blBoneNames = [] # TODO: Mesh objects with identical bone names are created during import, need to use the bone's matrix then skip the bone
 
     foundValid = False
-    foundInvalid = False
+    invalidCount = 0
 
     reorientLocal = Matrix.Rotation(math.radians(90.0), 4, 'Y') @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
     reorientWorld = Matrix.Rotation(math.radians(90.0), 4, 'X')
@@ -133,14 +133,14 @@ def exportElu(self, context):
 
             blObjs.append(object)
         elif object.type != 'ARMATURE':
-            foundInvalid = True
+            invalidCount += 1
 
     if not foundValid:
         self.report({ 'ERROR' }, "GZRS2: ELU export requires objects of type MESH or EMPTY!")
         return { 'CANCELLED' }
 
-    if foundInvalid:
-        self.report({ 'INFO' }, "GZRS2: ELU export skipping invalid object...")
+    if invalidCount > 0:
+        self.report({ 'WARNING' }, f"GZRS2: ELU export skipped { invalidCount } invalid objects...")
 
     blObjs = tuple(blObjs)
     blArmatureObjs = tuple(blArmatureObjs)
