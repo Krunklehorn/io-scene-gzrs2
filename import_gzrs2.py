@@ -475,7 +475,7 @@ def importRS2(self, context):
 
     if state.doSounds:
         for s, sound in enumerate(state.xmlAmbs):
-            if not all(key in sound for key in ['ObjName', 'RADIUS', 'type', 'filename']):
+            if not all(key in sound for key in ['ObjName', 'type', 'filename']):
                 skippedSounds.append(s)
                 continue
 
