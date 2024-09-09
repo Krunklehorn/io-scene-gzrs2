@@ -335,14 +335,14 @@ def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, sha
         blMat.shadow_method = 'HASHED'
 
     if xmlRsMat.get('USEALPHATEST') or xmlRsMat.get('USEOPACITY'):
-        blMat.show_transparent_back = True
+        blMat.use_transparency_overlap = True
         blMat.use_backface_culling = False
 
         tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
 
     if xmlRsMat.get('ADDITIVE'):
         blMat.blend_method = 'BLEND'
-        blMat.show_transparent_back = True
+        blMat.use_transparency_overlap = True
         blMat.use_backface_culling = False
 
         output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
@@ -548,7 +548,7 @@ def setupEluMat(self, m, eluMat, state):
             blMat.shadow_method = 'HASHED'
 
         if alphatest > 0 or useopacity:
-            blMat.show_transparent_back = True
+            blMat.use_transparency_overlap = True
             blMat.use_backface_culling = False
 
             alphaLink = tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
@@ -556,7 +556,7 @@ def setupEluMat(self, m, eluMat, state):
 
         if additive:
             blMat.blend_method = 'BLEND'
-            blMat.show_transparent_back = True
+            blMat.use_transparency_overlap = True
             blMat.use_backface_culling = False
 
             add = nodes.new('ShaderNodeAddShader')
@@ -638,7 +638,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
 
     if additive:
         blMat.blend_method = 'BLEND'
-        blMat.show_transparent_back = True
+        blMat.use_transparency_overlap = True
         blMat.use_backface_culling = False
 
         add = nodes.new('ShaderNodeAddShader')
