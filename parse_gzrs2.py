@@ -34,7 +34,10 @@ def parseXYZ(node, nodeName, convertUnits, flipY):
 
 def parseUnknown(self, data, nodeName, xmlName, tagName):
     if data is not None:
-        self.report({ 'INFO' }, f"GZRS2: No rule yet for { tagName } tag found in { xmlName }, it may contain useful data: { nodeName }, { data.strip() }")
+        if isinstance(data, str):
+            data = data.strip()
+
+        self.report({ 'INFO' }, f"GZRS2: No rule yet for { tagName } tag found in { xmlName }, it may contain useful data: { nodeName }, { data }")
 
     return True
 
@@ -395,9 +398,11 @@ def parseEluXML(self, xmlElu, state):
             'SPECULAR_LEVEL': 0.0,
             'GLOSSINESS': 0.0,
             'SELFILLUSIONSCALE': 1.0,
+            'USEALPHATEST': False,
             'ALPHATESTVALUE': 128.0,
-            'TWOSIDED': False,
-            'ADDITIVE': False
+            'USEOPACITY': False,
+            'ADDITIVE': False,
+            'TWOSIDED': False
         }
 
         for node, nodeName, data in filterNodes(material.childNodes):
@@ -419,6 +424,8 @@ def parseEluXML(self, xmlElu, state):
 
                             materialEntry['textures'].append({ 'type': dataType, 'name': data })
             elif nodeName in ['USEALPHATEST']:
+                materialEntry[nodeName] = True
+
                 for value in node.childNodes:
                     if value.nodeType == value.ELEMENT_NODE and value.nodeName.strip() == 'ALPHATESTVALUE':
                         materialEntry['ALPHATESTVALUE'] = float(value.firstChild and value.firstChild.nodeValue)
