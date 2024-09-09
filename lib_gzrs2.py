@@ -333,14 +333,16 @@ def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, sha
         # blMat.blend_method = 'CLIP'
         blMat.surface_render_method = 'DITHERED'
         blMat.shadow_method = 'CLIP'
-        blMat.alpha_threshold = 1.0 - alphatest
+        blMat.alpha_threshold = alphatest
 
         clip = nodes.new('ShaderNodeMath')
-        clip.operation = 'LESS_THAN'
+        clip.operation = 'GREATER_THAN'
         clip.location = (-160, 160)
         clip.select = False
+
         tree.links.new(texture.outputs[1], clip.inputs[0])
         tree.links.new(clip.outputs[0], shader.inputs[4]) # Alpha
+
         clip.inputs[1].default_value = alphatest
     elif useopacity:
         # blMat.blend_method = 'HASHED'
@@ -513,9 +515,9 @@ def setupEluMat(self, m, eluMat, state):
         if useopacity   != eluMat2.useopacity:  continue
         if additive     != eluMat2.additive:    continue
         if twosided     != eluMat2.twosided:    continue
-        if texName      != eluMat2.texName:     continue
-        if texBase      != eluMat2.texBase:     continue
-        if texDir       != eluMat2.texDir:      continue
+
+        if eluMat.texpath       != eluMat2.texpath:     continue
+        if eluMat.alphapath     != eluMat2.alphapath:   continue
 
         state.blEluMats.setdefault(elupath, {})[matID] = blMat2
         return
@@ -592,21 +594,23 @@ def setupEluMat(self, m, eluMat, state):
         diffuseLink.is_muted = texpath is None
         nodes.active = texture
 
-        alphatest = alphatest / 100.0
+        alphatest = alphatest / 255.0
 
         if alphatest > 0:
             # blMat.blend_method = 'CLIP'
             blMat.surface_render_method = 'DITHERED'
             blMat.shadow_method = 'CLIP'
-            blMat.alpha_threshold = 1.0 - alphatest
+            blMat.alpha_threshold = alphatest
 
             clip = nodes.new('ShaderNodeMath')
-            clip.operation = 'LESS_THAN'
+            clip.operation = 'GREATER_THAN'
             clip.location = (-160, 160)
             clip.select = False
+
             tree.links.new(texture.outputs[1], clip.inputs[0])
             alphaLink = tree.links.new(clip.outputs[0], shader.inputs[4]) # Alpha
             alphaLink.is_muted = texpath is None
+
             clip.inputs[1].default_value = alphatest
         elif useopacity:
             # blMat.blend_method = 'HASHED'
