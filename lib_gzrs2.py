@@ -474,10 +474,10 @@ def setupErrorMat(state):
     # blErrorMat.blend_method = 'BLEND'
     blErrorMat.surface_render_method = 'BLENDED'
     blErrorMat.shadow_method = 'NONE'
-    blColMat.use_transparency_overlap = True
-    blColMat.use_backface_culling = False
-    blColMat.use_backface_culling_shadow = False
-    blColMat.use_backface_culling_lightprobe_volume = False
+    blErrorMat.use_transparency_overlap = True
+    blErrorMat.use_backface_culling = False
+    blErrorMat.use_backface_culling_shadow = False
+    blErrorMat.use_backface_culling_lightprobe_volume = False
 
     state.blErrorMat = blErrorMat
 
