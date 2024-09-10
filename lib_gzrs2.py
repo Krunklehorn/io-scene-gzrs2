@@ -1091,6 +1091,16 @@ def isValidEluImageNode(node, muted):
 
     return True
 
+def makePathExtSingle(path):
+    dir = os.path.dirname(path)
+    base = os.path.basename(path)
+    name1, ext1 = os.path.splitext(base)
+    name2, ext2 = os.path.splitext(name1)
+
+    if ext2 != '': path = os.path.join(dir, name1)
+
+    return path
+
 def makeRS2DataPath(path):
     if path == None or path == '': return False
     found = None
@@ -1112,13 +1122,7 @@ def makeRS2DataPath(path):
 
     if found is None: return False
 
-    dir = os.path.dirname(found)
-    base = os.path.basename(found)
-    name1, ext1 = os.path.splitext(base)
-    name2, ext2 = os.path.splitext(name1)
-
-    if ext2 == '': return found
-    else: return os.path.join(dir, name1)
+    return makePathExtSingle(found)
 
 def calcEtcData(version, transform): # TODO
     if version >= ELU_5001:

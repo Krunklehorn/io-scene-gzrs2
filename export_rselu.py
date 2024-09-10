@@ -344,7 +344,7 @@ def exportElu(self, context):
 
         if texture is not None:
             if texture.label == '':
-                texpath = os.path.basename(texture.image.filepath)
+                texpath = makePathExtSingle(os.path.basename(texture.image.filepath))
             else:
                 texpath = makeRS2DataPath(texture.label)
 
@@ -359,7 +359,7 @@ def exportElu(self, context):
 
         if alpha is not None:
             if alpha.label == '':
-                alphapath = alpha.image.filepath
+                alphapath = makePathExtSingle(os.path.basename(alpha.image.filepath))
             else:
                 alphapath = makeRS2DataPath(alpha.label)
 
