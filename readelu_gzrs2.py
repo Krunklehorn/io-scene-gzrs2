@@ -164,6 +164,9 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
             if version >= ELU_5004: additive = readBool32(file)
             if version == ELU_5007: alphatest = readUInt(file)
 
+            texpath = texpath.replace('.dds.dds', '.dds')
+            alphapath = alphapath.replace('.dds.dds', '.dds')
+
             useopacity = alphapath != '' and alphapath.lower().endswith('.tga') or alphapath.lower().endswith('.tga.dds')
 
         if state.logEluMats:
