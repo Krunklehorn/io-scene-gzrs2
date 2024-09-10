@@ -168,7 +168,7 @@ def importElu(self, context):
                     break
 
             if not found:
-                self.report({ 'WARNING' }, f"GZRS2: Parent not found for elu child bone: { child.meshName }, { child.parentName }")
+                self.report({ 'WARNING' }, f"GZRS2: Parent not found for .elu child bone: { child.meshName }, { child.parentName }")
 
         for eluMesh, editBone in state.blBonePairs:
             if editBone.name == 'Bip01':

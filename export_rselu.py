@@ -91,7 +91,7 @@ def exportElu(self, context):
 
     blObjs = []
     blArmatureObjs = []
-    blBoneNames = [] # TODO: Mesh objects with identical bone names are created during import, need to use the bone's matrix then skip the bone
+    blValidBones = {}
 
     foundValid = False
     invalidCount = 0
@@ -109,27 +109,23 @@ def exportElu(self, context):
             if object.type == 'MESH':
                 object.update_from_editmode()
 
-                modifier = getModifierByType(self, object.modifiers, 'ARMATURE')
-                blArmatureObj = modifier.object if modifier is not None and modifier.object.type == 'ARMATURE' else None
-                blArmature = blArmatureObj.data if blArmatureObj is not None else None
+                blArmatureObj, blArmature = getValidArmature(self, object, state)
 
-                if blArmatureObj is not None and (state.selectedOnly and not blArmatureObj.select_get() or state.visibleOnly and not blArmatureObj.visible_get()):
-                    blArmatureObj = None
-                    blArmature = None
-
-                if blArmature is not None and blArmatureObj not in blArmatureObjs:
+                if blArmatureObj not in blArmatureObjs and blArmature is not None:
                     blArmatureObj.update_from_editmode()
                     blArmatureObjs.append(blArmatureObj)
 
                     for blBone in blArmature.bones:
                         blBoneName = blBone.name
 
-                        if blBoneName.startswith(("Bip01", "Bone")):
-                            if blBoneName not in blBoneNames:
-                                blBoneNames.append(blBone.name)
-                            else:
-                                self.report({ 'ERROR' }, "GZRS2: ELU export requires unique names for all bones across all connected armatures!")
-                                return { 'CANCELLED' }
+                        if not blBoneName.startswith(("Bip01", "Bone")):
+                            continue
+
+                        if blBoneName not in blValidBones:
+                            blValidBones[blBoneName] = blBone
+                        else:
+                            self.report({ 'ERROR' }, "GZRS2: ELU export requires unique names for all bones across all connected armatures!")
+                            return { 'CANCELLED' }
 
             blObjs.append(object)
         elif object.type != 'ARMATURE':
@@ -142,18 +138,93 @@ def exportElu(self, context):
     if invalidCount > 0:
         self.report({ 'WARNING' }, f"GZRS2: ELU export skipped { invalidCount } invalid objects...")
 
+    if len(blArmatureObjs) > 1:
+        self.report({ 'WARNING' }, f"GZRS2: ELU export detected multiple armatures! This scenerio is untested and may not be successful!")
+
     blObjs = tuple(blObjs)
     blArmatureObjs = tuple(blArmatureObjs)
-    blBoneNames = tuple(blBoneNames)
+
+    eluObjByName = {}
+
+    eluMeshObjs = []
+    eluEmptyBones = []
+
+    eluMatrices = []
+    eluInvMatrices = []
+
+    eluBoneIDs = {}
+
+    m = 0
+
+    # Non-bone meshes first
+    for blObj in blObjs:
+        meshName = blObj.name
+
+        if meshName in blValidBones:
+            continue
+
+        eluObjByName[meshName] = blObj
+
+        eluMeshObjs.append(blObj)
+
+        matrixWorld = blObj.matrix_world.copy()
+        eluMatrices.append(matrixWorld)
+        eluInvMatrices.append(matrixWorld.inverted())
+
+        m += 1
+
+    # Bone meshes second
+    for blObj in blObjs:
+        meshName = blObj.name
+
+        if not meshName in blValidBones:
+            continue
+
+        eluObjByName[meshName] = blObj
+
+        eluMeshObjs.append(blObj)
+
+        matrixWorld = blObj.matrix_world.copy()
+        eluMatrices.append(matrixWorld)
+        eluInvMatrices.append(matrixWorld.inverted())
+
+        eluBoneIDs[meshName] = m
+
+        m += 1
+
+    # Remaining bones last
+    for blArmatureObj in blArmatureObjs:
+        for blBone in blArmatureObj.data.bones:
+            boneName = blBone.name
+
+            if not boneName in blValidBones:
+                continue
+
+            if boneName in eluBoneIDs:
+                continue
+
+            eluObjByName[boneName] = blBone
+
+            eluEmptyBones.append(blBone)
+
+            matrixWorld = blArmatureObj.matrix_world @ blBone.matrix_local @ reorientLocal
+            eluMatrices.append(matrixWorld)
+            eluInvMatrices.append(matrixWorld.inverted())
+
+            eluBoneIDs[boneName] = m
+
+            m += 1
+
+    meshCount = m
 
     blMats = []
     matIndices = []
 
-    for blObj in blObjs:
-        if blObj.type == 'EMPTY':
+    for eluMeshObj in eluMeshObjs:
+        if eluMeshObj.type == 'EMPTY':
             continue
 
-        for blMatSlot in blObj.material_slots:
+        for blMatSlot in eluMeshObj.material_slots:
             blMat1 = blMatSlot.material
             found = False
 
@@ -175,7 +246,6 @@ def exportElu(self, context):
     matIndices = tuple(matIndices)
 
     matCount = len(blMats)
-    meshCount = len(blObjs)
 
     if state.logEluMats and matCount > 0:
         print()
@@ -344,30 +414,6 @@ def exportElu(self, context):
         weightIDs = set()
         weightNames = set()
 
-    eluIDs = {}
-    eluMatrices = []
-    eluInvMatrices = []
-    m = 0
-
-    for blObj in blObjs:
-        eluIDs[blObj.name] = m
-
-        matrixWorld = blObj.matrix_world.copy()
-        eluMatrices.append(matrixWorld)
-        eluInvMatrices.append(matrixWorld.inverted())
-
-        m += 1
-
-    for blArmatureObj in blArmatureObjs:
-        for blBone in blArmatureObj.data.bones:
-            if blBone.name in blBoneNames:
-                eluIDs[blBone.name] = m
-
-                matrixWorld = blArmatureObj.matrix_world @ blBone.matrix_local @ reorientLocal
-                eluMatrices.append(matrixWorld)
-                eluInvMatrices.append(matrixWorld.inverted())
-                m += 1
-
     eluMatrices = tuple(eluMatrices)
     eluInvMatrices = tuple(eluInvMatrices)
 
@@ -376,39 +422,51 @@ def exportElu(self, context):
     s = 0
     m = 0
 
-    for blObj in blObjs:
-        meshName = blObj.name
+    for eluMeshObj in eluMeshObjs:
+        meshName = eluMeshObj.name
         parentName = ''
 
-        if blObj.parent is not None:
-            if blObj.parent_type == 'OBJECT':
-                parentName = blObj.parent.name
-            elif (blObj.parent_type == 'BONE' and
-                  blObj.parent in blArmatureObjs and
-                  blObj.parent_bone in blBoneNames):
-                parentName = blObj.parent_bone
+        valid = True
+
+        if eluMeshObj.parent is not None:
+            if (eluMeshObj.parent_type == 'OBJECT' and
+                eluMeshObj.parent.name in eluObjByName):
+                    parentName = eluMeshObj.parent.name
+            elif (eluMeshObj.parent_type == 'BONE' and
+                  eluMeshObj.parent in blArmatureObjs and
+                  eluMeshObj.parent_bone in blValidBones):
+                    eluBone = blValidBones[eluMeshObj.parent_bone]
+
+                    if eluBone.parent is not None:
+                        parentName = eluBone.parent.name
+
+                        if not parentName in blValidBones:
+                            valid = False
+            else:
+                valid = False
+
+        if not valid:
+            self.report({ 'ERROR' }, f"GZRS2: Mesh object with an invalid parent! { meshName }, { parentName }")
+            return { 'CANCELLED' }
+
+        if meshName == parentName:
+            self.report({ 'ERROR' }, f"GZRS2: Tried to parent a mesh object to itself! { meshName }")
+            return { 'CANCELLED' }
 
         worldMatrix = eluMatrices[m]
         transform = reorientWorld @ worldMatrix
         apScale, rotAA, scaleAA, etcMatrix = calcEtcData(version, transform) # TODO
 
-        if blObj.type == 'MESH':
-            blMesh = blObj.data
+        if eluMeshObj.type == 'MESH':
+            blMesh = eluMeshObj.data
             uvLayer1 = blMesh.uv_layers[0] if len(blMesh.uv_layers) > 0 else None
             color1 = blMesh.color_attributes[0] if len(blMesh.color_attributes) > 0 else None
-            vertexGroups = blObj.vertex_groups if len(blObj.vertex_groups) > 0 else None
-
-            modifier = getModifierByType(self, blObj.modifiers, 'ARMATURE')
-            blArmatureObj = modifier.object if modifier is not None and modifier.object.type == 'ARMATURE' else None
-            blArmature = blArmatureObj.data if blArmatureObj is not None else None
-
-            if blArmatureObj is not None and (state.selectedOnly and not blArmatureObj.select_get() or state.visibleOnly and not blArmatureObj.visible_get()):
-                blArmatureObj = None
-                blArmature = None
+            vertexGroups = eluMeshObj.vertex_groups if len(eluMeshObj.vertex_groups) > 0 else None
+            blArmatureObj, blArmature = getValidArmature(self, eluMeshObj, state)
 
             hasUV1s = uvLayer1 is not None
             hasColors = color1 is not None
-            hasVGroups = vertexGroups is not None and blArmature is not None
+            hasVGroups = vertexGroups is not None and blArmatureObj in blArmatureObjs and blArmature is not None
 
             if hasColors and (color1.data_type != 'FLOAT_COLOR' or color1.domain != 'POINT'):
                 self.report({ 'ERROR' }, f"GZRS2: Mesh with invalid color attribute! Colors must be stored as per-vertex float data! { meshName }")
@@ -450,7 +508,7 @@ def exportElu(self, context):
                 colorCount = 0
                 colors = ()
 
-            matSlotCount = len(blObj.material_slots)
+            matSlotCount = len(eluMeshObj.material_slots)
             if matSlotCount > 0:
                 for ms in range(matSlotCount):
                     eluMatID = eluMats[matIndices[s + ms]].matID
@@ -472,8 +530,12 @@ def exportElu(self, context):
 
                     for vgroupInfo in vgroupInfos:
                         boneName = vertexGroups[vgroupInfo.group].name
-                        if boneName in blBoneNames:
-                            pairs.append((vgroupInfo.weight, boneName))
+
+                        if not boneName in blValidBones:
+                            self.report({ 'WARNING' }, f"GZRS2: ELU export skipping a vertex group with no corresponding bone: { boneName }")
+                            continue
+
+                        pairs.append((vgroupInfo.weight, boneName))
 
                     degree = len(pairs)
                     for _ in range(ELU_PHYS_KEYS - degree): pairs.append((0.0, ''))
@@ -482,8 +544,8 @@ def exportElu(self, context):
                     total = sum(pair[0] for pair in pairs)
 
                     boneNames = tuple(pair[1] for pair in pairs)
-                    values = tuple(pair[0] / total if total != 0.0 else pair[0] for pair in pairs)
-                    meshIDs = tuple(eluIDs[boneName] if boneName != '' else 0 for boneName in boneNames)
+                    values = tuple(pair[0] / total for pair in pairs) if total != 0.0 else tuple(pair[0] for pair in pairs)
+                    meshIDs = tuple(eluBoneIDs[boneName] if boneName != '' else 0 for boneName in boneNames)
                     offsets = tuple(eluInvMatrices[meshID] @ vertexWorld if meshID != 0 else Vector((0, 0, 0)) for meshID in meshIDs)
                     degree = min(ELU_PHYS_KEYS, degree)
 
@@ -515,18 +577,32 @@ def exportElu(self, context):
                                            colorCount, colors, eluMatID,
                                            weightCount, weights, slotIDs))
 
-    for blArmatureObj in blArmatureObjs:
-        for blBone in blArmatureObj.data.bones:
-            if blBone.name in blBoneNames:
-                meshName = blBone.name
-                parentName = blBone.parent.name if blBone.parent is not None and blBone.parent.name in blBoneNames else ''
-                transform = reorientWorld @ eluMatrices[m]
-                apScale, rotAA, scaleAA, etcMatrix = calcEtcData(version, transform) # TODO
+    for eluBone in eluEmptyBones:
+        boneName = eluBone.name
+        parentName = ''
 
-                m += 1
-                eluMeshes.append(EluMeshNodeExport(meshName, parentName, transform,
-                                                   apScale, rotAA, scaleAA, etcMatrix,
-                                                   0, (), 0, (), 0, (), 0, 0, ()))
+        if eluBone.parent is not None:
+            parentName = eluBone.parent.name
+
+            if not parentName in blValidBones:
+                self.report({ 'ERROR' }, f"GZRS2: ELU export found a bone with an invalid parent! { boneName }, { parentName }")
+                return { 'CANCELLED' }
+
+        if boneName == parentName:
+            self.report({ 'ERROR' }, f"GZRS2: ELU export tried to parent a bone to itself! { boneName }")
+            return { 'CANCELLED' }
+
+        transform = reorientWorld @ eluMatrices[m]
+        apScale, rotAA, scaleAA, etcMatrix = calcEtcData(version, transform) # TODO
+
+        m += 1
+        eluMeshes.append(EluMeshNodeExport(boneName, parentName, transform,
+                                            apScale, rotAA, scaleAA, etcMatrix,
+                                            0, (), 0, (), 0, (), 0, 0, ()))
+
+    if m != meshCount:
+        self.report({ 'ERROR' }, f"GZRS2: ELU export mesh count did not match after second pass! { m }, { meshCount }")
+        return { 'CANCELLED' }
 
     eluMeshes = tuple(eluMeshes)
 

@@ -253,6 +253,26 @@ def getModifierByType(self, modifiers, type):
         if modifier.type == type:
             return modifier
 
+def getValidArmature(self, object, state):
+    if object is None:
+        return None, None
+
+    modifier = getModifierByType(self, object.modifiers, 'ARMATURE')
+
+    if modifier is None:
+        return None, None
+
+    modObj = modifier.object
+
+    if modObj is None or modObj.type != 'ARMATURE':
+        return None, None
+
+    if (state.selectedOnly  and not modObj.select_get() or
+        state.visibleOnly   and not modObj.visible_get()):
+            return None, None
+
+    return modObj, modObj.data
+
 def getMatNode(bpy, blMat, nodes, texpath, alphamode, x, y, state):
     if texpath is None:
         texture = nodes.new('ShaderNodeTexImage')
