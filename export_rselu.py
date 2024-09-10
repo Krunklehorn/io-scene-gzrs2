@@ -203,16 +203,16 @@ def exportElu(self, context):
             lower = node.label.lower()
 
             if node.bl_idname == 'ShaderNodeValue':
-                if lower == 'matid': matID = int(node.outputs[0].default_value)
-                elif lower == 'submatid': subMatID = int(node.outputs[0].default_value)
-                elif lower == 'submatcount': subMatCount = int(node.outputs[0].default_value)
+                if      lower == 'matid':           matID           = int(node.outputs[0].default_value)
+                elif    lower == 'submatid':        subMatID        = int(node.outputs[0].default_value)
+                elif    lower == 'submatcount':     subMatCount     = int(node.outputs[0].default_value)
             elif node.bl_idname == 'ShaderNodeRGB':
                 value = node.outputs[0].default_value
                 value = (value[0], value[1], value[2], 0.0)
 
-                if lower == 'ambient': ambient = value
-                elif lower == 'diffuse': diffuse = value
-                elif lower == 'specular': specular = value
+                if      lower == 'ambient':     ambient     = value
+                elif    lower == 'diffuse':     diffuse     = value
+                elif    lower == 'specular':    specular    = value
 
         if matID is None:
             self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
@@ -222,24 +222,30 @@ def exportElu(self, context):
         shader          = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
         add             = getShaderNodeByID(self, nodes, 'ShaderNodeAddShader')
         transparent     = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfTransparent')
+        clip            = getShaderNodeByID(self, nodes, 'ShaderNodeMath')
 
-        shaderValid =       False if shader         is not None     else None
-        addValid =          False if add            is not None     else None
-        transparentValid =  False if transparent    is not None     else None
-
-        for link in links:
-            if link.is_hidden or not link.is_valid:
-                continue
-
-            if      shaderValid == False        and link.from_node == shader        and link.to_node == output:     shaderValid = True
-            elif    addValid == False           and link.from_node == add           and link.to_node == output:     addValid = True
-            elif    transparentValid == False   and link.from_node == transparent   and link.to_node == add:        transparentValid = True
+        shaderValid         = False if shader       is not None     else None
+        addValid            = False if add          is not None     else None
+        transparentValid    = False if transparent  is not None     else None
+        clipValid           = False if clip         is not None     else None
 
         for link in links:
             if link.is_hidden or not link.is_valid:
                 continue
 
-            if addValid and transparentValid and link.from_node == shader and link.to_node == add: shaderValid = True
+            if      shaderValid         == False    and link.from_socket == shader.outputs[0]       and link.to_socket == output.inputs[0]:     shaderValid         = True
+            elif    addValid            == False    and link.from_socket == add.outputs[0]          and link.to_socket == output.inputs[0]:     addValid            = True
+            elif    transparentValid    == False    and link.from_socket == transparent.outputs[0]  and link.to_socket == add.inputs[1]:        transparentValid    = True
+            elif    clipValid           == False    and link.from_socket == clip.outputs[0]         and link.to_socket == shader.inputs[4]:     clipValid           = True
+
+        for link in links:
+            if link.is_hidden or not link.is_valid:
+                continue
+
+            if addValid and transparentValid        and link.from_socket == shader.outputs[0]       and link.to_socket == add.inputs[0]:        shaderValid = True
+
+        if clipValid and clip.operation != 'GREATER_THAN':
+            clipValid = False
 
         if not shaderValid:
             self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
@@ -262,9 +268,9 @@ def exportElu(self, context):
             node = link.from_node
 
             if link.to_node == shader and isValidEluImageNode(node, link.is_muted):
-                if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[0]: texture = node
-                if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[26]: emission = node
-                if link.from_socket == node.outputs[1] and link.to_socket == shader.inputs[4]: alpha = node
+                if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[0]:      texture     = node
+                if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[26]:     emission    = node
+                if link.from_socket == node.outputs[1] and link.to_socket == shader.inputs[4]:      alpha       = node
 
         if texture is not None:
             if texture.label == '':
@@ -296,23 +302,10 @@ def exportElu(self, context):
                 return { 'CANCELLED' }
         else: alphapath = ''
 
-        twosided = (not blMat.use_backface_culling)
-        additive = False
-        alphatest = 0
-
-        # if blMat.blend_method == 'BLEND':
-        if blMat.surface_render_method == 'BLENDED':
-            additive = emission is not None
-        # elif blMat.blend_method == 'CLIP' or blMat.blend_method == 'HASHED':
-        elif blMat.surface_render_method == 'DITHERED':
-            if alpha is None:
-                self.report({ 'ERROR' }, f"GZRS2: Invalid alpha node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
-                return { 'CANCELLED' }
-
-            # alphatest = int((1 - blMat.alpha_threshold) * 100) if blMat.blend_method == 'CLIP' else 0
-            alphatest = int((1 - blMat.alpha_threshold) * 100)
-
-            # TODO: READ ALPHATEST FROM MATH NODE
+        alphatest = int(min(max(0, clip.inputs[1].default_value), 1) * 255) if clipValid else 0
+        useopacity = alpha is not None
+        additive = blMat.surface_render_method == 'BLENDED' and addValid and transparentValid and emission is not None
+        twosided = not blMat.use_backface_culling
 
         if state.logEluMats:
             print(f"===== Material { m + 1 } =====")
@@ -331,6 +324,7 @@ def exportElu(self, context):
             print(f"Two-sided:          { twosided }")
             print(f"Additive:           { additive }")
             print(f"Alpha Test:         { alphatest }")
+            print(f"Use Opacity:        { useopacity }")
             print()
 
         eluMats.append(EluMaterialExport(matID, subMatID,
