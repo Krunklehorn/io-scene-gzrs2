@@ -505,6 +505,8 @@ def importRS2(self, context):
                 blSoundObj.location = sound['CENTER']
                 blSoundObj.scale = (radius, radius, radius)
 
+            blSoundObj.location.y = -blSoundObj.location.y
+
             blSoundObj['gzrs2_sound_type'] = type
             blSoundObj['gzrs2_sound_space'] = space
             blSoundObj['gzrs2_sound_shape'] = shape
