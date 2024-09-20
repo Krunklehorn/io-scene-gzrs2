@@ -285,7 +285,7 @@ def exportElu(self, context):
                 elif    lower == 'specular':    specular    = value
 
         if matID is None:
-            self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
+            self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matName }")
             return { 'CANCELLED' }
 
         output          = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
