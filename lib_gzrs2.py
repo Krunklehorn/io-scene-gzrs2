@@ -1026,7 +1026,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
         else:
             if elupath in state.blXmlEluMats:
                 if len(state.blXmlEluMats[elupath]) > eluMatID:
-                    blMesh.materials.append(state.blXmlEluMats[elupath][eluMatID][eluSubMatID])
+                    blMesh.materials.append(state.blXmlEluMats[elupath][eluMatID])
                 else:
                     self.report({ 'WARNING' }, f"GZRS2: Missing .elu.xml material for mesh at index: { meshName }, { eluMatID }")
 
