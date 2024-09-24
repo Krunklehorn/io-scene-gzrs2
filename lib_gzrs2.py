@@ -506,8 +506,8 @@ def setupErrorMat(state):
 def setupEluMat(self, m, eluMat, state):
     elupath = eluMat.elupath
     matID = eluMat.matID
-
     subMatID = eluMat.subMatID
+
     subMatCount = eluMat.subMatCount
     ambient = eluMat.ambient
     diffuse = eluMat.diffuse
@@ -539,7 +539,7 @@ def setupEluMat(self, m, eluMat, state):
         if eluMat.texpath       != eluMat2.texpath:     continue
         if eluMat.alphapath     != eluMat2.alphapath:   continue
 
-        state.blEluMats.setdefault(elupath, {})[matID] = blMat2
+        state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})[subMatID] = blMat2
         return
 
     matName = texName or f"Material_{ m }"
@@ -672,7 +672,7 @@ def setupEluMat(self, m, eluMat, state):
             blMat.use_backface_culling_shadow = not twosided
             blMat.use_backface_culling_lightprobe_volume = not twosided
 
-    state.blEluMats.setdefault(elupath, {})[matID] = blMat
+    state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})[subMatID] = blMat
     state.blEluMatPairs.append((eluMat, blMat))
 
 def setupXmlEluMat(self, elupath, xmlEluMat, state):
@@ -983,36 +983,57 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     slotCount = max(1, max(slotIDs) + 1) if doSlots else 1
 
     if eluMesh.version <= ELU_5007:
-        if elupath in state.blEluMats:
-            if eluMatID in state.blEluMats[elupath]:
-                for _ in range(slotCount): blMesh.materials.append(state.blEluMats[elupath][eluMatID])
-            else:
-                self.report({ 'WARNING' }, f"GZRS2: Missing .elu material by index: { meshName }, { eluMatID }")
-                for _ in range(slotCount): blMesh.materials.append(state.blErrorMat)
+        if elupath not in state.blEluMats:
+            self.report({ 'WARNING' }, f"GZRS2: Missing .elu materials for mesh: { meshName }")
+            blMat = state.blErrorMat
         else:
-            self.report({ 'WARNING' }, f"GZRS2: No .elu materials available for mesh: { meshName }, { eluMatID }")
-            for _ in range(slotCount): blMesh.materials.append(state.blErrorMat)
+            blEluMatAtPath = state.blEluMats[elupath]
+
+            if eluMatID not in blEluMatAtPath:
+                self.report({ 'WARNING' }, f"GZRS2: Missing .elu material for mesh at index: { meshName }, { eluMatID }")
+                blMat = state.blErrorMat
+            else:
+                blEluMatAtIndex = blEluMatAtPath[eluMatID]
+
+                # TODO: alternate skin support
+                if 0 in blEluMatAtIndex:
+                    blMat = blEluMatAtIndex[0]
+                elif -1 in blEluMatAtIndex:
+                    blMat = blEluMatAtIndex[-1]
+                else:
+                    self.report({ 'WARNING' }, f"GZRS2: Failed to find .elu sub-material for mesh at index: { meshName }, { eluMatID }")
+                    blMat = state.blErrorMat
+
+        for s in range(slotCount):
+            if s not in slotIDs:
+                blMesh.materials.append(None)
+            else:
+                blMesh.materials.append(blMat)
     else:
         if eluMatID < 0:
             if -1 in slotIDs:
                 if not eluMesh.drawFlags & RM_FLAG_HIDE:
                     self.report({ 'WARNING' }, f"GZRS2: Double negative material index: { meshName }, { eluMatID }, { slotIDs }")
+
                     blMesh.materials.append(state.blErrorMat)
             elif elupath in state.blXmlEluMats:
                 for blXmlEluMat in state.blXmlEluMats[elupath]:
                     blMesh.materials.append(blXmlEluMat)
             else:
                 self.report({ 'WARNING' }, f"GZRS2: No .elu.xml material available after negative index: { meshName }, { eluMatID }")
+
                 blMesh.materials.append(state.blErrorMat)
         else:
             if elupath in state.blXmlEluMats:
                 if len(state.blXmlEluMats[elupath]) > eluMatID:
-                    blMesh.materials.append(state.blXmlEluMats[elupath][eluMatID])
+                    blMesh.materials.append(state.blXmlEluMats[elupath][eluMatID][eluSubMatID])
                 else:
-                    self.report({ 'WARNING' }, f"GZRS2: Missing .elu.xml material by index: { meshName }, { eluMatID }")
+                    self.report({ 'WARNING' }, f"GZRS2: Missing .elu.xml material for mesh at index: { meshName }, { eluMatID }")
+
                     blMesh.materials.append(state.blErrorMat)
             else:
-                self.report({ 'WARNING' }, f"GZRS2: No .elu.xml materials available for mesh: { meshName }, { eluMatID }")
+                self.report({ 'WARNING' }, f"GZRS2: No .elu.xml materials available for mesh: { meshName }")
+
                 blMesh.materials.append(state.blErrorMat)
 
     collection.objects.link(blMeshObj)
