@@ -97,6 +97,21 @@ def readElu(self, path, state):
 
     file.close()
 
+    for m1, eluMat1 in enumerate(state.eluMats):
+        if eluMat1.subMatID != -1:
+            valid = False
+
+            for m2, eluMat2 in enumerate(state.eluMats):
+                if m2 != m1 and eluMat2.matID == eluMat1.matID and eluMat2.subMatID in [-1, 0]:
+                    valid = True
+                    break
+
+            if not valid:
+                self.report({ 'ERROR' }, f"GZRS2: Found .elu sub-material with no valid base: { state.filename }, { version }, { eluMat1.matID }, { eluMat1.subMatID }")
+
+            if eluMat1.subMatCount > 0:
+                self.report({ 'ERROR' }, f"GZRS2: Found .elu sub-material with a sub-material count of it's own: { state.filename }, { version }, { eluMat1.matID }, { eluMat1.subMatID }, { eluMat1.subMatCount }")
+
     return result
 
 def readEluRS2Materials(self, path, file, version, matCount, state):
