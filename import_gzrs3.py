@@ -87,16 +87,18 @@ def importRS3(self, context):
             scenexmlpath = pathExists(f"{ state.directory }\\{ state.filename }.scene.{ ext }")
 
     if scenexmlpath:
-        with open(scenexmlpath) as file:
+        with open(scenexmlpath, encoding = 'utf8') as file:
             scenexmlstring = file.read()
             scenexmlstring = regex.sub(r"(<Umbra Synchronization[^>]+\/>)", '', scenexmlstring)
+            scenexmlstring = scenexmlstring.replace("\"unreducible=true\"", "\" unreducible=true\"")
 
         state.rs3Graph.extend(parseSceneXML(self, minidom.parseString(scenexmlstring), state.filename, state))
 
     if propxmlpath:
-        with open(propxmlpath) as file:
+        with open(propxmlpath, encoding = 'utf8') as file:
             propxmlstring = file.read()
             propxmlstring = regex.sub(r"(<Umbra Synchronization[^>]+\/>)", '', propxmlstring)
+            propxmlstring = propxmlstring.replace("\"unreducible=true\"", "\" unreducible=true\"")
 
         state.rs3Graph.extend(parsePropXML(self, minidom.parseString(propxmlstring), state.filename, state))
 
@@ -123,9 +125,10 @@ def importRS3(self, context):
 
                     openRS3Node(childnode)
                 else:
-                    with open(resourcepath) as file:
+                    with open(resourcepath, encoding = 'utf8') as file:
                         childstring = file.read()
                         childstring = regex.sub(r"(<Umbra Synchronization[^>]+\/>)", '', childstring)
+                        childstring = childstring.replace("\"unreducible=true\"", "\" unreducible=true\"")
 
                     node['children'] = parseSceneXML(self, minidom.parseString(childstring), resourcename, state)
 

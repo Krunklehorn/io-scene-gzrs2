@@ -76,7 +76,12 @@ def importElu(self, context):
         eluxmlpath = pathExists(f"{ elupath }.{ ext }")
 
         if eluxmlpath:
-            state.xmlEluMats[elupath] = parseEluXML(self, minidom.parse(eluxmlpath), state)
+            with open(eluxmlpath, encoding = 'utf8') as file:
+                eluxmlstring = file.read()
+                eluxmlstring = regex.sub(r"(<Umbra Synchronization[^>]+\/>)", '', eluxmlstring)
+                eluxmlstring = eluxmlstring.replace("\"unreducible=true\"", "\" unreducible=true\"")
+
+            state.xmlEluMats[elupath] = parseEluXML(self, minidom.parseString(eluxmlstring), state)
             break
 
     if readElu(self, elupath, state):
