@@ -404,6 +404,7 @@ def exportElu(self, context):
 
     eluMats = tuple(eluMats)
     usesDummies = False
+    totalSlotIDs = set()
     matIDs = set()
     weightIDs = set()
     weightNames = set()
@@ -484,6 +485,9 @@ def exportElu(self, context):
                 uv1s = tuple(reversed(tuple(uvLayer1.uv[triangle.loops[i]].vector.copy() for i in range(3)))) if hasUV1s else (Vector((0, 0)), Vector((0, 0)), Vector((0, 0)))
                 slotID = triangle.material_index
                 slotIDs.add(slotID)
+
+                if state.logEluMeshNodes:
+                    totalSlotIDs.add(slotID)
 
                 if version >= ELU_5005:
                     normal = triangle.normal.copy()
@@ -704,7 +708,11 @@ def exportElu(self, context):
             print(output)
             print()
 
+        print("===== Mesh Summary =====")
+        print()
+
         print(f"Uses Dummies:       { usesDummies }")
+        print(f"Slot IDs:           { totalSlotIDs }")
         print(f"Material IDs:       { matIDs }")
         print(f"Weight IDs:         { weightIDs }")
         print(f"Weight Names:       { weightNames }")

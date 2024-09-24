@@ -231,6 +231,7 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
         meshCount = readUShort(file)
 
     usesDummies = False
+    totalSlotIDs = set()
     matIDs = set()
     weightIDs = set()
     weightNames = set()
@@ -303,6 +304,9 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
 
                 slotID = readInt(file)
                 slotIDs.add(slotID)
+
+                if state.logEluMeshNodes:
+                    totalSlotIDs.add(slotID)
 
                 if version == ELU_0 or version >= ELU_5002:
                     skipBytes(file, 4) # skip signature ID
@@ -436,7 +440,11 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
                                            slotIDs, isDummy, eluMatID))
 
     if state.logEluMeshNodes:
+        print("===== Mesh Summary =====")
+        print()
+
         print(f"Uses Dummies:       { usesDummies }")
+        print(f"Slot IDs:           { totalSlotIDs }")
         print(f"Material IDs:       { matIDs }")
         print(f"Weight IDs:         { weightIDs }")
         print(f"Weight Names:       { weightNames }")
