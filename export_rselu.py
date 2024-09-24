@@ -228,6 +228,7 @@ def exportElu(self, context):
             blMat1 = blMatSlot.material
             found = False
 
+            # TODO: empty slots are valid now
             if blMat1 is None:
                 self.report({ 'ERROR' }, "GZRS2: Attempted to export ELU mesh with an empty material slot! Check the GitHub page for what makes a valid ELU material!")
                 return { 'CANCELLED' }

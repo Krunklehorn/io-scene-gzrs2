@@ -507,8 +507,8 @@ def setupEluMat(self, m, eluMat, state):
     elupath = eluMat.elupath
     matID = eluMat.matID
     subMatID = eluMat.subMatID
-
     subMatCount = eluMat.subMatCount
+
     ambient = eluMat.ambient
     diffuse = eluMat.diffuse
     specular = eluMat.specular
@@ -539,7 +539,9 @@ def setupEluMat(self, m, eluMat, state):
         if eluMat.texpath       != eluMat2.texpath:     continue
         if eluMat.alphapath     != eluMat2.alphapath:   continue
 
-        state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})[subMatID] = blMat2
+        blEluMatAtIndex = state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})
+        blEluMatAtIndex["subMatCount"] = subMatCount
+        blEluMatAtIndex[subMatID] = blMat2
         return
 
     matName = texName or f"Material_{ m }"
@@ -672,7 +674,9 @@ def setupEluMat(self, m, eluMat, state):
             blMat.use_backface_culling_shadow = not twosided
             blMat.use_backface_culling_lightprobe_volume = not twosided
 
-    state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})[subMatID] = blMat
+    blEluMatAtIndex = state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})
+    blEluMatAtIndex["subMatCount"] = subMatCount
+    blEluMatAtIndex[subMatID] = blMat
     state.blEluMatPairs.append((eluMat, blMat))
 
 def setupXmlEluMat(self, elupath, xmlEluMat, state):
@@ -983,32 +987,38 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     slotCount = max(1, max(slotIDs) + 1) if doSlots else 1
 
     if eluMesh.version <= ELU_5007:
-        if elupath not in state.blEluMats:
-            self.report({ 'WARNING' }, f"GZRS2: Missing .elu materials for mesh: { meshName }")
-            blMat = state.blErrorMat
-        else:
+        soloMat = None
+
+        if elupath in state.blEluMats:
             blEluMatAtPath = state.blEluMats[elupath]
 
-            if eluMatID not in blEluMatAtPath:
-                self.report({ 'WARNING' }, f"GZRS2: Missing .elu material for mesh at index: { meshName }, { eluMatID }")
-                blMat = state.blErrorMat
-            else:
+            if eluMatID in blEluMatAtPath:
                 blEluMatAtIndex = blEluMatAtPath[eluMatID]
 
-                # TODO: alternate skin support
-                if 0 in blEluMatAtIndex:
-                    blMat = blEluMatAtIndex[0]
-                elif -1 in blEluMatAtIndex:
-                    blMat = blEluMatAtIndex[-1]
+                if blEluMatAtIndex["subMatCount"] == 0:
+                    if -1 in blEluMatAtIndex:
+                        soloMat = blEluMatAtIndex[-1]
+                    else:
+                        self.report({ 'WARNING' }, f"GZRS2: Failed to find .elu solo-material for mesh at index: { meshName }, { eluMatID }")
+                        soloMat = state.blErrorMat
                 else:
-                    self.report({ 'WARNING' }, f"GZRS2: Failed to find .elu sub-material for mesh at index: { meshName }, { eluMatID }")
-                    blMat = state.blErrorMat
-
-        for s in range(slotCount):
-            if s not in slotIDs:
-                blMesh.materials.append(None)
+                    for s in range(slotCount):
+                        if s not in slotIDs:        blMesh.materials.append(None)
+                        elif s in blEluMatAtIndex:  blMesh.materials.append(blEluMatAtIndex[s])
+                        else:
+                            self.report({ 'WARNING' }, f"GZRS2: Failed to find .elu sub-material for mesh at index/sub-index: { meshName }, { eluMatID }/{ s }")
+                            blMesh.materials.append(state.blErrorMat)
             else:
-                blMesh.materials.append(blMat)
+                self.report({ 'WARNING' }, f"GZRS2: Missing .elu material for mesh at index: { meshName }, { eluMatID }")
+                soloMat = state.blErrorMat
+        else:
+            self.report({ 'WARNING' }, f"GZRS2: Missing .elu materials for mesh: { meshName }")
+            soloMat = state.blErrorMat
+
+        if soloMat is not None:
+            for s in range(slotCount):
+                if s not in slotIDs:    blMesh.materials.append(None)
+                else:                   blMesh.materials.append(soloMat)
     else:
         if eluMatID < 0:
             if -1 in slotIDs:
