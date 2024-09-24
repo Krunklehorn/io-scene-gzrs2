@@ -100,7 +100,7 @@ def readLm(self, path, state):
             skipBytes(file, 2 * 2 + 4 * 6) # skip color plane count, bit depth and compression info
 
             if state.logLmImages:
-                print(f"===== BMP { i + 1 } ==============================")
+                print(f"===== BMP { i } ==============================")
                 print(f"Byte Count:         { byteCount }")
                 print(f"Header Size:        { bmpHeaderSize }")
                 print(f"Dimensions:         { width } x { height }")
@@ -141,7 +141,7 @@ def readLm(self, path, state):
                 skipBytes(file, 4)
 
             if state.logLmImages:
-                print(f"===== DDS { i + 1 } ==============================")
+                print(f"===== DDS { i } ==============================")
                 print(f"Byte Count:         { byteCount }")
                 print(f"Main Flags:         { ddsFlags }")
                 print(f"Dimensions:         { width } x { height }")

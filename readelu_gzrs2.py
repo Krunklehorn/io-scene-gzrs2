@@ -116,7 +116,7 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
         subMatID = readInt(file)
 
         if state.logEluMats:
-            print(f"===== Material { m + 1 } =====")
+            print(f"===== Material { m } =====")
             print(f"Mat ID:             { matID }")
             print(f"Sub Mat ID:         { subMatID }")
             print()
@@ -261,7 +261,7 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
             if version >= ELU_5003: skipBytes(file, 4 * 4 + 4 * 4 + 4 * 4 * 4) # skip rotation aa, scale aa and etc matrix
 
         if state.logEluMeshNodes:
-            print(f"===== Mesh { m + 1 } =====")
+            print(f"===== Mesh { m } =====")
             print(f"Mesh Name:          { meshName }")
             print(f"Parent Name:        { parentName }")
             print("World Matrix:       ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*worldMatrix[0]))
@@ -480,7 +480,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             parentName = readString(file, readUInt(file))
 
         if state.logEluMeshNodes:
-            print(f"===== Mesh { m + 1 } =====")
+            print(f"===== Mesh { m } =====")
             print(f"Mesh Name:          { meshName }")
             print(f"Parent Name:        { parentName }")
             print(f"Mesh ID:            { meshID }")

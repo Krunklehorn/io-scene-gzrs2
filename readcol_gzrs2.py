@@ -89,7 +89,7 @@ def readCol(self, path, state):
             trisRead += triCount
 
             if state.logColNodes:
-                print(f"===== Node { n + 1 } =============================")
+                print(f"===== Node { n } =============================")
                 print("Plane:              ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*plane))
                 print(f"Hull:               { hull }")
                 print(f"Triangle Count:     { triCount }")
@@ -111,7 +111,7 @@ def readCol(self, path, state):
 
                     nor = readDirection(file, True)
 
-                    print(f"===== Triangle { t + 1 } ===========================")
+                    print(f"===== Triangle { t } ===========================")
                     print("Vertices:           ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*vertices[0]))
                     print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*vertices[1]))
                     print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*vertices[2]))
@@ -145,7 +145,7 @@ def readCol(self, path, state):
                 trisRead += triCount
 
                 if state.logColNodes:
-                    print(f"===== Node { n + 1 } =============================")
+                    print(f"===== Node { n } =============================")
                     print("Bounds:             ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*bounds[0]))
                     print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*bounds[1]))
                     print(f"Triangle Count:     { triCount }")
@@ -161,7 +161,7 @@ def readCol(self, path, state):
                         attributes = readUInt(file)
                         materialID = readInt(file)
 
-                        print(f"===== Triangle { t + 1 } ===========================")
+                        print(f"===== Triangle { t } ===========================")
                         print("Vertices:           ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*vertices[0]))
                         print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*vertices[1]))
                         print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*vertices[2]))

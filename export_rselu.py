@@ -378,7 +378,7 @@ def exportElu(self, context):
         twosided = not blMat.use_backface_culling
 
         if state.logEluMats:
-            print(f"===== Material { m + 1 } =====")
+            print(f"===== Material { m } =====")
             print(f"Mat ID:             { matID }")
             print(f"Sub Mat ID:         { subMatID }")
             print()
@@ -607,7 +607,7 @@ def exportElu(self, context):
 
     if state.logEluMeshNodes:
         for m, eluMesh in enumerate(eluMeshes):
-            print(f"===== Mesh { m + 1 } =====")
+            print(f"===== Mesh { m } =====")
             print(f"Mesh Name:          { eluMesh.meshName }")
             print(f"Parent Name:        { eluMesh.parentName }")
             print("World Matrix:       ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*eluMatrices[m][0]))

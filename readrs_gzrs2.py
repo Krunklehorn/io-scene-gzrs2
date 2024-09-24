@@ -129,7 +129,7 @@ def readRs(self, path, state):
                     state.rsVerts.append(RsVertex(pos, nor, (0, 0, 0), 1, uv1, uv2))
 
                     if state.logRsVerts:
-                        print(f"===== Vertex { v + 1 }   ===========================")
+                        print(f"===== Vertex { v }   ===========================")
                         print("Position:           ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*pos))
                         print("Normal:             ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*nor))
                         print("UV1:                ({:>6.03f}, {:>6.03f})".format(*uv1))
@@ -146,7 +146,7 @@ def readRs(self, path, state):
                 vertexOffset += leafVertexCount
 
                 if state.logRsLeaves:
-                    print(f"===== Leaf { l + 1 }     =============================")
+                    print(f"===== Leaf { l }     =============================")
                     print(f"Material ID:        { leafMatID }")
                     print(f"Draw Flags:         { drawFlags }")
                     print(f"Vertex Count:       { leafVertexCount }")
@@ -175,7 +175,7 @@ def readRs(self, path, state):
             state.smrPortals.append(RsPortal(name, vertices, cellID1, cellID2))
 
             if state.logRsPortals:
-                print(f"===== Portal { p + 1 }   ===========================")
+                print(f"===== Portal { p }   ===========================")
                 print(f"Name:               { name }")
                 print(f"Vertices:           { len(vertices) }")
                 print(f"Cell ID 1:          { cellID1 }")
@@ -218,7 +218,7 @@ def readRs(self, path, state):
                     state.rsVerts.append(RsVertex(pos, nor, col, alpha, uv1, uv2))
 
                     if state.logRsVerts:
-                        print(f"===== Vertex { v + 1 }   ===========================")
+                        print(f"===== Vertex { v }   ===========================")
                         print("Position:           ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*pos))
                         print("Normal:             ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*nor))
                         print("Color:              ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*col, alpha))
@@ -258,7 +258,7 @@ def readRs(self, path, state):
                             vertexOffset += leafVertexCount
 
                             if state.logRsLeaves:
-                                print(f"===== Leaf { l + 1 }     =============================")
+                                print(f"===== Leaf { l }     =============================")
                                 print(f"Material ID:        { leafMatID }")
                                 print(f"Draw Flags:         { drawFlags }")
                                 print(f"Vertex Count:       { leafVertexCount }")
@@ -272,7 +272,7 @@ def readRs(self, path, state):
                     trees.append(RsTree(matCount, lightmapID, treeVertexCount))
 
                     if state.logRsTrees:
-                        print(f"===== Tree { t + 1 }     =============================")
+                        print(f"===== Tree { t }     =============================")
                         print(f"Material Count:     { matCount }")
                         print(f"Lightmap ID:        { lightmapID }")
                         print(f"Vertex Count:       { treeVertexCount }")
@@ -282,7 +282,7 @@ def readRs(self, path, state):
                 geometry.append(RsGeometry(geoVertexCount, indexCount, tuple(trees)))
 
                 if state.logRsGeometry:
-                    print(f"===== Geometry { g + 1 } =============================")
+                    print(f"===== Geometry { g } =============================")
                     print(f"Vertex Count:       { geoVertexCount }")
                     print(f"Index Count:        { indexCount }")
                     print(f"Trees:              { len(trees) }")
@@ -291,7 +291,7 @@ def readRs(self, path, state):
             state.smrCells.append(RsCell(name, planes, faces, tuple(geometry)))
 
             if state.logRsCells:
-                print(f"===== Cell { c + 1 }     =============================")
+                print(f"===== Cell { c }     =============================")
                 print(f"Name:               { name }")
                 print(f"Planes:             { len(planes) }")
                 print(f"Faces:              { len(faces) }")
