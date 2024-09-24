@@ -403,16 +403,15 @@ def exportElu(self, context):
                                          twosided, additive, alphatest))
 
     eluMats = tuple(eluMats)
+    usesDummies = False
+    matIDs = set()
+    weightIDs = set()
+    weightNames = set()
 
     if state.logEluMeshNodes and meshCount > 0:
         print()
         print("=========  Elu Mesh Nodes  ========")
         print()
-
-        usesDummies = False
-        matIDs = set()
-        weightIDs = set()
-        weightNames = set()
 
     eluMatrices = tuple(eluMatrices)
     eluInvMatrices = tuple(eluInvMatrices)

@@ -230,6 +230,11 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
     if version == ELU_0:
         meshCount = readUShort(file)
 
+    usesDummies = False
+    matIDs = set()
+    weightIDs = set()
+    weightNames = set()
+
     if state.logEluMeshNodes and meshCount > 0:
         print()
         print("=========  Elu Mesh Nodes  ========")
@@ -237,11 +242,6 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
         if version == ELU_0:
             print(f"Mesh Count:         { meshCount }")
             print()
-
-        usesDummies = False
-        matIDs = set()
-        weightIDs = set()
-        weightNames = set()
 
     reorientWorld = Matrix.Rotation(math.radians(-90.0), 4, 'X')
 
