@@ -169,7 +169,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
 
             parentDir = os.path.dirname(parentDir)
 
-        self.report({ 'ERROR' }, f"GZRS2: Texture search failed, directory not found: { texBase }, { texDir }")
+        self.report({ 'WARNING' }, f"GZRS2: Texture search failed, directory not found: { texBase }, { texDir }")
     elif not isRS3:
         result = texMatchDownward(state.directory, texBase, ddsBase)
         if result: return result
@@ -193,16 +193,16 @@ def textureSearch(self, texBase, texDir, isRS3, state):
         if result: return result
 
         if state.rs2DataDir:
-            self.report({ 'ERROR' }, f"GZRS2: Texture search failed, no downward match: { texBase }")
+            self.report({ 'WARNING' }, f"GZRS2: Texture search failed, no downward match: { texBase }")
         else:
-            self.report({ 'ERROR' }, f"GZRS2: Texture search failed, no downward match and no data directory: { texBase }")
+            self.report({ 'WARNING' }, f"GZRS2: Texture search failed, no downward match and no data directory: { texBase }")
     else:
         ensureRS3DataDirectory(self, state)
 
         if texBase in state.rs3DataDict: return state.rs3DataDict[texBase]
         elif ddsBase in state.rs3DataDict: return state.rs3DataDict[ddsBase]
 
-        self.report({ 'ERROR' }, f"GZRS2: Texture search failed, no entry in data dictionary: { texBase }")
+        self.report({ 'WARNING' }, f"GZRS2: Texture search failed, no entry in data dictionary: { texBase }")
 
 def resourceSearch(self, resourcename, state):
     resourcepath = os.path.join(state.directory, resourcename)
