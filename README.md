@@ -1,6 +1,6 @@
 # ***io_scene_gzrs2***
 
-GunZ: The Duel RealSpace2/3 content importer for Blender 4.2.1 LTS.  
+GunZ: The Duel RealSpace2/3 content importer for Blender 4.2.1 LTS.<br>
 Intended for users wishing to visualize and modify GunZ content or prepare the data for a modern game engine.
 
 Please report bugs and unimplemented features to: ***Krunk#6051***
@@ -36,7 +36,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 # Current Export Features
 
-### Model Export (.elu)
+## Model Export (.elu)
 
 * GunZ 1 version 0x5007
 * supports both static and skinned meshes
@@ -139,7 +139,7 @@ The plugin will automatically truncate and verify the result for you. It will al
 - "shoes.tga" -> just omit the label entirely
 - "Documents\My Custom Gunz Content\fireball.bmp.dds" -> rearrange your folders, include a data subdirectory
 
-### Lightmap Export (.lm)
+## Lightmap Export (.lm)
 
 * overwrite only
 * supports image data as well as UVs
@@ -169,7 +169,7 @@ The plugin will automatically truncate and verify the result for you. It will al
 * GunZ 1: handful of .elus with improper bone weights (woman-parts_eola)
 * GunZ 1: all polygons in UV channel 2 come out garbled (import the lightmap and use channel 3 for now)
 * GunZ 1: some polygons in UV channel 3 come out garbled on maps with multiple lightmaps (Citadel)
-* GunZ 1: some elus with reversed winding-order/flipped normals (woman-parts27)
+* GunZ 1: some elus with reversed winding-order/flipped normals (woman-parts27, woman-parts_sum08, woman-parts_santa, etc.)
 
 <!-- -->
 
@@ -187,11 +187,11 @@ The plugin will automatically truncate and verify the result for you. It will al
 
 # Special Thanks
 
-[three-gunz](https://github.com/LostMyCode/three-gunz)  
-[open-gunz](https://github.com/open-gunz/ogz-source)  
-[rahulshekhawat](https://github.com/rahulshekhawat/blender-elu-ani-importer)  
-[x1nixmzeng, ThePhailure772, Lotus & coyotez1n](https://github.com/x1nixmzeng/z3ResEx)  
-[Nayr438](https://github.com/Nayr438)  
-[DeffJay](https://github.com/Jetman823)  
-[HeroBanana](https://github.com/HeroBanana)  
-bastardgoose  
+[three-gunz](https://github.com/LostMyCode/three-gunz)<br>
+[open-gunz](https://github.com/open-gunz/ogz-source)<br>
+[rahulshekhawat](https://github.com/rahulshekhawat/blender-elu-ani-importer)<br>
+[x1nixmzeng, ThePhailure772, Lotus & coyotez1n](https://github.com/x1nixmzeng/z3ResEx)<br>
+[Nayr438](https://github.com/Nayr438)<br>
+[DeffJay](https://github.com/Jetman823)<br>
+[HeroBanana](https://github.com/HeroBanana)<br>
+bastardgoose
