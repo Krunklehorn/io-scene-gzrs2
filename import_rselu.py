@@ -34,6 +34,7 @@
 
 import bpy, os, math
 import xml.dom.minidom as minidom
+import re as regex
 
 from contextlib import redirect_stdout
 from mathutils import Vector, Matrix
