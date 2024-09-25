@@ -788,7 +788,7 @@ def setupRsMesh(self, m, blMesh, state):
     index = 0
 
     for l, leaf in enumerate(state.rsLeaves):
-        if leaf.materialID == m or state.meshMode == 'BAKE':
+        if leaf.matID == m or state.meshMode == 'BAKE':
             found = True
 
             if meshUV3 is not None and numCells > 1:
@@ -820,7 +820,7 @@ def setupRsMesh(self, m, blMesh, state):
             index += leaf.vertexCount
 
             if state.meshMode == 'BAKE':
-                meshMatIDs.append(leaf.materialID)
+                meshMatIDs.append(leaf.matID)
 
     if state.meshMode == 'STANDARD' and not found:
         self.report({ 'INFO' }, f"GZRS2: Unused rs material slot: { m }, { state.xmlRsMats[m]['name'] }")

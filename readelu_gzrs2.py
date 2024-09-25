@@ -368,10 +368,10 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
             output += "      Min: ({:>5.02f}, {:>5.02f}, {:>5.02f})     Max: ({:>5.02f}, {:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(colors, 3)) if len(colors) > 0 else ''
             print(output)
 
-        eluMatID = readInt(file)
+        matID = readInt(file)
         if state.logEluMeshNodes:
-            matIDs.add(eluMatID)
-            print(f"Material ID:        { eluMatID }")
+            matIDs.add(matID)
+            print(f"Material ID:        { matID }")
 
         weights = []
         weightCount = readUInt(file)
@@ -452,7 +452,7 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
         state.eluMeshes.append(EluMeshNode(path, version, meshName, parentName, 0, worldMatrix,
                                            vertices, tuple(normals), tuple(uv1s), (),
                                            colors, tuple(faces), tuple(weights), (),
-                                           slotIDs, isDummy, eluMatID))
+                                           slotIDs, isDummy, matID))
 
     if state.logEluMeshNodes:
         print("===== Mesh Summary =====")
@@ -674,9 +674,9 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             output += "      Min: ({:>5.02f}, {:>5.02f}, {:>5.02f})     Max: ({:>5.02f}, {:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(colors, 3)) if len(colors) > 0 else ''
             print(output)
 
-        eluMatID = readInt(file)
+        matID = readInt(file)
         if state.logEluMeshNodes:
-            print(f"Material ID:        { eluMatID }")
+            print(f"Material ID:        { matID }")
 
         weights = []
         weightCount = readUInt(file)
@@ -825,4 +825,4 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
         state.eluMeshes.append(EluMeshNode(path, version, meshName, parentName, drawFlags, localMatrix,
                                            vertices, normals, uv1s, uv2s,
                                            colors, tuple(faces), tuple(weights), tuple(slots),
-                                           slotIDs, isDummy, eluMatID))
+                                           slotIDs, isDummy, matID))

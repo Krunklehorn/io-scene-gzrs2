@@ -147,7 +147,7 @@ class RsVertex:
 
 @dataclass
 class RsLeaf:
-    materialID:         int = 0
+    matID:              int = 0
     drawFlags:          int = 0
     vertexCount:        int = 0
     vertexOffset:       int = 0
