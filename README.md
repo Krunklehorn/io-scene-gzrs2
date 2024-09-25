@@ -83,10 +83,10 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 | :---: | :---: | :---: | :---: |
 | Image Texture | N/A | If labeled, represents a path relative to GunZ.exe | Color -> PBSDF Base Color |
 | Math (Greater Than) | 0 || Required for alpha-testing, parameter 2 controls the cutoff, must link Image Texture Alpha -> Math Value (1) -> PBSDF Alpha |
-| Value | 0 | subMatID | May be required for certain effects |
+| Value | -1 | subMatID | May be required for certain effects |
 | Value | 0 | subMatCount | May be required for certain effects |
-| RGB | 0.588, 0.588, 0.588 | ambient ||
-| RGB | 0.588, 0.588, 0.588 | diffuse ||
+| RGB | 0.588235, 0.588235, 0.588235 | ambient ||
+| RGB | 0.588235, 0.588235, 0.588235 | diffuse ||
 | RGB | 0.9, 0.9, 0.9 | specular ||
 
 ### Transparency Settings
