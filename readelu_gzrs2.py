@@ -102,7 +102,7 @@ def readElu(self, path, state):
             valid = False
 
             for m2, eluMat2 in enumerate(state.eluMats):
-                if m2 != m1 and eluMat2.matID == eluMat1.matID and eluMat2.subMatID in [-1, 0]:
+                if m2 != m1 and eluMat2.matID == eluMat1.matID and eluMat2.subMatID == -1:
                     valid = True
                     break
 
