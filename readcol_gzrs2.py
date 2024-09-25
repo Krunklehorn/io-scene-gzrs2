@@ -159,7 +159,7 @@ def readCol(self, path, state):
                         vertices = readCoordinateArray(file, 3, state.convertUnits, False)
                         for v in vertices: state.colVerts.append(v)
                         attributes = readUInt(file)
-                        matID = readInt(file)
+                        matID = readUInt(file)
 
                         print(f"===== Triangle { t } ===========================")
                         print("Vertices:           ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*vertices[0]))

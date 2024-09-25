@@ -127,7 +127,7 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
             print()
 
     for m in range(matCount):
-        matID = readInt(file)
+        matID = readUInt(file)
         subMatID = readInt(file)
 
         if state.logEluMats:
@@ -368,7 +368,7 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
             output += "      Min: ({:>5.02f}, {:>5.02f}, {:>5.02f})     Max: ({:>5.02f}, {:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(colors, 3)) if len(colors) > 0 else ''
             print(output)
 
-        matID = readInt(file)
+        matID = readUInt(file)
         if state.logEluMeshNodes:
             matIDs.add(matID)
             print(f"Material ID:        { matID }")
@@ -674,7 +674,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             output += "      Min: ({:>5.02f}, {:>5.02f}, {:>5.02f})     Max: ({:>5.02f}, {:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(colors, 3)) if len(colors) > 0 else ''
             print(output)
 
-        matID = readInt(file)
+        matID = readUInt(file)
         if state.logEluMeshNodes:
             print(f"Material ID:        { matID }")
 
