@@ -1130,6 +1130,7 @@ class GZRS2_PT_Realspace(Panel):
     bl_idname = "MATERIAL_PT_realspace"
     bl_description = "Custom properties for Realspace engine materials."
     bl_context = "material"
+    bl_options = { 'DEFAULT_CLOSED' }
 
     @classmethod
     def poll(cls, context):
