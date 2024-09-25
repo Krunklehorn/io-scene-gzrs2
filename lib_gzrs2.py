@@ -521,6 +521,7 @@ def setupEluMat(self, m, eluMat, state):
     texBase = eluMat.texBase
     texDir = eluMat.texDir
 
+    # TODO: compare with all materials in project, not just current
     for eluMat2, blMat2 in state.blEluMatPairs:
         if subMatID     !=  eluMat2.subMatID:       continue
         if subMatCount  !=  eluMat2.subMatCount:    continue
@@ -540,7 +541,6 @@ def setupEluMat(self, m, eluMat, state):
         if eluMat.alphapath     != eluMat2.alphapath:   continue
 
         blEluMatAtIndex = state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})
-        blEluMatAtIndex["subMatCount"] = subMatCount
         blEluMatAtIndex[subMatID] = blMat2
         return
 
@@ -551,40 +551,14 @@ def setupEluMat(self, m, eluMat, state):
     tree = blMat.node_tree
     nodes = tree.nodes
 
-    matIDNode = nodes.new('ShaderNodeValue')
-    subMatIDNode = nodes.new('ShaderNodeValue')
-    subMatCountNode = nodes.new('ShaderNodeValue')
-    ambientNode = nodes.new('ShaderNodeRGB')
-    diffuseNode = nodes.new('ShaderNodeRGB')
-    specularNode = nodes.new('ShaderNodeRGB')
+    blMat.gzrs2.matID = matID
+    blMat.gzrs2.isBase = subMatID == -1
+    blMat.gzrs2.subMatID = subMatID
+    blMat.gzrs2.subMatCount = subMatCount
 
-    matIDNode.label = 'MatID'
-    subMatIDNode.label = 'SubMatID'
-    subMatCountNode.label = 'SubMatCount'
-    ambientNode.label = 'Ambient'
-    diffuseNode.label = 'Diffuse'
-    specularNode.label = 'Specular'
-
-    matIDNode.location = (480, 300)
-    subMatIDNode.location = (660, 300)
-    subMatCountNode.location = (840, 300)
-    ambientNode.location = (480, 180)
-    diffuseNode.location = (660, 180)
-    specularNode.location = (840, 180)
-
-    matIDNode.select = False
-    subMatIDNode.select = False
-    subMatCountNode.select = False
-    ambientNode.select = False
-    diffuseNode.select = False
-    specularNode.select = False
-
-    matIDNode.outputs[0].default_value = matID
-    subMatIDNode.outputs[0].default_value = subMatID
-    subMatCountNode.outputs[0].default_value = subMatCount
-    ambientNode.outputs[0].default_value = (ambient[0], ambient[1], ambient[2], 1.0)
-    diffuseNode.outputs[0].default_value = (diffuse[0], diffuse[1], diffuse[2], 1.0)
-    specularNode.outputs[0].default_value = (specular[0], specular[1], specular[2], 1.0)
+    blMat.gzrs2.ambient = (ambient[0], ambient[1], ambient[2])
+    blMat.gzrs2.diffuse = (diffuse[0], diffuse[1], diffuse[2])
+    blMat.gzrs2.specular = (specular[0], specular[1], specular[2])
 
     output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
     shader = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
@@ -675,7 +649,6 @@ def setupEluMat(self, m, eluMat, state):
             blMat.use_backface_culling_lightprobe_volume = not twosided
 
     blEluMatAtIndex = state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})
-    blEluMatAtIndex["subMatCount"] = subMatCount
     blEluMatAtIndex[subMatID] = blMat
     state.blEluMatPairs.append((eluMat, blMat))
 
@@ -995,7 +968,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
             if eluMatID in blEluMatAtPath:
                 blEluMatAtIndex = blEluMatAtPath[eluMatID]
 
-                if blEluMatAtIndex["subMatCount"] > 0:
+                if blEluMatAtIndex[-1].gzrs2.subMatCount > 0:
                     for s in range(slotCount):
                         if s not in slotIDs:        blMesh.materials.append(None)
                         elif s in blEluMatAtIndex:  blMesh.materials.append(blEluMatAtIndex[s])
@@ -1003,11 +976,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
                             self.report({ 'WARNING' }, f"GZRS2: Failed to find .elu sub-material for mesh at index/sub-index: { meshName }, { eluMatID }/{ s }")
                             blMesh.materials.append(state.blErrorMat)
                 else:
-                    if -1 in blEluMatAtIndex:
-                        soloMat = blEluMatAtIndex[-1]
-                    else:
-                        self.report({ 'WARNING' }, f"GZRS2: Failed to find .elu solo-material for mesh at index: { meshName }, { eluMatID }")
-                        soloMat = state.blErrorMat
+                    soloMat = blEluMatAtIndex[-1]
             else:
                 self.report({ 'WARNING' }, f"GZRS2: Missing .elu material for mesh at index: { meshName }, { eluMatID }")
                 soloMat = state.blErrorMat

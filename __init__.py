@@ -23,9 +23,9 @@ if "bpy" in locals():
     if "export_rslm" in locals(): importlib.reload(export_rslm)
 else:
     import bpy
-    from bpy.types import Operator, Panel
+    from bpy.types import Operator, Panel, PropertyGroup
     from bpy_extras.io_utils import ImportHelper, ExportHelper
-    from bpy.props import BoolProperty, StringProperty, EnumProperty
+    from bpy.props import BoolProperty, StringProperty, EnumProperty, PointerProperty
 
 def cleanse_modules():
     import sys
@@ -1088,6 +1088,74 @@ class RSLM_PT_Export_Logging(Panel):
         layout.prop(operator, "logLmHeaders")
         layout.prop(operator, "logLmImages")
 
+class GZRS2Properties(bpy.types.PropertyGroup):
+    def onUpdate(self, context):
+        if self["isBase"]:  self["subMatID"] = -1
+        else:               self["subMatCount"] = 0
+
+    def onGetSubMatID(self):
+        return self["subMatID"] if not self["isBase"] else -1
+
+    def onSetSubMatID(self, value):
+        self["subMatID"] = value if not self["isBase"] else -1
+
+    def onGetSubMatCount(self):
+        return self["subMatCount"] if self["isBase"] else 0
+
+    def onSetSubMatCount(self, value):
+        self["subMatCount"] = value if self["isBase"] else 0
+
+    matID: bpy.props.IntProperty(name = 'Material ID', default = 0, min = 0, max = 2**31 - 1, soft_min = 0, soft_max = 256, subtype = 'UNSIGNED')
+    isBase: bpy.props.BoolProperty(name = 'Base', default = True, update = onUpdate)
+    subMatID: bpy.props.IntProperty(name = 'Sub Material ID', default = -1, min = -1, max = 2**31 - 1, soft_min = -1, soft_max = 31, update = onUpdate, get = onGetSubMatID, set = onSetSubMatID)
+    subMatCount: bpy.props.IntProperty(name = 'Sub Material Count', default = 0, min = 0, max = 2**31 - 1, soft_min = 0, soft_max = 256, subtype = 'UNSIGNED', update = onUpdate, get = onGetSubMatCount, set = onSetSubMatCount)
+    # parentMat: bpy.props.PointerProperty(type = bpy.types.Material, name = 'Parent Material')
+
+    ambient: bpy.props.FloatVectorProperty(name = 'Ambient', default = (0.588235, 0.588235, 0.588235), min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'COLOR', size = 3)
+    diffuse: bpy.props.FloatVectorProperty(name = 'Diffuse', default = (0.588235, 0.588235, 0.588235), min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'COLOR', size = 3)
+    specular: bpy.props.FloatVectorProperty(name = 'Specular', default = (0.9, 0.9, 0.9), min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'COLOR', size = 3)
+
+    @classmethod
+    def register(cls):
+        bpy.types.Material.gzrs2 = PointerProperty(type = cls)
+
+    @classmethod
+    def unregister(cls):
+        del bpy.types.Material.gzrs2
+
+class GZRS2_PT_Realspace(Panel):
+    bl_space_type = "PROPERTIES"
+    bl_region_type = "WINDOW"
+    bl_label = "Realspace"
+    bl_idname = "MATERIAL_PT_realspace"
+    bl_description = "Custom properties for Realspace engine materials."
+    bl_context = "material"
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object.active_material is not None
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+
+        props = context.active_object.active_material.gzrs2
+
+        layout.prop(props, 'matID')
+        layout.prop(props, 'isBase')
+
+        column = layout.column()
+        column.prop(props, 'subMatID')
+        column.enabled = not props.isBase
+
+        column = layout.column()
+        column.prop(props, 'subMatCount')
+        column.enabled = props.isBase
+
+        layout.prop(props, 'ambient')
+        layout.prop(props, 'diffuse')
+        layout.prop(props, 'specular')
+
 classes = (
     ImportGZRS2,
     GZRS2_PT_Import_Main,
@@ -1109,7 +1177,9 @@ classes = (
     RSELU_PT_Export_Logging,
     ExportRSLM,
     RSLM_PT_Export_Main,
-    RSLM_PT_Export_Logging
+    RSLM_PT_Export_Logging,
+    GZRS2Properties,
+    GZRS2_PT_Realspace
 )
 
 def menu_func_import(self, context):

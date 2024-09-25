@@ -268,6 +268,8 @@ def importRS2(self, context):
         tree = blMat.node_tree
         nodes = tree.nodes
 
+        blMat.gzrs2.matID = m
+
         output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
         shader = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
         shader.location = (20, 300)

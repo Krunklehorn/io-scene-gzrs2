@@ -263,31 +263,14 @@ def exportElu(self, context):
         links = tree.links.values()
         nodes = tree.nodes
 
-        matID = None
-        subMatID = -1
-        subMatCount = 0
-        ambient = (0.588, 0.588, 0.588, 0.0)
-        diffuse = (0.588, 0.588, 0.588, 0.0)
-        specular = (0.9, 0.9, 0.9, 0.0)
+        matID = blMat.gzrs2.matID
+        isBase = blMat.gzrs2.isBase
+        subMatID = blMat.gzrs2.subMatID
+        subMatCount = blMat.gzrs2.subMatCount
 
-        for node in nodes:
-            lower = node.label.lower()
-
-            if node.bl_idname == 'ShaderNodeValue':
-                if      lower == 'matid':           matID           = int(node.outputs[0].default_value)
-                elif    lower == 'submatid':        subMatID        = int(node.outputs[0].default_value)
-                elif    lower == 'submatcount':     subMatCount     = int(node.outputs[0].default_value)
-            elif node.bl_idname == 'ShaderNodeRGB':
-                value = node.outputs[0].default_value
-                value = (value[0], value[1], value[2], 0.0)
-
-                if      lower == 'ambient':     ambient     = value
-                elif    lower == 'diffuse':     diffuse     = value
-                elif    lower == 'specular':    specular    = value
-
-        if matID is None:
-            self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matName }")
-            return { 'CANCELLED' }
+        ambient = (blMat.gzrs2.ambient[0], blMat.gzrs2.ambient[1], blMat.gzrs2.ambient[2], 1.0)
+        diffuse = (blMat.gzrs2.diffuse[0], blMat.gzrs2.diffuse[1], blMat.gzrs2.diffuse[2], 1.0)
+        specular = (blMat.gzrs2.specular[0], blMat.gzrs2.specular[1], blMat.gzrs2.specular[2], 1.0)
 
         output          = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
         shader          = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
