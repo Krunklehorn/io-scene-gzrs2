@@ -217,34 +217,33 @@ def exportElu(self, context):
 
     meshCount = m
 
-    blMats = []
-    matIndices = []
+    blMats = set()
+    matSets = {}
 
     for eluMeshObj in eluMeshObjs:
-        if eluMeshObj.type == 'EMPTY':
-            continue
+        if eluMeshObj.type != 'EMPTY':
+            for blMatSlot in eluMeshObj.material_slots:
+                blMat = blMatSlot.material
 
-        for blMatSlot in eluMeshObj.material_slots:
-            blMat1 = blMatSlot.material
-            found = False
+                if blMat is not None:
+                    blMats.add(blMat)
+                    matSets.setdefault(blMat.gzrs2.matID, set()).add(blMat.gzrs2.subMatID)
 
-            # TODO: empty slots are valid now
-            if blMat1 is None:
-                self.report({ 'ERROR' }, "GZRS2: Attempted to export ELU mesh with an empty material slot! Check the GitHub page for what makes a valid ELU material!")
-                return { 'CANCELLED' }
+    blMats = list(blMats)
 
-            for id2, blMat2 in enumerate(blMats):
-                if blMat1 == blMat2:
-                    matIndices.append(id2)
-                    found = True
-                    break
+    # Ensure all sub-materials have a base
+    for matID, subMatIDs in matSets.items():
+        if -1 not in subMatIDs:
+            blMats.append({
+                'isPlaceholder': None,
+                'gzrs2': {
+                    'matID': matID,
+                    'isBase': True,
+                    'subMatID': -1,
+                    'subMatCount': max(subMatIDs) + 1 }})
+            self.report({ 'WARNING' }, f"GZRS2: ELU export found sub-materials with no base! A placeholder will be included for id: { matID }")
 
-            if not found:
-                matIndices.append(len(blMats))
-                blMats.append(blMat1)
-
-    blMats = tuple(blMats)
-    matIndices = tuple(matIndices)
+    blMats = tuple(sorted(blMats, key = lambda x: (x['gzrs2']['matID'], x['gzrs2']['subMatID'])))
 
     matCount = len(blMats)
 
@@ -258,108 +257,122 @@ def exportElu(self, context):
     maxPathLength = ELU_NAME_LENGTH if version <= ELU_5005 else ELU_PATH_LENGTH
 
     for m, blMat in enumerate(blMats):
-        matName = blMat.name
-        tree = blMat.node_tree
-        links = tree.links.values()
-        nodes = tree.nodes
+        matID = blMat['gzrs2']['matID']
+        isBase = blMat['gzrs2']['isBase']
+        subMatID = blMat['gzrs2']['subMatID']
+        subMatCount = blMat['gzrs2']['subMatCount']
 
-        matID = blMat.gzrs2.matID
-        isBase = blMat.gzrs2.isBase
-        subMatID = blMat.gzrs2.subMatID
-        subMatCount = blMat.gzrs2.subMatCount
+        ambient = (0.588235, 0.588235, 0.588235, 1.0)
+        diffuse = (0.588235, 0.588235, 0.588235, 1.0)
+        specular = (0.9, 0.9, 0.9, 1.0)
+        power = 0.0
 
-        ambient = (blMat.gzrs2.ambient[0], blMat.gzrs2.ambient[1], blMat.gzrs2.ambient[2], 1.0)
-        diffuse = (blMat.gzrs2.diffuse[0], blMat.gzrs2.diffuse[1], blMat.gzrs2.diffuse[2], 1.0)
-        specular = (blMat.gzrs2.specular[0], blMat.gzrs2.specular[1], blMat.gzrs2.specular[2], 1.0)
+        texpath = ''
+        alphapath = ''
 
-        output          = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
-        shader          = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
-        add             = getShaderNodeByID(self, nodes, 'ShaderNodeAddShader')
-        transparent     = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfTransparent')
-        clip            = getShaderNodeByID(self, nodes, 'ShaderNodeMath')
+        twosided = False
+        additive = False
+        alphatest = 0
+        useopacity = False
 
-        shaderValid         = False if shader       is not None     else None
-        addValid            = False if add          is not None     else None
-        transparentValid    = False if transparent  is not None     else None
-        clipValid           = False if clip         is not None     else None
+        if 'isPlaceholder' not in blMat:
+            matName = blMat.name
+            tree = blMat.node_tree
+            links = tree.links.values()
+            nodes = tree.nodes
 
-        for link in links:
-            if link.is_hidden or not link.is_valid:
-                continue
+            ambient = (blMat.gzrs2.ambient[0], blMat.gzrs2.ambient[1], blMat.gzrs2.ambient[2], 1.0)
+            diffuse = (blMat.gzrs2.diffuse[0], blMat.gzrs2.diffuse[1], blMat.gzrs2.diffuse[2], 1.0)
+            specular = (blMat.gzrs2.specular[0], blMat.gzrs2.specular[1], blMat.gzrs2.specular[2], 1.0)
 
-            if      shaderValid         == False    and link.from_socket == shader.outputs[0]       and link.to_socket == output.inputs[0]:     shaderValid         = True
-            elif    addValid            == False    and link.from_socket == add.outputs[0]          and link.to_socket == output.inputs[0]:     addValid            = True
-            elif    transparentValid    == False    and link.from_socket == transparent.outputs[0]  and link.to_socket == add.inputs[1]:        transparentValid    = True
-            elif    clipValid           == False    and link.from_socket == clip.outputs[0]         and link.to_socket == shader.inputs[4]:     clipValid           = True
+            output          = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
+            shader          = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
+            add             = getShaderNodeByID(self, nodes, 'ShaderNodeAddShader')
+            transparent     = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfTransparent')
+            clip            = getShaderNodeByID(self, nodes, 'ShaderNodeMath')
 
-        for link in links:
-            if link.is_hidden or not link.is_valid:
-                continue
+            shaderValid         = False if shader       is not None     else None
+            addValid            = False if add          is not None     else None
+            transparentValid    = False if transparent  is not None     else None
+            clipValid           = False if clip         is not None     else None
 
-            if addValid and transparentValid        and link.from_socket == shader.outputs[0]       and link.to_socket == add.inputs[0]:        shaderValid = True
+            for link in links:
+                if link.is_hidden or not link.is_valid:
+                    continue
 
-        if clipValid and clip.operation != 'GREATER_THAN':
-            clipValid = False
+                if      shaderValid         == False    and link.from_socket == shader.outputs[0]       and link.to_socket == output.inputs[0]:     shaderValid         = True
+                elif    addValid            == False    and link.from_socket == add.outputs[0]          and link.to_socket == output.inputs[0]:     addValid            = True
+                elif    transparentValid    == False    and link.from_socket == transparent.outputs[0]  and link.to_socket == add.inputs[1]:        transparentValid    = True
+                elif    clipValid           == False    and link.from_socket == clip.outputs[0]         and link.to_socket == shader.inputs[4]:     clipValid           = True
 
-        if not shaderValid:
-            self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
-            return { 'CANCELLED' }
+            for link in links:
+                if link.is_hidden or not link.is_valid:
+                    continue
 
-        bsdfPower = (1 - shader.inputs[2].default_value) * 100 # Roughness
-        if version <= ELU_5002:
-            power = 20 if bsdfPower == 0 else bsdfPower
-        else:
-            power = bsdfPower / 100
+                if addValid and transparentValid        and link.from_socket == shader.outputs[0]       and link.to_socket == add.inputs[0]:        shaderValid = True
 
-        texture = None
-        emission = None
-        alpha = None
+            if clipValid and clip.operation != 'GREATER_THAN':
+                clipValid = False
 
-        for link in links:
-            if link.is_hidden or not link.is_valid:
-                continue
-
-            node = link.from_node
-
-            if link.to_node == shader and isValidEluImageNode(node, link.is_muted):
-                if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[0]:      texture     = node
-                if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[26]:     emission    = node
-                if link.from_socket == node.outputs[1] and link.to_socket == shader.inputs[4]:      alpha       = node
-
-        if texture is not None:
-            if texture.label == '':
-                texpath = makePathExtSingle(os.path.basename(texture.image.filepath))
-            else:
-                texpath = makeRS2DataPath(texture.label)
-
-                if texpath == False:
-                    self.report({ 'ERROR' }, f"GZRS2: Unable to determine data path for texture in ELU material! Check the GitHub page for a list of valid data subdirectories! { matID }, { matName }, { texture.label }")
-                    return { 'CANCELLED' }
-
-            if len(texpath) >= maxPathLength:
-                self.report({ 'ERROR' }, f"GZRS2: Data path for texture has too many characters! Max length is 40 for versions <= ELU_5005 and 256 for everything above! { matID }, { matName }, { texpath }")
+            if not shaderValid:
+                self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
                 return { 'CANCELLED' }
-        else: texpath = ''
 
-        if alpha is not None:
-            if alpha.label == '':
-                alphapath = makePathExtSingle(os.path.basename(alpha.image.filepath))
+            bsdfPower = (1 - shader.inputs[2].default_value) * 100 # Roughness
+            if version <= ELU_5002:
+                power = 20 if bsdfPower == 0 else bsdfPower
             else:
-                alphapath = makeRS2DataPath(alpha.label)
+                power = bsdfPower / 100
 
-                if alphapath == False:
-                    self.report({ 'ERROR' }, f"GZRS2: Unable to determine data path for texture in ELU material! Check the GitHub page for a list of valid data subdirectories! { matID }, { matName }, { texture.label }")
+            texture = None
+            emission = None
+            alpha = None
+
+            for link in links:
+                if link.is_hidden or not link.is_valid:
+                    continue
+
+                node = link.from_node
+
+                if link.to_node == shader and isValidEluImageNode(node, link.is_muted):
+                    if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[0]:      texture     = node
+                    if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[26]:     emission    = node
+                    if link.from_socket == node.outputs[1] and link.to_socket == shader.inputs[4]:      alpha       = node
+
+            if texture is not None:
+                if texture.label == '':
+                    texpath = makePathExtSingle(os.path.basename(texture.image.filepath))
+                else:
+                    texpath = makeRS2DataPath(texture.label)
+
+                    if texpath == False:
+                        self.report({ 'ERROR' }, f"GZRS2: Unable to determine data path for texture in ELU material! Check the GitHub page for a list of valid data subdirectories! { matID }, { matName }, { texture.label }")
+                        return { 'CANCELLED' }
+
+                if len(texpath) >= maxPathLength:
+                    self.report({ 'ERROR' }, f"GZRS2: Data path for texture has too many characters! Max length is 40 for versions <= ELU_5005 and 256 for everything above! { matID }, { matName }, { texpath }")
                     return { 'CANCELLED' }
+            else: texpath = ''
 
-            if len(alphapath) > maxPathLength:
-                self.report({ 'ERROR' }, f"GZRS2: Data path for texture has too many characters! Max length is 40 for versions <= ELU_5005 and 256 for everything above! { matID }, { matName }, { alphapath }")
-                return { 'CANCELLED' }
-        else: alphapath = ''
+            if alpha is not None:
+                if alpha.label == '':
+                    alphapath = makePathExtSingle(os.path.basename(alpha.image.filepath))
+                else:
+                    alphapath = makeRS2DataPath(alpha.label)
 
-        alphatest = int(min(max(0, clip.inputs[1].default_value), 1) * 255) if clipValid else 0
-        useopacity = alpha is not None
-        additive = blMat.surface_render_method == 'BLENDED' and addValid and transparentValid and emission is not None
-        twosided = not blMat.use_backface_culling
+                    if alphapath == False:
+                        self.report({ 'ERROR' }, f"GZRS2: Unable to determine data path for texture in ELU material! Check the GitHub page for a list of valid data subdirectories! { matID }, { matName }, { texture.label }")
+                        return { 'CANCELLED' }
+
+                if len(alphapath) > maxPathLength:
+                    self.report({ 'ERROR' }, f"GZRS2: Data path for texture has too many characters! Max length is 40 for versions <= ELU_5005 and 256 for everything above! { matID }, { matName }, { alphapath }")
+                    return { 'CANCELLED' }
+            else: alphapath = ''
+
+            alphatest = int(min(max(0, clip.inputs[1].default_value), 1) * 255) if clipValid else 0
+            useopacity = alpha is not None
+            additive = blMat.surface_render_method == 'BLENDED' and addValid and transparentValid and emission is not None
+            twosided = not blMat.use_backface_culling
 
         if state.logEluMats:
             print(f"===== Material { m } =====")
@@ -403,7 +416,6 @@ def exportElu(self, context):
 
     eluMeshes = []
 
-    s = 0
     m = 0
 
     for eluMeshObj in eluMeshObjs:
@@ -495,16 +507,23 @@ def exportElu(self, context):
                 colorCount = 0
                 colors = ()
 
-            matSlotCount = len(eluMeshObj.material_slots)
-            if matSlotCount > 0:
-                for ms in range(matSlotCount):
-                    eluMatID = eluMats[matIndices[s + ms]].matID
-                s += matSlotCount
-            else:
-                eluMatID = 0
+            matID = None
+
+            for blMatSlot in eluMeshObj.material_slots:
+                if blMatSlot.material is None:
+                    continue
+
+                if matID == None:
+                    matID = blMatSlot.material.gzrs2.matID
+                elif matID != blMatSlot.material.gzrs2.matID:
+                    self.report({ 'ERROR' }, f"GZRS2: Mesh with two different material IDs! { meshName }")
+                    return { 'CANCELLED' }
+
+            if matID == None:
+                matID = 0
 
             if state.logEluMeshNodes:
-                matIDs.add(eluMatID)
+                matIDs.add(matID)
 
             if hasVGroups:
                 vgroupLookup = tuple(v.groups for v in blMesh.vertices)
@@ -553,7 +572,7 @@ def exportElu(self, context):
             slotIDs = ()
             colorCount = 0
             colors = ()
-            eluMatID = 0
+            matID = 0
             weightCount = 0
             weights = ()
 
@@ -561,7 +580,7 @@ def exportElu(self, context):
         eluMeshes.append(EluMeshNodeExport(meshName, parentName, transform,
                                            apScale, rotAA, scaleAA, etcMatrix,
                                            vertexCount, vertices, faceCount, faces,
-                                           colorCount, colors, eluMatID,
+                                           colorCount, colors, matID,
                                            weightCount, weights, slotIDs))
 
     for eluBone in eluEmptyBones:
