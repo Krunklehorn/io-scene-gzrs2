@@ -9,20 +9,21 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 # Latest Update
 
-[***ONLY WORKS WITH BLENDER 4.2.1 LTS!! >> DOWNLOAD v0.9.4***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.4)
+[***ONLY WORKS WITH BLENDER 4.2.1 LTS!! >> DOWNLOAD v0.9.4.1***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.4)
 
-* NEW: Blender 4.2.1 support, now LTS and therefor stable
-* Fixed .elu export (I don't know when it broke, sorry)
-* Fixed AABB sounds getting skipped
-* Smarter material matching
-* Silenced cleanup reports clogging up the Info tab
-* Warnings and errors are more obvious now
-* Simplified transparency workflow for both .rs.xml and .elu materials
+* NEW: Blender 4.2.1 support, now LTS and stable, we will remain on this version until further notice
+* NEW: Custom UI panel for controlling Realspace material parameters, less node wrangling
+* NEW: Proper sub-material and empty slot parsing for GunZ 1 .elus
+* NEW: Simplified transparency workflow for both .rs.xml and .elu materials
   * DITHERED = Alpha-testing / Alpha-blending
   * BLENDED = Additive Blending
   * See below for more details
+* Smarter material matching
+* Silenced cleanup reports and made warnings and errors more obvious
+* Fixed .rs AABB sounds getting skipped
 * Other minor fixes
 * New Known Issue: some .elus with reversed winding-order/flipped normals (woman-parts27)
+* New Known Issue: some .elu map materials with incorrect flags that should be overridden by their .rs.xml counterparts
 
 # Current Import Features
 
@@ -61,21 +62,18 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 ### Standard Materials
 
-| Type | Label<br />(right click -> rename) | Socket Configuration |
-| :---: | :---: | :---: |
-| Material Output || BSDF -> Surface |
-| Principled BSDF || BSDF -> Surface |
-| Value | matID ||
+| Type | Socket Configuration |
+| :---: | :---: |
+| Material Output | BSDF -> Surface |
+| Principled BSDF | BSDF -> Surface |
 
 ### Additive Materials
 
-| Type | Label<br />(right click -> rename) | Socket Configuration |
-| :---: | :---: | :---: |
-| Principled BSDF || BSDF -> Shader (1) |
-| Transparent BSDF || BSDF -> Shader (2) |
-| Add Shader || Shader -> Surface |
-| Value | matID ||
-
+| Type | Socket Configuration |
+| :---: | :---: |
+| Principled BSDF | BSDF -> Shader (1) |
+| Transparent BSDF | BSDF -> Shader (2) |
+| Add Shader | Shader -> Surface |
 
 ### Optional Nodes
 
@@ -83,13 +81,8 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 | :---: | :---: | :---: | :---: |
 | Image Texture | N/A | If labeled, represents a path relative to GunZ.exe | Color -> PBSDF Base Color |
 | Math (Greater Than) | 0 || Required for alpha-testing, parameter 2 controls the cutoff, must link Image Texture Alpha -> Math Value (1) -> PBSDF Alpha |
-| Value | -1 | subMatID | May be required for certain effects |
-| Value | 0 | subMatCount | May be required for certain effects |
-| RGB | 0.588235, 0.588235, 0.588235 | ambient ||
-| RGB | 0.588235, 0.588235, 0.588235 | diffuse ||
-| RGB | 0.9, 0.9, 0.9 | specular ||
 
-### Transparency Settings
+### Render Method
 
 | Style | Render Method | Details | Socket Configuration |
 | :---: | :---: | :---: | :---: |
@@ -97,18 +90,29 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 | Alpha Testing | Dithered || Image Texture Alpha -> Math Node (Greater Than) -> PBSDF Alpha |
 | Additive | Blended || Image Texture Color -> PBSDF Emission |
 
-### Extra Controls
+### Extra Parameters (Material Properties -> Realspace)
+
+| Name | Type | Default | Details |
+| :---: | :---: | :---: | :---: |
+| Base | Bool | True | Base-materials can have sub-materials, which may be required for certain effects  |
+| Sub Material ID | Integer | -1 | Only valid for sub-materials |
+| Sub Material Count | Integer | 0 | Only valid for base-materials |
+| Ambient | Color | 0.588235, 0.588235, 0.588235 ||
+| Diffuse | Color | 0.588235, 0.588235, 0.588235 ||
+| Specular | Color | 0.9, 0.9, 0.9 ||
+
+### Extra Parameters (Material Properties -> Viewport Display -> Settings)
 
 | Control | Details |
 | :---: | :---: |
 | Two-sided | Controlled by the Backface Culling checkboxes (keep all three in sync) |
 | Specular Power | Controlled by the the Principled BSDF Roughness value, lower is smoother & glossier |
 
-![Basic Material](meta/basicmaterial_240916.jpg)
+![Basic Material](meta/basicmaterial_240927.jpg)
 
-![Alphatest Material](meta/alphatestmaterial_240916.jpg)
+![Alphatest Material](meta/alphatestmaterial_240927.jpg)
 
-![Additive Material](meta/additivematerial_240916.jpg)
+![Additive Material](meta/additivematerial_240927.jpg)
 
 ### Notes on texture paths, labels and valid data subdirectories...
 
@@ -170,6 +174,7 @@ The plugin will automatically truncate and verify the result for you. It will al
 * GunZ 1: all polygons in UV channel 2 come out garbled (import the lightmap and use channel 3 for now)
 * GunZ 1: some polygons in UV channel 3 come out garbled on maps with multiple lightmaps (Citadel)
 * GunZ 1: some elus with reversed winding-order/flipped normals (woman-parts27, woman-parts_sum08, woman-parts_santa, etc.)
+* GunZ 1: some .elu map materials with incorrect flags that should be overridden by their .rs.xml counterparts
 
 <!-- -->
 
