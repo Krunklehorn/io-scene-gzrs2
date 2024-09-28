@@ -530,6 +530,8 @@ def exportElu(self, context):
                 weightCount = len(vgroupLookup)
                 weights = []
 
+                skippedBoneNames = set()
+
                 for v, vgroupInfos in enumerate(vgroupLookup):
                     pairs = []
                     vertexWorld = worldMatrix @ vertices[v]
@@ -538,7 +540,7 @@ def exportElu(self, context):
                         boneName = vertexGroups[vgroupInfo.group].name
 
                         if not boneName in blValidBones:
-                            self.report({ 'WARNING' }, f"GZRS2: ELU export skipping a vertex group with no corresponding bone: { boneName }")
+                            skippedBoneNames.add(boneName)
                             continue
 
                         pairs.append((vgroupInfo.weight, boneName))
@@ -556,6 +558,9 @@ def exportElu(self, context):
                     degree = min(ELU_PHYS_KEYS, degree)
 
                     weights.append(EluWeightExport(boneNames, values, meshIDs, degree, offsets))
+
+                for boneName in skippedBoneNames:
+                    self.report({ 'WARNING' }, f"GZRS2: ELU export skipping a vertex group with no corresponding bone: { meshName }, { boneName }")
 
                 weights = tuple(weights)
             else:
