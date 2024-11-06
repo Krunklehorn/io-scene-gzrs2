@@ -177,7 +177,7 @@ def exportElu(self, context):
     for blObj in blObjs:
         meshName = blObj.name
 
-        if not meshName in blValidBones:
+        if meshName not in blValidBones:
             continue
 
         eluObjByName[meshName] = blObj
@@ -197,7 +197,7 @@ def exportElu(self, context):
         for blBone in blArmatureObj.data.bones:
             boneName = blBone.name
 
-            if not boneName in blValidBones:
+            if boneName not in blValidBones:
                 continue
 
             if boneName in eluBoneIDs:
@@ -431,23 +431,27 @@ def exportElu(self, context):
             elif (eluMeshObj.parent_type == 'BONE' and
                   eluMeshObj.parent in blArmatureObjs and
                   eluMeshObj.parent_bone in blValidBones):
-                    eluBone = blValidBones[eluMeshObj.parent_bone]
+                    parentName = eluMeshObj.parent_bone
 
-                    if eluBone.parent is not None:
-                        parentName = eluBone.parent.name
+                    if meshName == parentName:
+                        parentBone = blValidBones[parentName]
 
-                        if not parentName in blValidBones:
-                            valid = False
+                        if parentBone in eluEmptyBones:
+                            self.report({ 'ERROR' }, f"GZRS2: ELU export found a mesh object with a corresponding empty bone that didn't get skipped! { meshName }")
+                            return { 'CANCELLED' }
+
+                        parentParent = parentBone.parent
+                        parentName = parentParent.name if parentParent is not None else ''
             else:
                 valid = False
 
         if not valid:
-            self.report({ 'ERROR' }, f"GZRS2: Mesh object with an invalid parent! { meshName }, { parentName }")
+            self.report({ 'ERROR' }, f"GZRS2: ELU export found a mesh object with an invalid parent! { meshName }, { parentName }")
             return { 'CANCELLED' }
 
         if meshName == parentName:
-            self.report({ 'ERROR' }, f"GZRS2: Tried to parent a mesh object to itself! { meshName }")
-            return { 'CANCELLED' }
+                self.report({ 'ERROR' }, f"GZRS2: ELU export tried to parent a mesh object to itself! { meshName }")
+                return { 'CANCELLED' }
 
         worldMatrix = eluMatrices[m]
         transform = reorientWorld @ worldMatrix
@@ -539,7 +543,7 @@ def exportElu(self, context):
                     for vgroupInfo in vgroupInfos:
                         boneName = vertexGroups[vgroupInfo.group].name
 
-                        if not boneName in blValidBones:
+                        if boneName not in blValidBones:
                             skippedBoneNames.add(boneName)
                             continue
 
@@ -595,7 +599,7 @@ def exportElu(self, context):
         if eluBone.parent is not None:
             parentName = eluBone.parent.name
 
-            if not parentName in blValidBones:
+            if parentName not in blValidBones:
                 self.report({ 'ERROR' }, f"GZRS2: ELU export found a bone with an invalid parent! { boneName }, { parentName }")
                 return { 'CANCELLED' }
 

@@ -781,7 +781,6 @@ def setupRsMesh(self, m, blMesh, state):
                     uv3 = state.lmUVs[v]
 
                     if numCells > 1:
-
                         uv3.x += cx
                         uv3.y -= cy
                         uv3 /= cellSpan
@@ -1084,7 +1083,7 @@ def processEluHeirarchy(self, state):
 def isValidEluImageNode(node, muted):
     if node is None: return False
     if node.name != 'Image Texture': return False
-    if muted: return True
+    if muted: return False
     if node.image is None: return False
     if node.image.source != 'FILE': return False
     if node.image.filepath == '': return False
