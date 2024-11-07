@@ -389,7 +389,7 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
 
         for _ in range(weightCount):
             if version == ELU_0:
-                degree = readUChar(file)
+                degree = min(ELU_PHYS_KEYS, readUChar(file))
                 meshIDs = [0 for d in range(degree)]
                 values = [0.0 for d in range(degree)]
                 offsets = [Vector((0.0, 0.0, 0.0)) for d in range(degree)]
@@ -409,7 +409,7 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
                 meshNames = tuple(readString(file, ELU_NAME_LENGTH) for _ in range(ELU_PHYS_KEYS))
                 values = readFloatArray(file, ELU_PHYS_KEYS)
                 meshIDs = readUIntArray(file, ELU_PHYS_KEYS)
-                degree = readUInt(file)
+                degree = min(ELU_PHYS_KEYS, readUInt(file))
                 offsets = readVec3Array(file, ELU_PHYS_KEYS)
 
             if state.logEluMeshNodes:
