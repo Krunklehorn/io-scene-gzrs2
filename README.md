@@ -200,4 +200,5 @@ The plugin will automatically truncate and verify the result for you. It will al
 [DeffJay](https://github.com/Jetman823)<br>
 [HeroBanana](https://github.com/HeroBanana)<br>
 bastardgoose<br>
-Menotso
+Menotso<br>
+Ennui
