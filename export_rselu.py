@@ -506,7 +506,19 @@ def exportElu(self, context):
 
             if version >= ELU_5005 and hasColors:
                 colorCount = vertexCount
-                colors = tuple(color1.data[v].color[:3] for v in range(vertexCount))
+                colors = []
+
+                for v in range(vertexCount):
+                    color = color1.data[v].color
+                    color = [color[0], color[1], color[2]]
+
+                    for c in range(3):
+                        if color[c] > 0.99: color[c] = 1.0
+                        if color[c] < 0.01: color[c] = 0.0
+
+                    colors.append(tuple(color))
+
+                colors = tuple(colors)
             else:
                 colorCount = 0
                 colors = ()
