@@ -1082,7 +1082,7 @@ def processEluHeirarchy(self, state):
 
 def isValidEluImageNode(node, muted):
     if node is None: return False
-    if node.name != 'Image Texture': return False
+    if node.bl_idname != 'ShaderNodeTexImage': return False
     if muted: return False
     if node.image is None: return False
     if node.image.source != 'FILE': return False
