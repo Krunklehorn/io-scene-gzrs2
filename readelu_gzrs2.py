@@ -97,20 +97,48 @@ def readElu(self, path, state):
 
     file.close()
 
+    # Check for duplicate material id pairs
+    dupePairs = set()
+
     for m1, eluMat1 in enumerate(state.eluMats):
-        if eluMat1.subMatID != -1:
-            valid = False
+        pair1 = (eluMat1.matID, eluMat1.subMatID)
 
-            for m2, eluMat2 in enumerate(state.eluMats):
-                if m2 != m1 and eluMat2.matID == eluMat1.matID and eluMat2.subMatID == -1:
-                    valid = True
-                    break
+        if pair1 in dupePairs:
+            continue
 
-            if not valid:
-                self.report({ 'ERROR' }, f"GZRS2: Found .elu sub-material with no valid base: { state.filename }, { version }, { eluMat1.matID }, { eluMat1.subMatID }")
+        for m2, eluMat2 in enumerate(state.eluMats):
+            if m2 == m1:
+                continue
 
-            if eluMat1.subMatCount > 0:
-                self.report({ 'ERROR' }, f"GZRS2: Found .elu sub-material with a sub-material count of it's own: { state.filename }, { version }, { eluMat1.matID }, { eluMat1.subMatID }, { eluMat1.subMatCount }")
+            pair2 = (eluMat2.matID, eluMat2.subMatID)
+
+            if pair2 in dupePairs:
+                continue
+
+            if pair1 == pair2:
+                self.report({ 'ERROR' }, f"GZRS2: Found .elu with duplicate material ids: { state.filename }, { hex(version) }, { pair1 }, { eluMat1.texpath }, { eluMat2.texpath }")
+                dupePairs.add(pair1)
+
+    # Check for sub-materials with an invalid base or sub-material counts of their own
+    for m1, eluMat1 in enumerate(state.eluMats):
+        if eluMat1.subMatID == -1:
+            continue
+
+        valid = False
+
+        for m2, eluMat2 in enumerate(state.eluMats):
+            if m2 == m1:
+                continue
+
+            if eluMat2.matID == eluMat1.matID and eluMat2.subMatID == -1:
+                valid = True
+                break
+
+        if not valid:
+            self.report({ 'ERROR' }, f"GZRS2: Found .elu sub-material with no valid base: { state.filename }, { hex(version) }, { eluMat1.matID }, { eluMat1.subMatID }")
+
+        if eluMat1.subMatCount > 0:
+            self.report({ 'ERROR' }, f"GZRS2: Found .elu sub-material with a sub-material count of it's own: { state.filename }, { hex(version) }, { eluMat1.matID }, { eluMat1.subMatID }, { eluMat1.subMatCount }")
 
     return result
 

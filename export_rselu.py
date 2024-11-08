@@ -231,6 +231,42 @@ def exportElu(self, context):
 
     blMats = list(blMats)
 
+    # Check for sub-materials with unmodified sub-material ids
+    invalidMats = set()
+
+    for blMat in blMats:
+        if not blMat.gzrs2.isBase and blMat.gzrs2.subMatID == -1:
+            self.report({ 'ERROR' }, f"GZRS2: ELU export found a sub-material with an invalid sub-material id: { blMat.name }, -1")
+            invalidMats.add(blMat)
+
+    if len(invalidMats) > 0:
+        return { 'CANCELLED' }
+
+    # Check for duplicate material id pairs
+    dupePairs = set()
+
+    for m1, blMat1 in enumerate(blMats):
+        pair1 = (blMat1.gzrs2.matID, blMat1.gzrs2.subMatID)
+
+        if pair1 in dupePairs:
+            continue
+
+        for m2, blMat2 in enumerate(blMats):
+            if m2 == m1:
+                continue
+
+            pair2 = (blMat2.gzrs2.matID, blMat2.gzrs2.subMatID)
+
+            if pair2 in dupePairs:
+                continue
+
+            if pair1 == pair2:
+                self.report({ 'ERROR' }, f"GZRS2: ELU export found a duplicate material id/subid pair: { pair1 }, { blMat1.name }, { blMat2.name }")
+                dupePairs.add(pair1)
+
+    if len(dupePairs) > 0:
+        return { 'CANCELLED' }
+
     # Ensure all sub-materials have a base
     for matID, subMatIDs in matSets.items():
         if -1 not in subMatIDs:
