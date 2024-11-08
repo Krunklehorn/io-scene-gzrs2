@@ -71,10 +71,13 @@ def texMatchDownward(root, texBase, ddsBase):
             if filename == texBase or filename == ddsBase:
                 return os.path.join(dirpath, filename)
 
-def matchRS2DataDirectory(self, dirpath, dirbase, state):
+def matchRSDataDirectory(self, dirpath, dirbase, isRS3, state):
+    if dirpath == '' or dirbase == '':
+        return False
+
     _, dirnames, _ = next(os.walk(dirpath))
 
-    for token in RS2_VALID_DATA_SUBDIRS:
+    for token in RS3_VALID_DATA_SUBDIRS if isRS3 else RS2_VALID_DATA_SUBDIRS:
         if dirbase.lower() == token.lower():
             state.rs2DataDir = os.path.dirname(dirpath)
             return True
@@ -85,6 +88,19 @@ def matchRS2DataDirectory(self, dirpath, dirbase, state):
                 return True
 
     return False
+
+def ensureRS3DataDict(self, state):
+    if len(state.rs3DataDict) > 0: return
+
+    for dirpath, _, filenames in os.walk(state.rs3DataDir):
+        for filename in filenames:
+            splitname = filename.split(os.extsep)
+
+            if splitname[-1].lower() in ['xml', 'elu', 'dds']:
+                resourcepath = pathExists(os.path.join(dirpath, filename))
+
+                if resourcepath: state.rs3DataDict[filename] = resourcepath
+                else: self.report({ 'ERROR' }, f"GZRS2: Resource found but pathExists() failed, potential case sensitivity issue: { filename }")
 
 def ensureRS3DataDirectory(self, state):
     if state.rs3DataDir: return
@@ -111,16 +127,7 @@ def ensureRS3DataDirectory(self, state):
         self.report({ 'ERROR' }, f"GZRS2: Failed to find RS3 data directory!")
         return
 
-    for dirpath, _, filenames in os.walk(state.rs3DataDir):
-        for filename in filenames:
-            splitname = filename.split(os.extsep)
-
-            if splitname[-1].lower() in ['xml', 'elu', 'dds']:
-                resourcepath = pathExists(os.path.join(dirpath, filename))
-
-                if resourcepath: state.rs3DataDict[filename] = resourcepath
-                else: self.report({ 'ERROR' }, f"GZRS2: Resource found but pathExists() failed, potential case sensitivity issue: { filename }")
-
+    ensureRS3DataDict(self, state)
 
 def textureSearch(self, texBase, texDir, isRS3, state):
     if not isValidTextureName(texBase):
@@ -183,7 +190,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
 
                 currentBase = os.path.basename(currentDir)
 
-                if matchRS2DataDirectory(self, currentDir, currentBase, state):
+                if matchRSDataDirectory(self, currentDir, currentBase, False, state):
                     self.report({ 'INFO' }, f"GZRS2: Upward directory search found a valid data subdirectory: { u }, { currentDir }")
                     break
 
@@ -273,9 +280,16 @@ def getValidArmature(self, object, state):
 
     return modObj, modObj.data
 
-def getMatNode(bpy, blMat, nodes, texpath, alphamode, x, y, state):
-    if texpath is None:
+def getMatNode(bpy, blMat, nodes, texpath, alphamode, x, y, loadFake, state):
+    if texpath is None or loadFake:
         texture = nodes.new('ShaderNodeTexImage')
+
+        if loadFake:
+            texture.image = bpy.data.images.new(texpath, 0, 0)
+            texture.image.filepath = texture.image.filepath_raw = '//' + texpath
+            texture.image.source = 'FILE'
+            texture.image.alpha_mode = alphamode
+
         texture.location = (x, y)
         texture.select = True
 
@@ -307,13 +321,20 @@ def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, sha
         self.report({ 'ERROR' }, f"GZRS2: Bsp material with invalid texture name, must not be a directory: { m }, { name }, { texname }")
         return
 
-    texpath = textureSearch(self, texname, '', False, state)
+    loadFake = False
 
-    if texpath is None:
-        self.report({ 'ERROR' }, f"GZRS2: Texture not found for bsp material: { m }, { name }, { texname }")
-        return
+    if state.texSearchMode != 'SKIP':
+        texpath = textureSearch(self, texname, '', False, state)
 
-    texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, state)
+        if texpath is None:
+            self.report({ 'ERROR' }, f"GZRS2: Texture not found for bsp material: { m }, { name }, { texname }")
+            texpath = texname
+            loadFake = True
+    else:
+        texpath = texname
+        loadFake = True
+
+    texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, loadFake, state)
 
     if state.doLightmap:
         lightmap = nodes.new('ShaderNodeTexImage')
@@ -422,19 +443,26 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
         self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with invalid texture name, must not be a directory: { texname }, { textype }")
         return
 
-    texpath = textureSearch(self, texname, '', True, state)
+    loadFake = False
 
-    if texpath is None:
-        self.report({ 'ERROR' }, f"GZRS2: Texture not found for .elu.xml material: { texname }, { textype }")
-        return
+    if state.texSearchMode != 'SKIP':
+        texpath = textureSearch(self, texname, '', True, state)
+
+        if texpath is None:
+            self.report({ 'ERROR' }, f"GZRS2: Texture not found for .elu.xml material: { texname }, { textype }")
+            texpath = texname
+            loadFake = True
+    else:
+        texpath = texname
+        loadFake = True
 
     if textype == 'DIFFUSEMAP':
-        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, loadFake, state)
         texture.select = False
 
         tree.links.new(texture.outputs[0], shader.inputs[0]) # Base Color
     elif textype == 'SPECULARMAP':
-        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 0, state)
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 0, loadFake, state)
         texture.select = False
 
         invert = nodes.new('ShaderNodeInvert')
@@ -445,14 +473,14 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
         tree.links.new(texture.outputs[0], invert.inputs[1])
         tree.links.new(invert.outputs[0], shader.inputs[2]) # Roughness
     elif textype == 'SELFILLUMINATIONMAP':
-        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, -300, state)
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, -300, loadFake, state)
         texture.select = False
 
         tree.links.new(texture.outputs[0], shader.inputs[26]) # Emission Color
 
         shader.inputs[27].default_value = emission # Emission Strength
     elif textype == 'OPACITYMAP':
-        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, state)
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, loadFake, state)
         texture.select = False
 
         if alphatest > 0:
@@ -477,7 +505,7 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
 
             tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
     elif textype == 'NORMALMAP':
-        texture = getMatNode(bpy, blMat, nodes, texpath, 'NONE', -540, -600, state)
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'NONE', -540, -600, loadFake, state)
         texture.image.colorspace_settings.name = 'Non-Color'
         texture.select = False
 
@@ -571,20 +599,28 @@ def setupEluMat(self, m, eluMat, state):
     output.select = False
 
     if texBase and isValidTextureName(texBase):
-        texpath = textureSearch(self, texBase, texDir, False, state)
+        loadFake = False
 
-        if texpath is None:
-            self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu material: { texBase }")
+        if state.texSearchMode != 'SKIP':
+            texpath = textureSearch(self, texBase, texDir, False, state)
 
-        texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, state)
-        datapath = makeRS2DataPath(texpath)
-
-        if texDir == '':
-            texture.label = ''
-        elif datapath != False:
-            texture.label = datapath
+            if texpath is None:
+                self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu material: { texName }")
+                texpath = eluMat.texpath
+                loadFake = True
         else:
-            texture.label = os.path.join(texDir, texBase)
+            texpath = eluMat.texpath
+            loadFake = True
+
+        texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, loadFake, state)
+
+        if texDir != '':
+            datapath = makeRS2DataPath(texpath)
+
+            if datapath != False:
+                texture.label = datapath
+            else:
+                texture.label = os.path.join(texDir, texBase)
 
         diffuseLink = tree.links.new(texture.outputs[0], shader.inputs[0]) # Base Color
         diffuseLink.is_muted = texpath is None

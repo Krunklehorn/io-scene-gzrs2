@@ -50,9 +50,18 @@ from .lib_gzrs2 import *
 def importRS2(self, context):
     state = GZRS2State()
 
+    if self.texSearchMode == 'PATH':
+        if not self.rs2DataDir:
+            self.report({ 'ERROR' }, f"GZRS2: Must specify a path to search for or select a different texture mode!")
+            return { 'CANCELLED' }
+
+        if not matchRSDataDirectory(self, self.rs2DataDir, os.path.basename(self.rs2DataDir), False, state):
+            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory: { self.rs2DataDir }")
+            return { 'CANCELLED' }
+
     state.convertUnits = self.convertUnits
     state.meshMode = self.meshMode
-    state.doCleanup = self.doCleanup
+    state.texSearchMode = self.texSearchMode
     state.doCollision = self.doCollision and self.meshMode != 'BAKE'
     state.doLightmap = self.doLightmap
     state.doLights = self.doLights
@@ -66,6 +75,7 @@ def importRS2(self, context):
     state.doBspBounds = self.doBspBounds and self.meshMode != 'BAKE'
     state.doLightDrivers = self.doLightDrivers
     state.doFogDriver = self.doFogDriver
+    state.doCleanup = self.doCleanup
 
     if self.panelLogging:
         print()

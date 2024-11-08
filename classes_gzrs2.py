@@ -12,7 +12,7 @@ class GZRS2State:
 
     convertUnits:       bool = False
     meshMode:           str = ""
-    doCleanup:          bool = False
+    texSearchMode:      str = ""
     doCollision:        bool = False
     doLightmap:         bool = False
     doLights:           bool = False
@@ -27,6 +27,7 @@ class GZRS2State:
     doFogDriver:        bool = False
     doBoneRolls:        bool = False
     doTwistConstraints: bool = False
+    doCleanup:          bool = False
 
     logRsPortals:       bool = False
     logRsCells:         bool = False

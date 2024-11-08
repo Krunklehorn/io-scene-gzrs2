@@ -74,16 +74,24 @@ class ImportGZRS2(Operator, ImportHelper):
         default = True
     )
 
-    doCleanup: BoolProperty(
-        name = "Cleanup",
-        description = "Deletes loose geometry, removes doubles and sets each mesh to render smooth",
-        default = True
-    )
-
     meshMode: EnumProperty(
         name = "Mesh Mode",
         items = (('STANDARD',   "Standard",     "Split geometry by material, optionally perform cleanup."),
                  ('BAKE',       "Bake",         "Don't split geometry or perform any cleanup."))
+    )
+
+    texSearchMode: EnumProperty(
+        name = "Texture Mode",
+        items = (('SMART',      "Smart",        "Automatically search for textures in surrounding filesystem (slow, may freeze)"),
+                 ('PATH',       "Path",         "Search for textures using the specified path (faster)"),
+                 ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
+    )
+
+    rs2DataDir: StringProperty(
+        name = "Search Path",
+        description = "Path to a folder containing the extracted .mrs data",
+        default = "",
+        subtype = "DIR_PATH"
     )
 
     doCollision: BoolProperty(
@@ -95,12 +103,6 @@ class ImportGZRS2(Operator, ImportHelper):
     doLightmap: BoolProperty(
         name = "Lightmap",
         description = "Import lightmap data",
-        default = True
-    )
-
-    linkInMaterials: BoolProperty(
-        name = "Link In Materials",
-        description = "Tweaks light data to give comparable results directly in Blender",
         default = True
     )
 
@@ -167,6 +169,12 @@ class ImportGZRS2(Operator, ImportHelper):
     doFogDriver: BoolProperty(
         name = "Fog",
         description = "Generate driver to control fog settings",
+        default = True
+    )
+
+    doCleanup: BoolProperty(
+        name = "Cleanup",
+        description = "Deletes loose geometry, removes doubles and sets each mesh to render smooth",
         default = True
     )
 
@@ -297,8 +305,12 @@ class GZRS2_PT_Import_Main(Panel):
         layout.enabled = operator.panelMain
 
         layout.prop(operator, "convertUnits")
-        layout.prop(operator, "doCleanup")
         layout.prop(operator, "meshMode")
+        layout.prop(operator, "texSearchMode")
+
+        column = layout.column()
+        column.prop(operator, "rs2DataDir")
+        column.enabled = operator.texSearchMode == 'PATH'
 
         column = layout.column()
         column.prop(operator, "doCollision")
@@ -325,6 +337,8 @@ class GZRS2_PT_Import_Main(Panel):
         column.prop(operator, "doItems")
         column.prop(operator, "doBspBounds")
         column.enabled = operator.meshMode != 'BAKE'
+
+        layout.prop(operator, "doCleanup")
 
 class GZRS2_PT_Import_Drivers(Panel):
     bl_space_type = "FILE_BROWSER"
@@ -422,6 +436,20 @@ class ImportGZRS3(Operator, ImportHelper):
         default = True
     )
 
+    texSearchMode: EnumProperty(
+        name = "Texture Mode",
+        items = (('SMART',      "Smart",        "Automatically search for textures in surrounding filesystem (slow, may freeze)"),
+                 ('PATH',       "Path",         "Search for textures using the specified path (faster)"),
+                 ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
+    )
+
+    rs3DataDir: StringProperty(
+        name = "Search Path",
+        description = "Path to a folder containing the extracted .mrf data",
+        default = "",
+        subtype = "DIR_PATH"
+    )
+
     doCleanup: BoolProperty(
         name = "Cleanup",
         description = "Deletes loose geometry, removes doubles and sets each mesh to render smooth",
@@ -495,6 +523,12 @@ class GZRS3_PT_Import_Main(Panel):
         layout.enabled = operator.panelMain
 
         layout.prop(operator, "convertUnits")
+        layout.prop(operator, "texSearchMode")
+
+        column = layout.column()
+        column.prop(operator, "rs3DataDir")
+        column.enabled = operator.texSearchMode == 'PATH'
+
         layout.prop(operator, "doCleanup")
 
 class GZRS3_PT_Import_Logging(Panel):
@@ -559,10 +593,18 @@ class ImportRSELU(Operator, ImportHelper):
         default = True
     )
 
-    doCleanup: BoolProperty(
-        name = "Cleanup",
-        description = "Deletes loose geometry, removes doubles and sets each mesh to render smooth",
-        default = True
+    texSearchMode: EnumProperty(
+        name = "Texture Mode",
+        items = (('SMART',      "Smart",        "Automatically search for textures in surrounding filesystem (slow, may freeze)"),
+                 ('PATH',       "Path",         "Search for textures using the specified path (faster)"),
+                 ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
+    )
+
+    rs2DataDir: StringProperty(
+        name = "Search Path",
+        description = "Path to a folder containing the extracted .mrs data",
+        default = "",
+        subtype = "DIR_PATH"
     )
 
     doBoneRolls: BoolProperty(
@@ -574,6 +616,12 @@ class ImportRSELU(Operator, ImportHelper):
     doTwistConstraints: BoolProperty(
         name = "Twist Constraints",
         description = "Automatically add constraints for twist bones. Bone rolls are required to be re-calculated first",
+        default = True
+    )
+
+    doCleanup: BoolProperty(
+        name = "Cleanup",
+        description = "Deletes loose geometry, removes doubles and sets each mesh to render smooth",
         default = True
     )
 
@@ -638,12 +686,19 @@ class RSELU_PT_Import_Main(Panel):
         layout.enabled = operator.panelMain
 
         layout.prop(operator, "convertUnits")
-        layout.prop(operator, "doCleanup")
+        layout.prop(operator, "texSearchMode")
+
+        column = layout.column()
+        column.prop(operator, "rs2DataDir")
+        column.enabled = operator.texSearchMode == 'PATH'
+
         layout.prop(operator, "doBoneRolls")
 
         column = layout.column()
         column.prop(operator, "doTwistConstraints")
         column.enabled = operator.doBoneRolls
+
+        layout.prop(operator, "doCleanup")
 
 class RSELU_PT_Import_Logging(Panel):
     bl_space_type = "FILE_BROWSER"

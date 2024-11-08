@@ -12,6 +12,7 @@ else:
     COL_EXTENSIONS =            ['col', 'COL', 'cl2', 'CL2']
 
 RS2_VALID_DATA_SUBDIRS =        ['Interface', 'Maps', 'Model', 'Quest', 'Sfx', 'Shader', 'Sound', 'System']
+RS3_VALID_DATA_SUBDIRS =        ['Data']
 
 RS2_ID =                        0x12345678
 RS2_VERSION =                   7
