@@ -59,9 +59,9 @@ def pathExists(path):
 
         return current
 
-def isValidTextureName(texname):
-    if texname.endswith(os.sep): return False
-    if os.path.splitext(texname)[1] == '': return False
+def isValidTextureName(texName):
+    if texName.endswith(os.sep): return False
+    if os.path.splitext(texName)[1] == '': return False
 
     return True
 
@@ -312,26 +312,26 @@ def getMatNode(bpy, blMat, nodes, texpath, alphamode, x, y, loadFake, state):
 
     return matNodes[texpath][alphamode]
 
-def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, shader, state):
-    if not texname:
+def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, nodes, shader, state):
+    if not texName:
         self.report({ 'ERROR' }, f"GZRS2: Bsp material with empty texture name: { m }, { name }")
         return
 
-    if not isValidTextureName(texname):
-        self.report({ 'ERROR' }, f"GZRS2: Bsp material with invalid texture name, must not be a directory: { m }, { name }, { texname }")
+    if not isValidTextureName(texName):
+        self.report({ 'ERROR' }, f"GZRS2: Bsp material with invalid texture name, must not be a directory: { m }, { name }, { texName }")
         return
 
     loadFake = False
 
     if state.texSearchMode != 'SKIP':
-        texpath = textureSearch(self, texname, '', False, state)
+        texpath = textureSearch(self, texName, '', False, state)
 
         if texpath is None:
-            self.report({ 'ERROR' }, f"GZRS2: Texture not found for bsp material: { m }, { name }, { texname }")
-            texpath = texname
+            self.report({ 'ERROR' }, f"GZRS2: Texture not found for bsp material: { m }, { name }, { texName }")
+            texpath = texName
             loadFake = True
     else:
-        texpath = texname
+        texpath = texName
         loadFake = True
 
     texture = getMatNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, loadFake, state)
@@ -428,40 +428,40 @@ def processRS2Texlayer(self, m, name, texname, blMat, xmlRsMat, tree, nodes, sha
         blMat.use_backface_culling_lightprobe_volume = not twosided
 
 def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alphatest, state):
-    textype = texlayer['type']
-    texname = texlayer['name']
+    texType = texlayer['type']
+    texName = texlayer['name']
 
-    if not textype in XMLELU_TEXTYPES:
-        self.report({ 'ERROR' }, f"GZRS2: Unsupported texture type for .elu.xml material: { texname }, { textype }")
+    if not texType in XMLELU_TEXTYPES:
+        self.report({ 'ERROR' }, f"GZRS2: Unsupported texture type for .elu.xml material: { texName }, { texType }")
         return
 
-    if not texname:
-        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with empty texture name: { texname }, { textype }")
+    if not texName:
+        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with empty texture name: { texName }, { texType }")
         return
 
-    if not isValidTextureName(texname):
-        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with invalid texture name, must not be a directory: { texname }, { textype }")
+    if not isValidTextureName(texName):
+        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with invalid texture name, must not be a directory: { texName }, { texType }")
         return
 
     loadFake = False
 
     if state.texSearchMode != 'SKIP':
-        texpath = textureSearch(self, texname, '', True, state)
+        texpath = textureSearch(self, texName, '', True, state)
 
         if texpath is None:
-            self.report({ 'ERROR' }, f"GZRS2: Texture not found for .elu.xml material: { texname }, { textype }")
-            texpath = texname
+            self.report({ 'ERROR' }, f"GZRS2: Texture not found for .elu.xml material: { texName }, { texType }")
+            texpath = texName
             loadFake = True
     else:
-        texpath = texname
+        texpath = texName
         loadFake = True
 
-    if textype == 'DIFFUSEMAP':
+    if texType == 'DIFFUSEMAP':
         texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, loadFake, state)
         texture.select = False
 
         tree.links.new(texture.outputs[0], shader.inputs[0]) # Base Color
-    elif textype == 'SPECULARMAP':
+    elif texType == 'SPECULARMAP':
         texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 0, loadFake, state)
         texture.select = False
 
@@ -472,14 +472,14 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
         # TODO: specular data is sometimes found in the alpha channel of the diffuse or normal maps
         tree.links.new(texture.outputs[0], invert.inputs[1])
         tree.links.new(invert.outputs[0], shader.inputs[2]) # Roughness
-    elif textype == 'SELFILLUMINATIONMAP':
+    elif texType == 'SELFILLUMINATIONMAP':
         texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, -300, loadFake, state)
         texture.select = False
 
         tree.links.new(texture.outputs[0], shader.inputs[26]) # Emission Color
 
         shader.inputs[27].default_value = emission # Emission Strength
-    elif textype == 'OPACITYMAP':
+    elif texType == 'OPACITYMAP':
         texture = getMatNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, loadFake, state)
         texture.select = False
 
@@ -504,7 +504,7 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
             blMat.shadow_method = 'HASHED'
 
             tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
-    elif textype == 'NORMALMAP':
+    elif texType == 'NORMALMAP':
         texture = getMatNode(bpy, blMat, nodes, texpath, 'NONE', -540, -600, loadFake, state)
         texture.image.colorspace_settings.name = 'Non-Color'
         texture.select = False
@@ -709,16 +709,16 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
         match = True
 
         for t, texture in enumerate(xmlEluMat['textures']):
-            textype = texture['type']
-            texname = texture['name']
+            texType = texture['type']
+            texName = texture['name']
 
-            if textype in XMLELU_TEXTYPES and texname:
+            if texType in XMLELU_TEXTYPES and texName:
                 texture2 = xmlEluMat2['textures'][t]
-                textype2 = texture2['type']
-                texname2 = texture2['name']
+                texType2 = texture2['type']
+                texName2 = texture2['name']
 
-                if textype2 in XMLELU_TEXTYPES and texname2:
-                    if textype != textype2 or texname != texname2:
+                if texType2 in XMLELU_TEXTYPES and texName2:
+                    if texType != texType2 or texName != texName2:
                         match = False
                         break
 
