@@ -289,9 +289,9 @@ def importRS2(self, context):
         nodes.active = shader
         output.select = False
 
-        texname = xmlRsMat.get('DIFFUSEMAP')
+        texName = xmlRsMat.get('DIFFUSEMAP')
 
-        processRS2Texlayer(self, m, xmlRsMatName, texname, blMat, xmlRsMat, tree, nodes, shader, state)
+        processRS2Texlayer(self, m, xmlRsMatName, texName, blMat, xmlRsMat, tree, nodes, shader, state)
 
         state.blXmlRsMats.append(blMat)
 
