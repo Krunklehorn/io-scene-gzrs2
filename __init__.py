@@ -1089,23 +1089,35 @@ class RSLM_PT_Export_Logging(Panel):
         layout.prop(operator, "logLmImages")
 
 class GZRS2Properties(bpy.types.PropertyGroup):
+    def ensureAll(self):
+        if 'matID' not in self: self['matID'] = 0
+        if 'isBase' not in self: self['isBase'] = True
+        if 'subMatID' not in self: self['subMatID'] = -1
+        if 'subMatCount' not in self: self['subMatCount'] = 0
+
     def onUpdate(self, context):
-        if self["isBase"]:  self["subMatID"] = -1
-        else:               self["subMatCount"] = 0
+        self.ensureAll()
+
+        if self['isBase']:  self['subMatID'] = -1
+        else:               self['subMatCount'] = 0
 
     def onGetSubMatID(self):
-        return self["subMatID"] if not self["isBase"] else -1
+        self.ensureAll()
+        return self['subMatID'] if not self['isBase'] else -1
 
     def onSetSubMatID(self, value):
-        self["subMatID"] = value if not self["isBase"] else -1
+        self.ensureAll()
+        self['subMatID'] = value if not self['isBase'] else -1
 
     def onGetSubMatCount(self):
-        return self["subMatCount"] if self["isBase"] else 0
+        self.ensureAll()
+        return self['subMatCount'] if self['isBase'] else 0
 
     def onSetSubMatCount(self, value):
-        self["subMatCount"] = value if self["isBase"] else 0
+        self.ensureAll()
+        self['subMatCount'] = value if self['isBase'] else 0
 
-    matID: bpy.props.IntProperty(name = 'Material ID', default = 0, min = 0, max = 2**31 - 1, soft_min = 0, soft_max = 256, subtype = 'UNSIGNED')
+    matID: bpy.props.IntProperty(name = 'Material ID', default = 0, min = 0, max = 2**31 - 1, soft_min = 0, soft_max = 256, update = onUpdate, subtype = 'UNSIGNED')
     isBase: bpy.props.BoolProperty(name = 'Base', default = True, update = onUpdate)
     subMatID: bpy.props.IntProperty(name = 'Sub Material ID', default = -1, min = -1, max = 2**31 - 1, soft_min = -1, soft_max = 31, update = onUpdate, get = onGetSubMatID, set = onSetSubMatID)
     subMatCount: bpy.props.IntProperty(name = 'Sub Material Count', default = 0, min = 0, max = 2**31 - 1, soft_min = 0, soft_max = 256, subtype = 'UNSIGNED', update = onUpdate, get = onGetSubMatCount, set = onSetSubMatCount)
