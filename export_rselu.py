@@ -270,16 +270,10 @@ def exportElu(self, context):
     # Ensure all sub-materials have a base
     for matID, subMatIDs in matSets.items():
         if -1 not in subMatIDs:
-            blMats.append({
-                'isPlaceholder': None,
-                'gzrs2': {
-                    'matID': matID,
-                    'isBase': True,
-                    'subMatID': -1,
-                    'subMatCount': max(subMatIDs) + 1 }})
             self.report({ 'WARNING' }, f"GZRS2: ELU export found sub-materials with no base! A placeholder will be included for id: { matID }")
+            blMats.append(RSELUExportMaterialPlaceholder(matID, max(subMatIDs) + 1))
 
-    blMats = tuple(sorted(blMats, key = lambda x: (x['gzrs2']['matID'], x['gzrs2']['subMatID'])))
+    blMats = tuple(sorted(blMats, key = lambda x: (x.gzrs2.matID, x.gzrs2.subMatID)))
 
     matCount = len(blMats)
 
@@ -293,10 +287,10 @@ def exportElu(self, context):
     maxPathLength = ELU_NAME_LENGTH if version <= ELU_5005 else ELU_PATH_LENGTH
 
     for m, blMat in enumerate(blMats):
-        matID = blMat['gzrs2']['matID']
-        isBase = blMat['gzrs2']['isBase']
-        subMatID = blMat['gzrs2']['subMatID']
-        subMatCount = blMat['gzrs2']['subMatCount']
+        matID = blMat.gzrs2.matID
+        isBase = blMat.gzrs2.isBase
+        subMatID = blMat.gzrs2.subMatID
+        subMatCount = blMat.gzrs2.subMatCount
 
         ambient = (0.588235, 0.588235, 0.588235, 1.0)
         diffuse = (0.588235, 0.588235, 0.588235, 1.0)
@@ -311,7 +305,7 @@ def exportElu(self, context):
         alphatest = 0
         useopacity = False
 
-        if 'isPlaceholder' not in blMat:
+        if not isinstance(blMat, RSELUExportMaterialPlaceholder):
             matName = blMat.name
             tree = blMat.node_tree
             links = tree.links.values()
@@ -418,7 +412,7 @@ def exportElu(self, context):
             print("Ambient:            ({:>5.03f}, {:>5.03f}, {:>5.03f}, {:>5.03f})".format(*ambient))
             print("Diffuse:            ({:>5.03f}, {:>5.03f}, {:>5.03f}, {:>5.03f})".format(*diffuse))
             print("Specular:           ({:>5.03f}, {:>5.03f}, {:>5.03f}, {:>5.03f})".format(*specular))
-            print(f"Power:              { bsdfPower }")
+            print(f"Power:              { power }")
             print()
             print(f"Sub Mat Count:      { subMatCount }")
             print(f"Texture path:       { texpath }")

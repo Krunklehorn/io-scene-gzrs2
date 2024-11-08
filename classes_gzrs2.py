@@ -286,6 +286,23 @@ class RSELUExportState:
     logVerboseWeights:      bool = False
 
 @dataclass
+class RSELUExportMaterialPlaceholderProperties:
+    matID:              int = 0
+    subMatCount:        int = 0
+
+    @property
+    def isBase(self) -> bool:
+        return True
+
+    @property
+    def subMatID(self) -> int:
+        return -1
+
+class RSELUExportMaterialPlaceholder:
+    def __init__(self, matID: int, subMatCount: int):
+        self.gzrs2 = RSELUExportMaterialPlaceholderProperties(matID, subMatCount)
+
+@dataclass
 class EluMaterialExport:
     matID:              int = 0
     subMatID:           int = 0
