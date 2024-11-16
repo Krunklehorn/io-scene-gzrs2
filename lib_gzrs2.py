@@ -956,6 +956,9 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
 
         index = 0
 
+        eluMeshNames = [eluMesh.meshName for eluMesh in state.eluMeshes]
+        invalidBones = set()
+
         for face in eluMesh.faces:
             degree = face.degree
 
@@ -964,29 +967,21 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
                 weight = eluMesh.weights[face.ipos[v]]
 
                 for d in range(weight.degree):
-                    if eluMesh.version <= ELU_5007:
-                        boneName = weight.meshNames[d]
-                        found = False
+                    if eluMesh.version <= ELU_5007: boneName = weight.meshNames[d]
+                    else:                           boneName = state.eluMeshes[weight.meshIDs[d]].meshName
 
-                        for p, parentMesh in enumerate(state.eluMeshes):
-                            if parentMesh.meshName == boneName:
-                                meshID = p
-                                found = True
-                                break
+                    if boneName in eluMeshNames:    state.gzrsValidBones.add(boneName)
+                    else:                           invalidBones.add(boneName)
 
-                        if not found:
-                            self.report({ 'ERROR' }, f"GZRS2: Named search failed to find mesh id for weight group: { meshName }, { parentMesh.meshName }")
-                    else:
-                        meshID = weight.meshIDs[d]
+                    if boneName not in meshGroups:
+                        meshGroups[boneName] = blMeshObj.vertex_groups.new(name = boneName)
 
-                    if meshID not in meshGroups:
-                        boneName = state.eluMeshes[meshID].meshName
-                        meshGroups[meshID] = blMeshObj.vertex_groups.new(name = boneName)
-                        state.gzrsValidBones.add(boneName)
-
-                    meshGroups[meshID].add((index,), weight.values[d], 'REPLACE')
+                    meshGroups[boneName].add((index,), weight.values[d], 'REPLACE')
 
                 index += 1
+
+        for boneName in invalidBones:
+            self.report({ 'WARNING' }, f"GZRS2: Failed to find bone for weight group: { boneName }")
 
     elupath = eluMesh.elupath
     eluMatID = eluMesh.matID
