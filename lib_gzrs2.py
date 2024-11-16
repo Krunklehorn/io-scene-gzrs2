@@ -990,7 +990,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     slotCount = max(1, max(slotIDs) + 1) if doSlots else 1
 
     if eluMesh.version <= ELU_5007:
-        soloMat = None
+        baseMat = None
 
         if elupath in state.blEluMats:
             blEluMatAtPath = state.blEluMats[elupath]
@@ -1006,18 +1006,18 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
                             self.report({ 'WARNING' }, f"GZRS2: Failed to find .elu sub-material for mesh at index/sub-index: { meshName }, { eluMatID }/{ s }")
                             blMesh.materials.append(state.blErrorMat)
                 else:
-                    soloMat = blEluMatAtIndex[-1]
+                    baseMat = blEluMatAtIndex[-1]
             else:
                 self.report({ 'WARNING' }, f"GZRS2: Missing .elu material for mesh at index: { meshName }, { eluMatID }")
-                soloMat = state.blErrorMat
+                baseMat = state.blErrorMat
         else:
             self.report({ 'WARNING' }, f"GZRS2: Missing .elu materials for mesh: { meshName }")
-            soloMat = state.blErrorMat
+            baseMat = state.blErrorMat
 
-        if soloMat is not None:
+        if baseMat is not None:
             for s in range(slotCount):
                 if s not in slotIDs:    blMesh.materials.append(None)
-                else:                   blMesh.materials.append(soloMat)
+                else:                   blMesh.materials.append(baseMat)
     else:
         if eluMatID < 0:
             if -1 in slotIDs:
