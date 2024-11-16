@@ -515,6 +515,11 @@ def readEluRS3UVs(file, version):
     return uv1s, uv2s
 
 def readEluRS3Meshes(self, path, file, version, meshCount, state):
+    usesDummies = False
+    totalSlotIDs = set()
+    matIDs = set()
+    weightIDs = set()
+
     if state.logEluMeshNodes and meshCount > 0:
         print()
         print("=========  Elu Mesh Nodes  ========")
@@ -679,6 +684,9 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
                 slotID = readShort(file)
                 slotIDs.add(slotID)
 
+                if state.logEluMeshNodes:
+                    totalSlotIDs.add(slotID)
+
                 faces.append(EluFace(degree, tuple(vindices), tuple(nindices), tuple(uv1indices), tuple(uv2indices), slotID))
 
             if state.logEluMeshNodes and state.logVerboseIndices:
@@ -690,6 +698,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
 
         isDummy = len(vertices) == 0 or len(faces) == 0
         if state.logEluMeshNodes:
+            if isDummy: usesDummies = True
             print(f"Is Dummy:           { isDummy }")
             print()
 
@@ -704,6 +713,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
 
         matID = readInt(file)
         if state.logEluMeshNodes:
+            matIDs.add(matID)
             print(f"Material ID:        { matID }")
 
         weights = []
@@ -726,27 +736,33 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
 
             for d in range(degree):
                 skipBytes(file, 2) # skip unused id
-                meshID = readShort(file)
-                value = readFloat(file)
+                meshIDs[d] = readShort(file)
+                values[d] = readFloat(file)
 
-                values[d] = value
-                meshIDs[d] = meshID
+            meshIDs = tuple(meshIDs)
+            values = tuple(values)
 
-                if state.logEluMeshNodes:
-                    if value < minWeightValue:
-                        minWeightValue = value
-                        minWeightID = meshID
+            if state.logEluMeshNodes:
+                for d in range(degree):
+                    weightValue = values[d]
+                    weightID = meshIDs[d]
 
-                    if value > maxWeightValue:
-                        maxWeightValue = value
-                        maxWeightID = meshID
+                    weightIDs.add(weightID)
 
-                    if state.logVerboseWeights:
-                        print("Weight:             {:>1d}, {:>6.03f}, {:>2d}".format(degree, values[d], meshIDs[d]))
+                    if state.logEluMeshNodes:
+                        if weightValue < minWeightValue:
+                            minWeightValue = weightValue
+                            minWeightID = weightID
 
-            weights.append(EluWeight(degree, None, tuple(meshIDs), tuple(values), None))
+                        if weightValue > maxWeightValue:
+                            maxWeightValue = weightValue
+                            maxWeightID = weightID
 
-        weights = tuple(weights)
+                        if state.logVerboseWeights:
+                            print("Weight:             {:>1d}/{:>1d}, {:>6.03f}, {:>2d}".format(d + 1, degree, weightValue, weightID))
+
+            weights.append(EluWeight(degree, None, meshIDs, values, None))
+
         if state.logEluMeshNodes:
             if state.logVerboseWeights:
                 print()
@@ -854,3 +870,13 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
                                            vertices, normals, uv1s, uv2s,
                                            colors, tuple(faces), tuple(weights), tuple(slots),
                                            slotIDs, isDummy, matID))
+
+    if state.logEluMeshNodes:
+        print("===== Mesh Summary =====")
+        print()
+
+        print(f"Uses Dummies:       { usesDummies }")
+        print(f"Slot IDs:           { totalSlotIDs }")
+        print(f"Material IDs:       { matIDs }")
+        print(f"Weight IDs:         { weightIDs }")
+        print()
