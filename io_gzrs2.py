@@ -34,6 +34,7 @@ def readVec2Array(file, length):            return tuple(iter_unpack('<2f', file
 def readVec3Array(file, length):            return tuple(iter_unpack('<3f', file.read(3 * 4 * length)))
 def readVec4Array(file, length):            return tuple(iter_unpack('<4f', file.read(4 * 4 * length)))
 def readString(file, length):               return str(file.read(length), 'utf-8').split('\x00', 1)[0].strip()
+def readStringAlt(file, length):            return str(file.read(length).split(b'\x00', 1)[0], 'utf-8').strip()
 
 def readUV2(file):
     x, y = readVec2(file)

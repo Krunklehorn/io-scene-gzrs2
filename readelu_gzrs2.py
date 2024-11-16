@@ -427,14 +427,14 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
                     meshIDs[d] = readUInt(file)
                     values[d] = readFloat(file)
                     offsets[d] = readVec3(file)
-                    meshNames[d] = readString(file, readUShort(file))
+                    meshNames[d] = readStringAlt(file, readUShort(file))
 
                 meshIDs = tuple(meshIDs)
                 values = tuple(values)
                 offsets = tuple(offsets)
                 meshNames = tuple(meshNames)
             else:
-                meshNames = tuple(readString(file, ELU_NAME_LENGTH) for _ in range(ELU_PHYS_KEYS))
+                meshNames = tuple(readStringAlt(file, ELU_NAME_LENGTH) for _ in range(ELU_PHYS_KEYS))
                 values = readFloatArray(file, ELU_PHYS_KEYS)
                 meshIDs = readUIntArray(file, ELU_PHYS_KEYS)
                 degree = min(ELU_PHYS_KEYS, readUInt(file))
@@ -464,7 +464,7 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
                         maxWeightName = weightName
 
                     if state.logVerboseWeights:
-                        print("Weight:             {:>1d}, {:>6.03f}, {:>2d}, {:<16s}    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(degree, weightValue, weightID, weightName, *weightOffset))
+                        print("Weight:             {:>1d}/{:>1d}, {:>6.03f}, {:>2d}, {:<16s}    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(d + 1, degree, weightValue, weightID, weightName, *weightOffset))
 
             weights.append(EluWeight(degree, meshNames, meshIDs, values, offsets))
 
