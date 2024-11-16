@@ -702,7 +702,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             output += "      Min: ({:>5.02f}, {:>5.02f}, {:>5.02f})     Max: ({:>5.02f}, {:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(colors, 3)) if len(colors) > 0 else ''
             print(output)
 
-        matID = readUInt(file)
+        matID = readInt(file)
         if state.logEluMeshNodes:
             print(f"Material ID:        { matID }")
 
