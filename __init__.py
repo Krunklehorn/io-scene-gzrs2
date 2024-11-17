@@ -146,11 +146,11 @@ class GZRS2Preferences(AddonPreferences):
         column = layout.column()
 
         row = column.row()
-        row.label(text = self['rs2DataDir'])
+        row.label(text = self.rs2DataDir)
         row.operator(GZRS2_OT_Specify_Path_MRS.bl_idname, text = "Set .mrs data path...")
 
         row = column.row()
-        row.label(text = self['rs3DataDir'])
+        row.label(text = self.rs3DataDir)
         row.operator(GZRS2_OT_Specify_Path_MRF.bl_idname, text = "Set .mrf data path...")
 
 
