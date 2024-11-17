@@ -1,5 +1,9 @@
+import os
+
 from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rslm
 from . import export_rselu, export_rslm
+
+from .constants_gzrs2 import *
 
 bl_info = {
     "name": "GZRS2/3 Format",
@@ -23,7 +27,7 @@ if "bpy" in locals():
     if "export_rslm" in locals(): importlib.reload(export_rslm)
 else:
     import bpy
-    from bpy.types import Operator, Panel, PropertyGroup
+    from bpy.types import Operator, Panel, PropertyGroup, AddonPreferences
     from bpy_extras.io_utils import ImportHelper, ExportHelper
     from bpy.props import BoolProperty, StringProperty, EnumProperty, PointerProperty
 
@@ -38,6 +42,117 @@ def cleanse_modules():
             del sys.modules[k]
 
     return
+
+def validateRSDataDirectory(dirpath, isRS3):
+    if dirpath == '':
+        return False
+
+    _, dirnames, _ = next(os.walk(dirpath))
+
+    for token in RS3_VALID_DATA_SUBDIRS if isRS3 else RS2_VALID_DATA_SUBDIRS:
+        for dirname in dirnames:
+            if token.lower() == dirname.lower():
+                return True
+
+    return False
+
+class GZRS2_OT_Specify_Path_MRS(Operator):
+    bl_idname = "gzrs2.specify_path_mrs"
+    bl_label = "Please specify the location of the extracted .mrs data"
+    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_description = "Specify the location of the extracted .mrs data"
+
+    dataPath: StringProperty(
+        name = "Path",
+        default = "",
+        subtype = "DIR_PATH"
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def invoke(self, context, event):
+        self.dataPath = ""
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "dataPath")
+
+    def execute(self, context):
+        if not validateRSDataDirectory(self.dataPath, False):
+            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory!")
+            return { 'CANCELLED' }
+
+        context.preferences.addons[__package__].preferences.rs2DataDir = self.dataPath
+
+        return { 'FINISHED' }
+
+class GZRS2_OT_Specify_Path_MRF(Operator):
+    bl_idname = "gzrs2.specify_path_mrf"
+    bl_label = "Please specify the location of the extracted .mrf data"
+    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_description = "Specify the location of the extracted .mrf data"
+
+    dataPath: StringProperty(
+        name = "Path",
+        default = "",
+        subtype = "DIR_PATH"
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def invoke(self, context, event):
+        self.dataPath = ""
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "dataPath")
+
+    def execute(self, context):
+        if not validateRSDataDirectory(self.dataPath, True):
+            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory!")
+            return { 'CANCELLED' }
+
+        context.preferences.addons[__package__].preferences.rs3DataDir = self.dataPath
+
+        return { 'FINISHED' }
+
+class GZRS2Preferences(AddonPreferences):
+    bl_idname = __package__
+
+    rs2DataDir: StringProperty(
+        name = "RS2/.mrs",
+        description = "Path to a folder containing extracted .mrs data",
+        default = "",
+        subtype = "DIR_PATH"
+    )
+
+    rs3DataDir: StringProperty(
+        name = "RS3/.mrf",
+        description = "Path to a folder containing extracted .mrf data",
+        default = "",
+        subtype = "DIR_PATH"
+    )
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text = "Working Directories")
+
+        column = layout.column()
+
+        row = column.row()
+        row.label(text = self['rs2DataDir'])
+        row.operator(GZRS2_OT_Specify_Path_MRS.bl_idname, text = "Set .mrs data path...")
+
+        row = column.row()
+        row.label(text = self['rs3DataDir'])
+        row.operator(GZRS2_OT_Specify_Path_MRF.bl_idname, text = "Set .mrf data path...")
+
 
 class ImportGZRS2(Operator, ImportHelper):
     bl_idname = "import_scene.gzrs2"
@@ -82,16 +197,9 @@ class ImportGZRS2(Operator, ImportHelper):
 
     texSearchMode: EnumProperty(
         name = "Texture Mode",
-        items = (('SMART',      "Smart",        "Automatically search for textures in surrounding filesystem (slow, may freeze)"),
-                 ('PATH',       "Path",         "Search for textures using the specified path (faster)"),
+        items = (('PATH',       "Path",         "Search for textures using the specified path (faster)"),
+                 ('SMART',      "Smart",        "Search for textures in surrounding filesystem (slow, may freeze)"),
                  ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
-    )
-
-    rs2DataDir: StringProperty(
-        name = "Search Path",
-        description = "Path to a folder containing the extracted .mrs data",
-        default = "",
-        subtype = "DIR_PATH"
     )
 
     doCollision: BoolProperty(
@@ -309,10 +417,6 @@ class GZRS2_PT_Import_Main(Panel):
         layout.prop(operator, "texSearchMode")
 
         column = layout.column()
-        column.prop(operator, "rs2DataDir")
-        column.enabled = operator.texSearchMode == 'PATH'
-
-        column = layout.column()
         column.prop(operator, "doCollision")
         column.enabled = operator.meshMode != 'BAKE'
 
@@ -438,16 +542,9 @@ class ImportGZRS3(Operator, ImportHelper):
 
     texSearchMode: EnumProperty(
         name = "Texture Mode",
-        items = (('SMART',      "Smart",        "Automatically search for textures in surrounding filesystem (slow, may freeze)"),
-                 ('PATH',       "Path",         "Search for textures using the specified path (faster)"),
+        items = (('PATH',       "Path",         "Search for textures using the specified path (faster)"),
+                 ('SMART',      "Smart",        "Search for textures in surrounding filesystem (slow, may freeze)"),
                  ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
-    )
-
-    rs3DataDir: StringProperty(
-        name = "Search Path",
-        description = "Path to a folder containing the extracted .mrf data",
-        default = "",
-        subtype = "DIR_PATH"
     )
 
     doCleanup: BoolProperty(
@@ -525,10 +622,6 @@ class GZRS3_PT_Import_Main(Panel):
         layout.prop(operator, "convertUnits")
         layout.prop(operator, "texSearchMode")
 
-        column = layout.column()
-        column.prop(operator, "rs3DataDir")
-        column.enabled = operator.texSearchMode == 'PATH'
-
         layout.prop(operator, "doCleanup")
 
 class GZRS3_PT_Import_Logging(Panel):
@@ -595,16 +688,9 @@ class ImportRSELU(Operator, ImportHelper):
 
     texSearchMode: EnumProperty(
         name = "Texture Mode",
-        items = (('SMART',      "Smart",        "Automatically search for textures in surrounding filesystem (slow, may freeze)"),
-                 ('PATH',       "Path",         "Search for textures using the specified path (faster)"),
+        items = (('PATH',       "Path",         "Search for textures using the specified path (faster)"),
+                 ('SMART',      "Smart",        "Search for textures in surrounding filesystem (slow, may freeze)"),
                  ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
-    )
-
-    rs2DataDir: StringProperty(
-        name = "Search Path",
-        description = "Path to a folder containing the extracted .mrs data",
-        default = "",
-        subtype = "DIR_PATH"
     )
 
     doBoneRolls: BoolProperty(
@@ -687,10 +773,6 @@ class RSELU_PT_Import_Main(Panel):
 
         layout.prop(operator, "convertUnits")
         layout.prop(operator, "texSearchMode")
-
-        column = layout.column()
-        column.prop(operator, "rs2DataDir")
-        column.enabled = operator.texSearchMode == 'PATH'
 
         layout.prop(operator, "doBoneRolls")
 
@@ -1143,7 +1225,7 @@ class RSLM_PT_Export_Logging(Panel):
         layout.prop(operator, "logLmHeaders")
         layout.prop(operator, "logLmImages")
 
-class GZRS2Properties(bpy.types.PropertyGroup):
+class GZRS2Properties(PropertyGroup):
     def ensureAll(self):
         if 'matID' not in self: self['matID'] = 0
         if 'isBase' not in self: self['isBase'] = True
@@ -1172,7 +1254,7 @@ class GZRS2Properties(bpy.types.PropertyGroup):
         self.ensureAll()
         self['subMatCount'] = value if self['isBase'] else 0
 
-    matID: bpy.props.IntProperty(name = 'Material ID', default = 0, min = 0, max = 2**31 - 1, soft_min = 0, soft_max = 256, update = onUpdate, subtype = 'UNSIGNED')
+    matID: bpy.props.IntProperty(name = 'Material ID', default = 0, min = 0, max = 2**31 - 1, soft_min = 0, soft_max = 256, subtype = 'UNSIGNED', update = onUpdate)
     isBase: bpy.props.BoolProperty(name = 'Base', default = True, update = onUpdate)
     subMatID: bpy.props.IntProperty(name = 'Sub Material ID', default = -1, min = -1, max = 2**31 - 1, soft_min = -1, soft_max = 31, update = onUpdate, get = onGetSubMatID, set = onSetSubMatID)
     subMatCount: bpy.props.IntProperty(name = 'Sub Material Count', default = 0, min = 0, max = 2**31 - 1, soft_min = 0, soft_max = 256, subtype = 'UNSIGNED', update = onUpdate, get = onGetSubMatCount, set = onSetSubMatCount)
@@ -1225,6 +1307,9 @@ class GZRS2_PT_Realspace(Panel):
         layout.prop(props, 'specular')
 
 classes = (
+    GZRS2_OT_Specify_Path_MRS,
+    GZRS2_OT_Specify_Path_MRF,
+    GZRS2Preferences,
     ImportGZRS2,
     GZRS2_PT_Import_Main,
     GZRS2_PT_Import_Drivers,

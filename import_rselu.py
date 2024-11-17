@@ -48,13 +48,15 @@ from .lib_gzrs2 import *
 def importElu(self, context):
     state = GZRS2State()
 
+    rs2DataDir = os.path.dirname(context.preferences.addons[__package__].preferences.rs2DataDir)
+
     if self.texSearchMode == 'PATH':
-        if not self.rs2DataDir:
+        if not rs2DataDir:
             self.report({ 'ERROR' }, f"GZRS2: Must specify a path to search for or select a different texture mode!")
             return { 'CANCELLED' }
 
-        if not matchRSDataDirectory(self, self.rs2DataDir, os.path.basename(self.rs2DataDir), False, state):
-            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory: { self.rs2DataDir }")
+        if not matchRSDataDirectory(self, rs2DataDir, os.path.basename(rs2DataDir), False, state):
+            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory!")
             return { 'CANCELLED' }
 
     state.convertUnits = self.convertUnits

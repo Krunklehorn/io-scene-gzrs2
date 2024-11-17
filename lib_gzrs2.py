@@ -78,12 +78,12 @@ def matchRSDataDirectory(self, dirpath, dirbase, isRS3, state):
     _, dirnames, _ = next(os.walk(dirpath))
 
     for token in RS3_VALID_DATA_SUBDIRS if isRS3 else RS2_VALID_DATA_SUBDIRS:
-        if dirbase.lower() == token.lower():
+        if token.lower() == dirbase.lower():
             state.rs2DataDir = os.path.dirname(dirpath)
             return True
 
         for dirname in dirnames:
-            if dirname.lower() == token.lower():
+            if token.lower() == dirname.lower():
                 state.rs2DataDir = dirpath
                 return True
 

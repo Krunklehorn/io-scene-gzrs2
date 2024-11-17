@@ -49,13 +49,15 @@ from .lib_gzrs2 import *
 def importRS3(self, context):
     state = GZRS2State()
 
+    rs3DataDir = os.path.dirname(context.preferences.addons[__package__].preferences.rs3DataDir)
+
     if self.texSearchMode == 'PATH':
-        if not self.rs3DataDir:
+        if not rs3DataDir:
             self.report({ 'ERROR' }, f"GZRS2: Must specify a path to search for or select a different texture mode!")
             return { 'CANCELLED' }
 
-        if not matchRSDataDirectory(self, self.rs3DataDir, os.path.basename(self.rs3DataDir), True, state):
-            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory: { self.rs3DataDir }")
+        if not matchRSDataDirectory(self, rs3DataDir, os.path.basename(rs3DataDir), True, state):
+            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory!")
             return { 'CANCELLED' }
 
         ensureRS3DataDict(self, state)
