@@ -9,21 +9,14 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 # Latest Update
 
-[***ONLY WORKS WITH BLENDER 4.2.1 LTS!! >> DOWNLOAD v0.9.4.1***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.4)
+[***ONLY WORKS WITH BLENDER 4.2.1 LTS!! >> DOWNLOAD v0.9.4.2***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.4)
 
-* NEW: Blender 4.2.1 support, now LTS and stable, we will remain on this version until further notice
-* NEW: Custom UI panel for controlling Realspace material parameters, less node wrangling
-* NEW: Proper sub-material and empty slot parsing for GunZ 1 .elus
-* NEW: Simplified transparency workflow for both .rs.xml and .elu materials
-  * DITHERED = Alpha-testing / Alpha-blending
-  * BLENDED = Additive Blending
-  * See below for more details
-* Smarter material matching
-* Silenced cleanup reports and made warnings and errors more obvious
-* Fixed .rs AABB sounds getting skipped
+* NEW: Texture search modes and fake loading for missing textures
+  * Be sure to specify a working directory in addon preferences after installing
+* Fixed .elu import UnboundLocalError when weight groups reference bones that don't exist
+* Fixed .elu export orientation issues when working with attached mesh objects
+* Fixed .elu export cloth data suddenly becoming immobile
 * Other minor fixes
-* New Known Issue: some .elus with reversed winding-order/flipped normals (woman-parts27)
-* New Known Issue: some .elu map materials with incorrect flags that should be overridden by their .rs.xml counterparts
 
 # Current Import Features
 
