@@ -72,7 +72,10 @@ def texMatchDownward(root, texBase, ddsBase):
                 return os.path.join(dirpath, filename)
 
 def matchRSDataDirectory(self, dirpath, dirbase, isRS3, state):
-    if dirpath == '' or dirbase == '':
+    if dirpath == '' or not os.path.exists(dirpath) or not os.path.isdir(dirpath):
+        return False
+
+    if dirbase == '':
         return False
 
     _, dirnames, _ = next(os.walk(dirpath))

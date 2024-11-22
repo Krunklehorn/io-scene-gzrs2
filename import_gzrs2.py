@@ -54,11 +54,11 @@ def importRS2(self, context):
 
     if self.texSearchMode == 'PATH':
         if not rs2DataDir:
-            self.report({ 'ERROR' }, f"GZRS2: Must specify a path to search for or select a different texture mode!")
+            self.report({ 'ERROR' }, f"GZRS2: Must specify a path to search for or select a different texture mode! Verify your path in the plugin's preferences!")
             return { 'CANCELLED' }
 
         if not matchRSDataDirectory(self, rs2DataDir, os.path.basename(rs2DataDir), False, state):
-            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory!")
+            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory! Verify your path in the plugin's preferences!")
             return { 'CANCELLED' }
 
     state.convertUnits = self.convertUnits

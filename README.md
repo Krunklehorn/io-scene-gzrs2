@@ -7,6 +7,11 @@ Please report bugs and unimplemented features to: ***Krunk#6051***
 
 RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-map-1204327/***
 
+## ***Make sure you specify a working directory in addon preferences.​***
+***Don't update Blender's major version. This plugin will only support the v4.2 branch until further notice.***
+
+![Beta Select](meta/steambetaselect_241122.jpg)
+
 # Latest Update
 
 [***ONLY WORKS WITH BLENDER 4.2.1 LTS!! >> DOWNLOAD v0.9.4.2***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.4)
@@ -120,7 +125,8 @@ If you get this error during export...
 ...this means one of your Image Texture node labels does not contain a valid RealSpace2 data subdirectory.
 This check is not case sensitive. Valid data subdirectories are...
 
-    'Interface', 'Maps', 'Model', 'Quest', 'Sfx', 'Shader', 'Sound' or 'System'
+    GunZ 1/.mrs: 'Interface', 'Maps', 'Model', 'Quest', 'Sfx', 'Shader', 'Sound' and 'System'
+    GunZ 2/.mrf: 'Data', 'EngineRes'
 
 To work around this difference, you can control what path is written during export by labeling an Image Texture node. (right click -> rename)
 - If an Image Texture node has no label, the file name of the image is written, which RealSpace2 interprets as .elu relative

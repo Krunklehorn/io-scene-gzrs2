@@ -44,7 +44,7 @@ def cleanse_modules():
     return
 
 def validateRSDataDirectory(dirpath, isRS3):
-    if dirpath == '':
+    if dirpath == '' or not os.path.exists(dirpath) or not os.path.isdir(dirpath):
         return False
 
     _, dirnames, _ = next(os.walk(dirpath))
@@ -65,6 +65,7 @@ class GZRS2_OT_Specify_Path_MRS(Operator):
     dataPath: StringProperty(
         name = "Path",
         default = "",
+        options = { "ANIMATABLE", "OUTPUT_PATH" },
         subtype = "DIR_PATH"
     )
 
@@ -81,6 +82,8 @@ class GZRS2_OT_Specify_Path_MRS(Operator):
         layout.prop(self, "dataPath")
 
     def execute(self, context):
+        self.dataPath = os.path.join(self.dataPath, '')
+
         if not validateRSDataDirectory(self.dataPath, False):
             self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory!")
             return { 'CANCELLED' }
@@ -98,6 +101,7 @@ class GZRS2_OT_Specify_Path_MRF(Operator):
     dataPath: StringProperty(
         name = "Path",
         default = "",
+        options = { "ANIMATABLE", "OUTPUT_PATH" },
         subtype = "DIR_PATH"
     )
 
@@ -114,6 +118,8 @@ class GZRS2_OT_Specify_Path_MRF(Operator):
         layout.prop(self, "dataPath")
 
     def execute(self, context):
+        self.dataPath = os.path.join(self.dataPath, '')
+
         if not validateRSDataDirectory(self.dataPath, True):
             self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory!")
             return { 'CANCELLED' }
@@ -129,6 +135,7 @@ class GZRS2Preferences(AddonPreferences):
         name = "RS2/.mrs",
         description = "Path to a folder containing extracted .mrs data",
         default = "",
+        options = { 'ANIMATABLE', 'OUTPUT_PATH' },
         subtype = "DIR_PATH"
     )
 
@@ -136,6 +143,7 @@ class GZRS2Preferences(AddonPreferences):
         name = "RS3/.mrf",
         description = "Path to a folder containing extracted .mrf data",
         default = "",
+        options = { 'ANIMATABLE', 'OUTPUT_PATH' },
         subtype = "DIR_PATH"
     )
 
@@ -144,14 +152,30 @@ class GZRS2Preferences(AddonPreferences):
         layout.label(text = "Working Directories")
 
         column = layout.column()
+        column.label(text = "Many of the vanilla maps and models share data between packages.")
+        column.label(text = "You need to extract ALL of them to a CLEAN working directory.")
+        column.label(text = "Any sub-packages you find you will extract in-place.")
+        column.label(text = "Don't move them around; the heirarchy must be maintained.")
+
+        box = layout.box()
+
+        column = box.column()
+        column.label(text = "Valid data subdirectories for .mrs include:")
+        column.label(text = "\'Interface\', \'Maps\', \'Model\', \'Quest\', \'Sfx\', \'Shader\', \'Sound\' and \'System\'")
+        column.label(text = "Example: \"C:\\Users\\krunk\\Documents\\GunZ\\clean\\")
 
         row = column.row()
         row.label(text = self.rs2DataDir)
-        row.operator(GZRS2_OT_Specify_Path_MRS.bl_idname, text = "Set .mrs data path...")
+        row.operator(GZRS2_OT_Specify_Path_MRS.bl_idname, text = "Set .mrs (GunZ 1) data path...")
+
+        column = box.column()
+        column.label(text = "Valid data subdirectories for .mrf include:")
+        column.label(text = "\'Data\' and \'EngineRes\'")
+        column.label(text = "Example: \"C:\\Users\\krunk\\Documents\\GunZ2\\z3ResEx\\datadump\\")
 
         row = column.row()
         row.label(text = self.rs3DataDir)
-        row.operator(GZRS2_OT_Specify_Path_MRF.bl_idname, text = "Set .mrf data path...")
+        row.operator(GZRS2_OT_Specify_Path_MRF.bl_idname, text = "Set .mrf (GunZ 2) data path...")
 
 
 class ImportGZRS2(Operator, ImportHelper):
