@@ -1035,16 +1035,16 @@ class ExportRSELU(Operator, ExportHelper):
         default = False
     )
 
-    visibleOnly: BoolProperty(
-        name = "Visible Only",
-        description = "Limit export to visible objects only",
-        default = False
-    )
-
     includeChildren: BoolProperty(
         name = "Include Children",
         description = "Include children of selected objects",
         default = True
+    )
+
+    visibleOnly: BoolProperty(
+        name = "Visible Only",
+        description = "Limit export to visible objects only",
+        default = False
     )
 
     logEluHeaders: BoolProperty(
