@@ -1135,7 +1135,7 @@ def makePathExtSingle(path):
     return path
 
 def makeRS2DataPath(path):
-    if path == None or path == '': return False
+    if path is None or path == '': return False
     found = None
 
     for token in RS2_VALID_DATA_SUBDIRS:

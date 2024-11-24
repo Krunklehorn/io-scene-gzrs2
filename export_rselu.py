@@ -558,13 +558,13 @@ def exportElu(self, context):
                 if blMatSlot.material is None:
                     continue
 
-                if matID == None:
+                if matID is None:
                     matID = blMatSlot.material.gzrs2.matID
                 elif matID != blMatSlot.material.gzrs2.matID:
                     self.report({ 'ERROR' }, f"GZRS2: Mesh with two different material IDs! { meshName }")
                     return { 'CANCELLED' }
 
-            if matID == None:
+            if matID is None:
                 matID = 0
 
             if state.logEluMeshNodes:

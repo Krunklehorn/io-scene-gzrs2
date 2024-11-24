@@ -1043,7 +1043,7 @@ class ExportRSELU(Operator, ExportHelper):
 
     includeChildren: BoolProperty(
         name = "Include Children",
-        description = "Include children of selected or visible objects",
+        description = "Include children of selected objects",
         default = True
     )
 
