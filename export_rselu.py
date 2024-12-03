@@ -118,7 +118,7 @@ def exportElu(self, context):
                     for blBone in blArmature.bones:
                         blBoneName = blBone.name
 
-                        if not blBoneName.startswith(("Bip01", "Bone")):
+                        if not blBoneName.startswith(('Bip01', 'Bone', 'Dummy')):
                             continue
 
                         if blBoneName not in blValidBones:

@@ -123,7 +123,7 @@ def importElu(self, context):
     for eluMesh in state.eluMeshes:
         meshName = eluMesh.meshName
 
-        if meshName.startswith(("Bip01", "Bone")):
+        if meshName.startswith(('Bip01', 'Bone', 'Dummy')):
             state.gzrsValidBones.add(meshName)
 
         if eluMesh.isDummy:
@@ -173,7 +173,7 @@ def importElu(self, context):
             state.blBonePairs.append((eluMesh, editBone))
 
         for child, childBone in state.blBonePairs:
-            if child.meshName == 'Bip01':
+            if child.meshName in ['Bip01', 'Dummy01']:
                 continue
 
             found = False
@@ -189,7 +189,7 @@ def importElu(self, context):
                 self.report({ 'WARNING' }, f"GZRS2: Parent not found for .elu child bone: { child.meshName }, { child.parentName }")
 
         for eluMesh, editBone in state.blBonePairs:
-            if editBone.name == 'Bip01':
+            if editBone.name in ['Bip01', 'Dummy01']:
                 continue
             elif len(editBone.children) > 0:
                 length = 0
@@ -236,7 +236,7 @@ def importElu(self, context):
             isBone = child.meshName in state.gzrsValidBones
             noParentBone = child.parentName not in state.gzrsValidBones
             isNubDummy = isBone and child.isDummy and 'Nub' in child.meshName
-            isNotRoot = child.meshName != 'Bip01'
+            isNotRoot = child.meshName not in ['Bip01', 'Dummy01']
 
             if isNubDummy or noParentBone and isNotRoot:
                 continue

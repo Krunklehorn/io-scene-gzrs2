@@ -230,7 +230,7 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
             texDir = os.path.dirname(texpath)
             texBase = os.path.basename(texpath)
             texName, texExt = os.path.splitext(texBase)
-            isAniTex = texBase.startswith("txa")
+            isAniTex = texBase.startswith('txa')
 
             if state.logEluMats:
                 print(f"Texture Base:       { texBase }")
