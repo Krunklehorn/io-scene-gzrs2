@@ -59,8 +59,14 @@ def readUV4(file):
 
     return Vector((x, y))
 
-def readCoordinate(file, convertUnits, flipY):
+def readCoordinate(file, convertUnits, flipY, *, swizzle = False):
     coord = Vector(readVec3(file))
+
+    if swizzle:
+        # MCPlug2_Ani.cpp
+        (x, y, z) = coord.to_tuple()
+        coord.y = z
+        coord.z = y
 
     if convertUnits: coord *= 0.01
     if flipY: coord.y = -coord.y
@@ -85,11 +91,18 @@ def readUV2Array(file, length): return tuple(readUV2(file) for _ in range(length
 def readUV3Array(file, length): return tuple(readUV3(file) for _ in range(length))
 def readUV4Array(file, length): return tuple(readUV4(file) for _ in range(length))
 
-def readCoordinateArray(file, length, convertUnits, flipY):
+def readCoordinateArray(file, length, convertUnits, flipY, *, swizzle = False):
     result = []
 
     for coord in readVec3Array(file, length):
         coord = Vector(coord)
+
+        if swizzle:
+            # MCPlug2_Ani.cpp
+            (x, y, z) = coord.to_tuple()
+            coord.y = z
+            coord.z = y
+
         if convertUnits: coord *= 0.01
         if flipY: coord.y = -coord.y
 
@@ -119,8 +132,33 @@ def readPlaneArray(file, length, flipY):
 
     return tuple(result)
 
-def readTransform(file, convertUnits, flipY):
+def readTransform(file, convertUnits, flipY, *, swizzle = False):
     mat = Matrix(readVec4Array(file, 4))
+
+    # MCPlug2_Ani.cpp
+    if swizzle:
+        temp = mat.copy()
+
+        row = temp.row[0]
+        mat[0][0] = row.x
+        mat[0][1] = row.z
+        mat[0][2] = row.y
+
+        row = temp.row[1]
+        mat[2][0] = row.x
+        mat[2][1] = row.z
+        mat[2][2] = row.y
+
+        row = temp.row[2]
+        mat[1][0] = row.x
+        mat[1][1] = row.z
+        mat[1][2] = row.y
+
+        row = temp.row[3]
+        mat[3][0] = row.x
+        mat[3][1] = row.z
+        mat[3][2] = row.y
+
     mat.transpose()
 
     loc, rot, sca = mat.decompose()

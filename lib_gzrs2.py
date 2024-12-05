@@ -7,6 +7,10 @@ from mathutils import Vector, Matrix
 
 from .constants_gzrs2 import *
 
+def IndexOrNone(list, i):
+    try:        return list.index(i)
+    except:     return None
+
 def vecArrayMinMax(vectors, size):
     minLen2 = float('inf')
     maxLen2 = float('-inf')
@@ -1173,6 +1177,27 @@ def calcEtcData(version, transform): # TODO
         etcMatrix = None
 
     return apScale, rotAA, scaleAA, etcMatrix
+
+def getFilteredObjects(context, state):
+    if state.selectedOnly:
+        if state.includeChildren:
+            objects = set()
+
+            for object in context.selected_objects:
+                objects.add(object)
+
+                for child in object.children_recursive:
+                    objects.add(child)
+        else:
+            objects = context.selected_objects
+    else:
+        objects = context.scene.objects
+
+    objects = tuple(object for object in objects if object.visible_get()) if state.visibleOnly else tuple(objects)
+
+    print(objects)
+
+    return objects
 
 def nextSquare(x):
     result = 1

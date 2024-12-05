@@ -13,6 +13,7 @@ class GZRS2State:
     convertUnits:       bool = False
     meshMode:           str = ""
     texSearchMode:      str = ""
+    overwriteAction:    bool = False
     doCollision:        bool = False
     doLightmap:         bool = False
     doLights:           bool = False
@@ -44,6 +45,8 @@ class GZRS2State:
     logEluHeaders:      bool = False
     logEluMats:         bool = False
     logEluMeshNodes:    bool = False
+    logAniHeaders:      bool = False
+    logAniNodes:        bool = False
     logVerboseIndices:  bool = False
     logVerboseWeights:  bool = False
     logCleanup:         bool = False
@@ -83,6 +86,9 @@ class GZRS2State:
     colVerts:           list = field(default_factory = list)
     eluMats:            list = field(default_factory = list)
     eluMeshes:          list = field(default_factory = list)
+    aniMaxTick:         int = 0
+    aniMaxVisTick:      int = 0
+    aniNodes:           list = field(default_factory = list)
     lmImages:           list = field(default_factory = list)
     lmPolygonIDs:       tuple = field(default_factory = tuple)
     lmIndices:          tuple = field(default_factory = tuple)
@@ -263,6 +269,65 @@ class EluSlot:
     indexOffset:        int = 0
     faceCount:          int = 0
     maskID:             int = 0
+
+# Bone nodes are the same as Transform nodes as far as I can tell
+@dataclass
+class AniNodeTransform:
+    meshName:           int = 0
+    baseMat:            Matrix = ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))
+    posKeyCount:        int = 0
+    posVectors:         tuple = field(default_factory = tuple)
+    posTicks:           tuple = field(default_factory = tuple)
+    rotKeyCount:        int = 0
+    rotQuats:           tuple = field(default_factory = tuple)
+    rotTicks:           tuple = field(default_factory = tuple)
+    visKeyCount:        int = 0
+    visValues:          tuple = field(default_factory = tuple)
+    visTicks:           tuple = field(default_factory = tuple)
+
+@dataclass
+class AniNodeVertex:
+    meshName:           int = 0
+    vertexKeyCount:     int = 0
+    vertexCount:        int = 0
+    vertexTicks:        tuple = field(default_factory = tuple)
+    vertexPositions:    tuple = field(default_factory = tuple)
+    visKeyCount:        int = 0
+    visValues:          tuple = field(default_factory = tuple)
+    visTicks:           tuple = field(default_factory = tuple)
+
+# Bone nodes are the same as Transform nodes as far as I can tell
+@dataclass
+class AniNodeBone:
+    meshName:           int = 0
+    baseMat:            Matrix = ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))
+    posKeyCount:        int = 0
+    posVectors:         tuple = field(default_factory = tuple)
+    posTicks:           tuple = field(default_factory = tuple)
+    rotKeyCount:        int = 0
+    rotQuats:           tuple = field(default_factory = tuple)
+    rotTicks:           tuple = field(default_factory = tuple)
+    visKeyCount:        int = 0
+    visValues:          tuple = field(default_factory = tuple)
+    visTicks:           tuple = field(default_factory = tuple)
+
+@dataclass
+class AniNodeTM:
+    meshName:           int = 0
+    firstMat:           Matrix = ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))
+    tmKeyCount:         int = 0
+    tmMats:             tuple = field(default_factory = tuple)
+    tmTicks:            tuple = field(default_factory = tuple)
+    visKeyCount:        int = 0
+    visValues:          tuple = field(default_factory = tuple)
+    visTicks:           tuple = field(default_factory = tuple)
+
+ANI_TYPES_ENUM = {
+    AniNodeTransform: 'TRANSFORM',
+    AniNodeVertex: 'VERTEX',
+    AniNodeBone: 'BONE',
+    AniNodeTM: 'TM'
+}
 
 @dataclass
 class LmImage:

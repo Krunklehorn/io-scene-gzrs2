@@ -113,6 +113,35 @@ ELU_NAME_LENGTH =               40
 ELU_PATH_LENGTH =               256
 ELU_PHYS_KEYS =                 4
 
+ANI_TICKS_PER_SECOND =          4800
+ANI_FRAMES_PER_SECOND =         30
+ANI_TICKS_PER_FRAME =           ANI_TICKS_PER_SECOND / ANI_FRAMES_PER_SECOND
+
+ANI_ID =                        ELU_ID
+
+ANI_0012 =                      0x0012
+ANI_1001 =                      0x1001
+ANI_1002 =                      0x1002
+ANI_1003 =                      0x1003
+
+ANI_VERSIONS =                  [ ANI_0012, ANI_1001, ANI_1002, ANI_1003 ]
+
+ANI_TYPE_TRANSFORM =            0
+ANI_TYPE_VERTEX =               1
+ANI_TYPE_BONE =                 2
+ANI_TYPE_TM =                   3
+ANI_TYPES =                     [ ANI_TYPE_TRANSFORM, ANI_TYPE_VERTEX, ANI_TYPE_BONE, ANI_TYPE_TM ]
+ANI_TYPES_PRETTY =              {
+                                    ANI_TYPE_TRANSFORM: 'TRANSFORM',
+                                    ANI_TYPE_VERTEX: 'VERTEX',
+                                    ANI_TYPE_BONE: 'BONE',
+                                    ANI_TYPE_TM: 'TM'
+                                }
+ANI_IMPORT_TYPES =              [ ANI_TYPE_TRANSFORM, ANI_TYPE_VERTEX, ANI_TYPE_BONE, ANI_TYPE_TM ]
+
+ANI_VERTEX_THRESHOLD =          0.0001
+ANI_TM_ARMATURE_NAME =          "GZRS2_ANI_TM_Armature"
+
 DDSD_CAPS =                     0x00000001
 DDSD_HEIGHT =                   0x00000002
 DDSD_WIDTH =                    0x00000004

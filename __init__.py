@@ -1,6 +1,6 @@
 import os
 
-from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rslm
+from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rslm, import_rsani
 from . import export_rselu, export_rslm
 
 from .constants_gzrs2 import *
@@ -23,6 +23,7 @@ if "bpy" in locals():
     if "import_rselu" in locals(): importlib.reload(import_rselu)
     if "import_rscol" in locals(): importlib.reload(import_rscol)
     if "import_rslm" in locals(): importlib.reload(import_rslm)
+    if "import_rsani" in locals(): importlib.reload(import_rsani)
     if "export_rselu" in locals(): importlib.reload(export_rselu)
     if "export_rslm" in locals(): importlib.reload(export_rslm)
 else:
@@ -838,6 +839,129 @@ class RSELU_PT_Import_Logging(Panel):
 
         layout.prop(operator, "logCleanup")
 
+class ImportRSANI(Operator, ImportHelper):
+    bl_idname = "import_scene.rsani"
+    bl_label = "Import ANI"
+    bl_options = { 'UNDO', 'PRESET' }
+    bl_description = "Load an ANI file"
+
+    filter_glob: StringProperty(
+        default = "*.ani",
+        options = { 'HIDDEN' }
+    )
+
+    panelMain: BoolProperty(
+        name = "Main",
+        description = "Main panel of options",
+        default = True
+    )
+
+    panelLogging: BoolProperty(
+        name = "Logging",
+        description = "Log details to the console",
+        default = False
+    )
+
+    convertUnits: BoolProperty(
+        name = "Convert Units",
+        description = "Convert measurements from centimeters to meters",
+        default = True
+    )
+
+    overwriteAction: BoolProperty(
+        name = "Overwrite Action",
+        description = "Overwrite action data if found by matching name. Disable to always create a new action",
+        default = True
+    )
+
+    selectedOnly: BoolProperty(
+        name = "Selected Only",
+        description = "Limit import to selected objects only. Does not apply to TRANSFORM or BONE types",
+        default = False
+    )
+
+    includeChildren: BoolProperty(
+        name = "Include Children",
+        description = "Include children of selected objects.  Does not apply to TRANSFORM or BONE types",
+        default = True
+    )
+
+    visibleOnly: BoolProperty(
+        name = "Visible Only",
+        description = "Limit export to visible objects only.  Does not apply to TRANSFORM or BONE types",
+        default = False
+    )
+
+    logAniHeaders: BoolProperty(
+        name = "Ani Headers",
+        description = "Log Ani header data",
+        default = True
+    )
+
+    logAniNodes: BoolProperty(
+        name = "Ani Nodes",
+        description = "Log ANI node data",
+        default = True
+    )
+
+    def draw(self, context):
+        pass
+
+    def execute(self, context):
+        return import_rsani.importAni(self, context)
+
+class RSANI_PT_Import_Main(Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Main"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rsani"
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelMain
+
+        layout.prop(operator, "convertUnits")
+        layout.prop(operator, "overwriteAction")
+        layout.prop(operator, "selectedOnly")
+
+        column = layout.column()
+        column.prop(operator, "includeChildren")
+        column.enabled = operator.selectedOnly
+
+        layout.prop(operator, "visibleOnly")
+
+class RSANI_PT_Import_Logging(Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Logging"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rsani"
+
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelLogging
+
+        layout.prop(operator, "logAniHeaders")
+        layout.prop(operator, "logAniNodes")
+
 class ImportRSCOL(Operator, ImportHelper):
     bl_idname = "import_scene.rscol"
     bl_label = "Import COL"
@@ -1344,6 +1468,9 @@ classes = (
     ImportRSELU,
     RSELU_PT_Import_Main,
     RSELU_PT_Import_Logging,
+    ImportRSANI,
+    RSANI_PT_Import_Main,
+    RSANI_PT_Import_Logging,
     ImportRSCOL,
     RSCOL_PT_Import_Main,
     RSCOL_PT_Import_Logging,
@@ -1363,6 +1490,7 @@ def menu_func_import(self, context):
     self.layout.operator(ImportGZRS2.bl_idname, text = "GunZ RS2 (.rs)")
     self.layout.operator(ImportGZRS3.bl_idname, text = "GunZ RS3 (.scene.xml/.prop.xml)")
     self.layout.operator(ImportRSELU.bl_idname, text = "GunZ ELU (.elu)")
+    self.layout.operator(ImportRSANI.bl_idname, text = "GunZ ANI (.ani)")
     self.layout.operator(ImportRSCOL.bl_idname, text = "GunZ COL (.col/.cl2)")
     self.layout.operator(ImportRSLM.bl_idname, text = "GunZ LM (.lm)")
 
