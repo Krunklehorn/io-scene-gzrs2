@@ -8,7 +8,7 @@ from .constants_gzrs2 import *
 bl_info = {
     "name": "GZRS2/3 Format",
     "author": "Krunklehorn",
-    "version": (0, 9, 4),
+    "version": (0, 9, 5),
     "blender": (4, 2, 1),
     "location": "File > Import-Export",
     "description": "GunZ: The Duel RealSpace2/3 content importer.",
