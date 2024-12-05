@@ -163,7 +163,7 @@ def importElu(self, context):
                 continue
 
             editBone = state.blArmature.edit_bones.new(eluMesh.meshName)
-            editBone.tail = (0, 0.1, 0)
+            editBone.tail = (0.0, 0.0, 0.1)
             editBone.matrix = blMeshOrDummyObj.matrix_world @ reorientLocal
 
             if eluMesh.isDummy and 'Nub' in eluMesh.meshName:

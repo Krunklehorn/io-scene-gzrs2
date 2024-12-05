@@ -73,21 +73,7 @@ def exportElu(self, context):
     id = ELU_ID
     version = ELU_5007
 
-    if state.selectedOnly:
-        if state.includeChildren:
-            objects = set()
-
-            for object in context.selected_objects:
-                objects.add(object)
-
-                for child in object.children_recursive:
-                    objects.add(child)
-        else:
-            objects = context.selected_objects
-    else:
-        objects = context.scene.objects
-
-    objects = tuple(object for object in objects if object.visible_get()) if state.visibleOnly else tuple(objects)
+    objects = getFilteredObjects(context, state)
 
     blObjs = []
     blArmatureObjs = []
