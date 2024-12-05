@@ -1,6 +1,6 @@
 # ***io_scene_gzrs2***
 
-GunZ: The Duel RealSpace2/3 content importer for Blender 4.2.1 LTS.<br>
+GunZ: The Duel RealSpace2/3 content importer for Blender 4.2.x LTS.<br>
 Intended for users wishing to visualize and modify GunZ content or prepare the data for a modern game engine.
 
 Please report bugs and unimplemented features to: ***Krunk#6051***
@@ -14,18 +14,19 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 # Latest Update
 
-[***ONLY WORKS WITH BLENDER 4.2.1 LTS!! >> DOWNLOAD v0.9.4.2***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.4)
+[***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.5***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.5)
 
-* NEW: Texture search modes and fake loading for missing textures
-  * Be sure to specify a working directory in addon preferences after installing
-* Fixed .elu import UnboundLocalError when weight groups reference bones that don't exist
-* Fixed .elu export orientation issues when working with attached mesh objects
-* Fixed .elu export cloth data suddenly becoming immobile
-* Other minor fixes
+* NEW: .ani import support for GunZ 1 versions: 0x0012, 0x1001, 0x1002 and 0x1003
+  * Animations become Actions, manage them with the Timeline or Dopesheet areas, combine them using NLA tracks
+  * Bone type: Animates the selected armature's bones, disconnects bones to allow translation, controls bone position and rotation, but not scale
+  * TM type: Similar to Bone, but generates it's own armature, controls object position, rotation and scale
+  * Vertex type: Adds absolute mode shape keys, animates by keying Evaluation Time, may fail for meshes with duplicate or overlapping vertices
+* NEW: Material guidelines for .elu export have been added, see below!
+* Mesh nodes beginning with "Dummy" are now treated as bones
 
 # Current Import Features
 
-* supported filetypes: .rs, .elu, .col, .lm, .scene.xml, .prop.xml, .cl2
+* supported filetypes: .rs, .elu, .ani, .col, .lm, .scene.xml, .prop.xml, .cl2
 * displays world geometry, occlusion planes and collision data using mesh objects
 * displays BSP bounding boxes, sounds, spawns, powerups and other dummies using empties
 * approximates fog using a volume scatter or volume absorption shader
@@ -111,6 +112,24 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 ![Alphatest Material](meta/alphatestmaterial_240927.jpg)
 
 ![Additive Material](meta/additivematerial_240927.jpg)
+
+### Material ID/Sub-ID Guidelines
+
+Realspace materials are not well defined. Certain effects are implicit, some cancel each other out, some behave differently based on context. Frankly, it's a mess.
+
+The following guidelines help you set your material IDs and sub-IDs to sane values during export...
+
+1. Material IDs must not have gaps. Example: cannot export with IDs 0, 3, and 4. Instead, use 0, 1, and 2.
+2. Different meshes can use the same material, but one mesh with different materials must mark them as sub-materials by unchecking Base.
+3. The sub-IDs of sub-materials must match the material slot they are used in. The top slot is 0.
+4. Groups of sub-materials need a base of the same ID.*
+5. The sub-material count of a base material must be high enough to hold it's sub-materials.
+
+*No. 4 is handled for you automatically. Future updates will handle more.
+
+These guidelines are based on patterns found in the vanilla GunZ content. Please submit an issue if you belive these guidelines are too restrictive or in error.
+
+The Maiet Character Viewer (MCV) can be used to change these after exporting if you need to do something more advanced.
 
 ### Notes on texture paths, labels and valid data subdirectories...
 
