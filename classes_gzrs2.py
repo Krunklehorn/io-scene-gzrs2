@@ -143,6 +143,10 @@ class GZRS2State:
     blDrivers:          list = field(default_factory = list)
     blDriverObj:        Object      = None
 
+#########################
+####    RS IMPORT    ####
+#########################
+
 @dataclass
 class RsVertex:
     pos:                Vector = (0, 0, 0)
@@ -185,6 +189,10 @@ class RsTree:
     lightmapID:         int = 0
     vertexCount:        int = 0
     vertexOffset:       int = 0
+
+#########################
+####   ELU  IMPORT   ####
+#########################
 
 @dataclass
 class EluMaterial:
@@ -270,7 +278,6 @@ class EluSlot:
     faceCount:          int = 0
     maskID:             int = 0
 
-# Bone nodes are the same as Transform nodes as far as I can tell
 @dataclass
 class AniNodeTransform:
     meshName:           int = 0
@@ -296,20 +303,7 @@ class AniNodeVertex:
     visValues:          tuple = field(default_factory = tuple)
     visTicks:           tuple = field(default_factory = tuple)
 
-# Bone nodes are the same as Transform nodes as far as I can tell
-@dataclass
-class AniNodeBone:
-    meshName:           int = 0
-    baseMat:            Matrix = ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))
-    posKeyCount:        int = 0
-    posVectors:         tuple = field(default_factory = tuple)
-    posTicks:           tuple = field(default_factory = tuple)
-    rotKeyCount:        int = 0
-    rotQuats:           tuple = field(default_factory = tuple)
-    rotTicks:           tuple = field(default_factory = tuple)
-    visKeyCount:        int = 0
-    visValues:          tuple = field(default_factory = tuple)
-    visTicks:           tuple = field(default_factory = tuple)
+AniNodeBone = AniNodeTransform
 
 @dataclass
 class AniNodeTM:

@@ -311,8 +311,6 @@ def importAni(self, context):
         else:
             self.report({ 'WARNING' }, f"GZRS2: ANI import of type { aniTypePretty } performed on an armature with no parent-child hierarchy!")
 
-        # TODO: Ensure node list is sorted by parent-child hierarchy, or check for a mismatch somehow
-
         for blPoseBone in blPoseBones:
             blPoseBone.matrix_basis.identity()
 

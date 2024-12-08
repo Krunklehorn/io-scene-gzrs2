@@ -4,6 +4,7 @@ from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rsl
 from . import export_rselu, export_rslm
 
 from .constants_gzrs2 import *
+from .lib_gzrs2 import getRelevantShaderNodes, checkShaderNodeValidity, getLinkedImageNodes, getValidImageNodePathSilent
 
 bl_info = {
     "name": "GZRS2/3 Format",
@@ -56,6 +57,50 @@ def validateRSDataDirectory(dirpath, isRS3):
                 return True
 
     return False
+
+class GZRS2_OT_Apply_Material_Preset(Operator):
+    bl_idname = "gzrs2.apply_material_preset"
+    bl_label = "Please select a GunZ 1 material preset..."
+    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_description = "Modify a material to make it compatible with the Realspace engine"
+
+    materialPreset: EnumProperty(
+        name = "Preset",
+        items = (('COLORED',    "Colored",      "Color material."),
+                 ('TEXTURED',   "Textured",     "Textured material."),
+                 ('BLENDED',    "Blended",      "Textured, alpha-blended material."),
+                 ('TESTED',     "Tested",       "Textured, alpha-tested material."),
+                 ('ADDITIVE',   "Additive",     "Textured, additive material."))
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def invoke(self, context, event):
+        self.materialPreset = "COLORED"
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        self.layout.prop(self, "materialPreset")
+
+    def execute(self, context):
+        bpy.ops.ed.undo_push()
+
+        # TODO: All presets should include a value node labeled "Visibility" with a driver and fallback
+
+        if self.materialPreset == 'COLORED':
+            pass
+        elif self.materialPreset == 'TEXTURED':
+            pass
+        elif self.materialPreset == 'BLENDED':
+            pass
+        elif self.materialPreset == 'TESTED':
+            pass
+        elif self.materialPreset == 'ADDITIVE':
+            pass
+
+        return { 'FINISHED' }
 
 class GZRS2_OT_Specify_Path_MRS(Operator):
     bl_idname = "gzrs2.specify_path_mrs"
@@ -1379,6 +1424,7 @@ class GZRS2Properties(PropertyGroup):
         if 'isBase' not in self: self['isBase'] = True
         if 'subMatID' not in self: self['subMatID'] = -1
         if 'subMatCount' not in self: self['subMatCount'] = 0
+        if 'visibility' not in self: self['visibility'] = 1.0
 
     def onUpdate(self, context):
         self.ensureAll()
@@ -1402,6 +1448,20 @@ class GZRS2Properties(PropertyGroup):
         self.ensureAll()
         self['subMatCount'] = value if self['isBase'] else 0
 
+    def onGetVisibility(self):
+        self.ensureAll()
+        return self['visibility']
+
+    def onSetVisibility(self, value):
+        self.ensureAll()
+        self['visibility'] = value
+
+        for area in bpy.context.screen.areas:
+            if area.type in [ 'PROPERTIES', 'NODE_EDITOR']:
+                for region in area.regions:
+                    if region.type == 'WINDOW':
+                        region.tag_redraw()
+
     matID: bpy.props.IntProperty(name = 'Material ID', default = 0, min = 0, max = 2**31 - 1, soft_min = 0, soft_max = 256, subtype = 'UNSIGNED', update = onUpdate)
     isBase: bpy.props.BoolProperty(name = 'Base', default = True, update = onUpdate)
     subMatID: bpy.props.IntProperty(name = 'Sub Material ID', default = -1, min = -1, max = 2**31 - 1, soft_min = -1, soft_max = 31, update = onUpdate, get = onGetSubMatID, set = onSetSubMatID)
@@ -1411,6 +1471,8 @@ class GZRS2Properties(PropertyGroup):
     ambient: bpy.props.FloatVectorProperty(name = 'Ambient', default = (0.588235, 0.588235, 0.588235), min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'COLOR', size = 3)
     diffuse: bpy.props.FloatVectorProperty(name = 'Diffuse', default = (0.588235, 0.588235, 0.588235), min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'COLOR', size = 3)
     specular: bpy.props.FloatVectorProperty(name = 'Specular', default = (0.9, 0.9, 0.9), min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'COLOR', size = 3)
+
+    visibility: bpy.props.FloatProperty(name = 'Visibility', description = 'Drives shader parameters. Exports to .ani, not .elu', default = 1.0, min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'FACTOR', update = onUpdate, get = onGetVisibility, set = onSetVisibility)
 
     @classmethod
     def register(cls):
@@ -1437,24 +1499,123 @@ class GZRS2_PT_Realspace(Panel):
         layout = self.layout
         layout.use_property_split = True
 
-        props = context.active_object.active_material.gzrs2
-
-        layout.prop(props, 'matID')
-        layout.prop(props, 'isBase')
+        blMat = context.active_object.active_material
+        props = blMat.gzrs2
 
         column = layout.column()
-        column.prop(props, 'subMatID')
-        column.enabled = not props.isBase
 
-        column = layout.column()
-        column.prop(props, 'subMatCount')
-        column.enabled = props.isBase
+        column.prop(props, 'matID')
+        column.prop(props, 'isBase')
 
-        layout.prop(props, 'ambient')
-        layout.prop(props, 'diffuse')
-        layout.prop(props, 'specular')
+        row = column.row()
+        row.prop(props, 'subMatID')
+        row.enabled = not props.isBase
+
+        row = column.row()
+        row.prop(props, 'subMatCount')
+        row.enabled = props.isBase
+
+        column.prop(props, 'ambient')
+        column.prop(props, 'diffuse')
+        column.prop(props, 'specular')
+
+        column.prop(props, 'visibility')
+
+        box = column.box()
+        row = box.row()
+        row.label(text = 'Preset: Unknown')
+        row.operator(GZRS2_OT_Apply_Material_Preset.bl_idname, text = "Change Preset")
+
+        version = ELU_5007
+        maxPathLength = ELU_NAME_LENGTH if version <= ELU_5005 else ELU_PATH_LENGTH
+
+        tree = blMat.node_tree
+        links = tree.links.values()
+        nodes = tree.nodes
+
+        output, shader, add, transparent, clip = getRelevantShaderNodes(nodes)
+        shaderValid, addValid, transparentValid, clipValid = checkShaderNodeValidity(output, shader, add, transparent, clip, links)
+
+        shaderLabel =       'Not Found' if shaderValid          is None else ('Invalid' if shaderValid ==           False else 'Valid')
+        addLabel =          'Not Found' if addValid             is None else ('Invalid' if addValid ==              False else 'Valid')
+        transparentLabel =  'Not Found' if transparentValid     is None else ('Invalid' if transparentValid ==      False else 'Valid')
+        clipLabel =         'Not Found' if clipValid            is None else ('Invalid' if clipValid ==             False else 'Valid')
+
+        box = column.box()
+        column2 = box.column()
+        row = column2.row()
+        row.label(text = 'Principled BSDF:')
+        row.label(text = shaderLabel)
+        row = column2.row()
+        row.label(text = 'Add Shader:')
+        row.label(text = addLabel)
+        row = column2.row()
+        row.label(text = 'Transparent Shader:')
+        row.label(text = transparentLabel)
+        row = column2.row()
+        row.label(text = 'Clip Math:')
+        row.label(text = clipLabel)
+
+        if shaderValid:
+            texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid)
+            texpath = getValidImageNodePathSilent(texture, maxPathLength)
+            alphapath = getValidImageNodePathSilent(alpha, maxPathLength)
+
+            twosided = not blMat.use_backface_culling
+            additive = blMat.surface_render_method == 'BLENDED' and addValid and transparentValid and emission is not None
+            alphatest = int(min(max(0, clip.inputs[1].default_value), 1) * 255) if clipValid else 0 # Threshold
+            useopacity = alpha is not None
+
+            box = column.box()
+            column2 = box.column()
+            row = column2.row()
+            row.label(text = 'Texpath:')
+            row.label(text = texpath)
+            row = column2.row()
+            row.label(text = 'Alphapath:')
+            row.label(text = alphapath)
+
+            box = column.box()
+            column2 = box.column()
+            row = column2.row()
+            row.label(text = 'Twosided:')
+            row.label(text = str(twosided))
+            row = column2.row()
+            row.label(text = 'Additive:')
+            row.label(text = str(additive))
+            row = column2.row()
+            row.label(text = 'Alphatest:')
+            row.label(text = str(alphatest))
+            row = column2.row()
+            row.label(text = 'Use Opacity:')
+            row.label(text = str(useopacity))
+        else:
+            box = column.box()
+            column2 = box.column()
+            row = column2.row()
+            row.label(text = 'Texpath:')
+            row.label(text = 'N/A')
+            row = column2.row()
+            row.label(text = 'Alphapath:')
+            row.label(text = 'N/A')
+
+            box = column.box()
+            column2 = box.column()
+            row = column2.row()
+            row.label(text = 'Twosided:')
+            row.label(text = 'N/A')
+            row = column2.row()
+            row.label(text = 'Additive:')
+            row.label(text = 'N/A')
+            row = column2.row()
+            row.label(text = 'Alphatest:')
+            row.label(text = 'N/A')
+            row = column2.row()
+            row.label(text = 'Use Opacity:')
+            row.label(text = 'N/A')
 
 classes = (
+    GZRS2_OT_Apply_Material_Preset,
     GZRS2_OT_Specify_Path_MRS,
     GZRS2_OT_Specify_Path_MRF,
     GZRS2Preferences,

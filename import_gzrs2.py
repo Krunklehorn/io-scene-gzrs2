@@ -282,8 +282,8 @@ def importRS2(self, context):
 
         blMat.gzrs2.matID = m
 
-        output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
-        shader = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
+        output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
+        shader = getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled')
         shader.location = (20, 300)
         shader.select = False
         shader.inputs[12].default_value = 0.0 # Specular IOR Level
@@ -563,7 +563,6 @@ def importRS2(self, context):
             blColMat.use_nodes = True
             blColMat.diffuse_color = (1.0, 0.0, 1.0, 0.25)
             blColMat.roughness = 1.0
-            # blColMat.blend_method = 'BLEND'
             blColMat.surface_render_method = 'BLENDED'
             blColMat.shadow_method = 'NONE'
             blColMat.use_transparency_overlap = True
@@ -573,9 +572,9 @@ def importRS2(self, context):
 
             tree = blColMat.node_tree
             nodes = tree.nodes
-            nodes.remove(getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled'))
+            nodes.remove(getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled'))
 
-            output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
+            output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
 
             transparent = nodes.new('ShaderNodeBsdfTransparent')
             transparent.location = (120, 300)
@@ -614,7 +613,6 @@ def importRS2(self, context):
             blOccMat.use_nodes = True
             blOccMat.diffuse_color = (0.0, 1.0, 1.0, 0.25)
             blOccMat.roughness = 1.0
-            # blOccMat.blend_method = 'BLEND'
             blOccMat.surface_render_method = 'BLENDED'
             blOccMat.shadow_method = 'NONE'
             blOccMat.use_transparency_overlap = True
@@ -624,9 +622,9 @@ def importRS2(self, context):
 
             tree = blOccMat.node_tree
             nodes = tree.nodes
-            nodes.remove(getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled'))
+            nodes.remove(getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled'))
 
-            output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
+            output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
 
             transparent = nodes.new('ShaderNodeBsdfTransparent')
             transparent.location = (120, 300)
@@ -711,9 +709,9 @@ def importRS2(self, context):
             tree = blFogMat.node_tree
             nodes = tree.nodes
 
-            nodes.remove(getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled'))
+            nodes.remove(getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled'))
 
-            output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
+            output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
 
             if min(color[:3]) > 0.5:
                 shader = nodes.new('ShaderNodeVolumeScatter')

@@ -257,10 +257,104 @@ def getTexImage(bpy, texpath, alphamode, state):
 
     return texImages[alphamode]
 
-def getShaderNodeByID(self, nodes, id):
+def getShaderNodeByID(nodes, id):
     for node in nodes.values():
         if node.bl_idname == id:
             return node
+
+def getRelevantShaderNodes(nodes):
+    output          = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
+    shader          = getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled')
+    add             = getShaderNodeByID(nodes, 'ShaderNodeAddShader')
+    transparent     = getShaderNodeByID(nodes, 'ShaderNodeBsdfTransparent')
+    clip            = getShaderNodeByID(nodes, 'ShaderNodeMath')
+
+    return output, shader, add, transparent, clip
+
+def checkShaderNodeValidity(output, shader, add, transparent, clip, links):
+    shaderValid         = False if shader       is not None     else None
+    addValid            = False if add          is not None     else None
+    transparentValid    = False if transparent  is not None     else None
+    clipValid           = False if clip         is not None     else None
+
+    for link in links:
+        if link.is_hidden or not link.is_valid:
+            continue
+
+        if      shaderValid         == False    and link.from_socket == shader.outputs[0]       and link.to_socket == output.inputs[0]:     shaderValid         = True
+        elif    addValid            == False    and link.from_socket == add.outputs[0]          and link.to_socket == output.inputs[0]:     addValid            = True
+        elif    transparentValid    == False    and link.from_socket == transparent.outputs[0]  and link.to_socket == add.inputs[1]:        transparentValid    = True
+        elif    clipValid           == False    and link.from_socket == clip.outputs[0]         and link.to_socket == shader.inputs[4]:     clipValid           = True
+
+    for link in links:
+        if link.is_hidden or not link.is_valid:
+            continue
+
+        if addValid and transparentValid        and link.from_socket == shader.outputs[0]       and link.to_socket == add.inputs[0]:        shaderValid = True
+
+    if clipValid and clip.operation != 'GREATER_THAN':
+        clipValid = False
+
+    return shaderValid, addValid, transparentValid, clipValid
+
+def getLinkedImageNodes(shader, links, clip, clipValid):
+    texture = None
+    emission = None
+    alpha = None
+
+    for link in links:
+        if link.is_hidden or not link.is_valid:
+            continue
+
+        node = link.from_node
+
+        if not isValidEluImageNode(node, link.is_muted):
+            continue
+
+        if link.to_node == shader:
+            if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[0]:      texture     = node
+            if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[26]:     emission    = node
+            if link.from_socket == node.outputs[1] and link.to_socket == shader.inputs[4]:      alpha       = node
+        elif link.to_node == clip and clipValid:
+            if link.from_socket == node.outputs[1] and link.to_socket == clip.inputs[0]:        alpha       = node
+
+    return texture, emission, alpha
+
+def getValidImageNodePath(self, node, maxPathLength, matID, matName):
+    if node is None:
+        return ''
+
+    if node.label == '':
+        texpath = makePathExtSingle(os.path.basename(node.image.filepath))
+    else:
+        texpath = makeRS2DataPath(node.label)
+
+        if texpath == False:
+            self.report({ 'ERROR' }, f"GZRS2: Unable to determine data path for texture in material! Check the GitHub page for a list of valid data subdirectories! { matID }, { matName }, { node.label }")
+            return False
+
+    if len(texpath) >= maxPathLength:
+        self.report({ 'ERROR' }, f"GZRS2: Data path for texture has too many characters! Max length is 40 for versions <= ELU_5005 and 256 for everything above! { matID }, { matName }, { texpath }")
+        return False
+
+    return texpath
+
+def getValidImageNodePathSilent(node, maxPathLength):
+    if node is None:
+        return ''
+
+    if node.label == '':
+        texpath = makePathExtSingle(os.path.basename(node.image.filepath))
+    else:
+        texpath = makeRS2DataPath(node.label)
+
+        if texpath == False:
+            return 'Invalid: No valid subdirectory'
+
+    if len(texpath) >= maxPathLength:
+        return 'Invalid: Exceeds character limit'
+
+    return texpath
 
 def getModifierByType(self, modifiers, type):
     for modifier in modifiers.values():
@@ -378,7 +472,6 @@ def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, nodes, sha
     twosided = xmlRsMat['TWOSIDED']
 
     if usealphatest:
-        # blMat.blend_method = 'CLIP'
         blMat.surface_render_method = 'DITHERED'
         blMat.shadow_method = 'CLIP'
         blMat.alpha_threshold = alphatest
@@ -393,18 +486,16 @@ def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, nodes, sha
 
         clip.inputs[1].default_value = alphatest
     elif useopacity:
-        # blMat.blend_method = 'HASHED'
         blMat.surface_render_method = 'DITHERED'
         blMat.shadow_method = 'HASHED'
 
         tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
 
     if additive:
-        # blMat.blend_method = 'BLEND'
         blMat.surface_render_method = 'BLENDED'
         blMat.shadow_method = 'NONE'
 
-        output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
+        output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
 
         add = nodes.new('ShaderNodeAddShader')
         transparent = nodes.new('ShaderNodeBsdfTransparent')
@@ -491,7 +582,6 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
         texture.select = False
 
         if alphatest > 0:
-            # blMat.blend_method = 'CLIP'
             blMat.surface_render_method = 'DITHERED'
             blMat.shadow_method = 'CLIP'
             blMat.alpha_threshold = alphatest
@@ -506,7 +596,6 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
 
             clip.inputs[1].default_value = alphatest
         else:
-            # blMat.blend_method = 'HASHED'
             blMat.surface_render_method = 'DITHERED'
             blMat.shadow_method = 'HASHED'
 
@@ -528,7 +617,6 @@ def setupErrorMat(state):
     blErrorMat.use_nodes = False
     blErrorMat.diffuse_color = (1.0, 0.0, 1.0, 1.0)
     blErrorMat.roughness = 1.0
-    # blErrorMat.blend_method = 'BLEND'
     blErrorMat.surface_render_method = 'BLENDED'
     blErrorMat.shadow_method = 'NONE'
     blErrorMat.use_transparency_overlap = True
@@ -595,8 +683,8 @@ def setupEluMat(self, m, eluMat, state):
     blMat.gzrs2.diffuse = (diffuse[0], diffuse[1], diffuse[2])
     blMat.gzrs2.specular = (specular[0], specular[1], specular[2])
 
-    output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
-    shader = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
+    output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
+    shader = getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled')
     shader.location = (20, 300)
     shader.select = False
     shader.inputs[12].default_value = 0.0 # Specular IOR Level
@@ -636,7 +724,6 @@ def setupEluMat(self, m, eluMat, state):
         alphatest = alphatest / 255.0
 
         if alphatest > 0:
-            # blMat.blend_method = 'CLIP'
             blMat.surface_render_method = 'DITHERED'
             blMat.shadow_method = 'CLIP'
             blMat.alpha_threshold = alphatest
@@ -652,7 +739,6 @@ def setupEluMat(self, m, eluMat, state):
 
             clip.inputs[1].default_value = alphatest
         elif useopacity:
-            # blMat.blend_method = 'HASHED'
             blMat.surface_render_method = 'DITHERED'
             blMat.shadow_method = 'HASHED'
 
@@ -660,7 +746,6 @@ def setupEluMat(self, m, eluMat, state):
             alphaLink.is_muted = texpath is None
 
         if additive:
-            # blMat.blend_method = 'BLEND'
             blMat.surface_render_method = 'BLENDED'
             blMat.shadow_method = 'NONE'
 
@@ -740,8 +825,8 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     tree = blMat.node_tree
     nodes = tree.nodes
 
-    output = getShaderNodeByID(self, nodes, 'ShaderNodeOutputMaterial')
-    shader = getShaderNodeByID(self, nodes, 'ShaderNodeBsdfPrincipled')
+    output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
+    shader = getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled')
     shader.location = (20, 300)
     shader.select = False
     shader.inputs[6].default_value = glossiness / 100.0 # Metallic
@@ -756,7 +841,6 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
         processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alphatest, state)
 
     if additive:
-        # blMat.blend_method = 'BLEND'
         blMat.surface_render_method = 'BLENDED'
         blMat.shadow_method = 'NONE'
 
