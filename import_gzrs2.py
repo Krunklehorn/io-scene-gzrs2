@@ -271,23 +271,11 @@ def importRS2(self, context):
 
     for m, xmlRsMat in enumerate(state.xmlRsMats):
         xmlRsMatName = xmlRsMat.get('name', f"Material_{ m }")
+        blMat, tree, nodes, shader, output = createMatBase(xmlRsMatName)
 
-        blMat = bpy.data.materials.new(xmlRsMatName)
-        blMat.use_nodes = True
-
-        tree = blMat.node_tree
-        nodes = tree.nodes
-
-        blMat.gzrs2.matID = m
-
-        output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
-        shader = getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled')
-        shader.location = (20, 300)
-        shader.select = False
         shader.inputs[12].default_value = 0.0 # Specular IOR Level
 
-        nodes.active = shader
-        output.select = False
+        blMat.gzrs2.matID = m
 
         texName = xmlRsMat.get('DIFFUSEMAP')
 
@@ -586,7 +574,7 @@ def importRS2(self, context):
             blOccGeo.from_pydata(occVerts, [], occFaces)
             blOccGeo.update()
 
-            setObjDebugFlags(blOccObj)
+            setObjFlagsDebug(blOccObj)
 
             state.blOccMat = blOccMat
             state.blOccGeo = blOccGeo
