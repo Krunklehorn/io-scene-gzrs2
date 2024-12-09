@@ -680,8 +680,6 @@ def getErrorMat(state):
 
     blErrorMat = setupDebugMat(errName, (1.0, 0.0, 1.0, 1.0))
 
-    setObjFlagsDebug(blErrorMat)
-
     state.blErrorMat = blErrorMat
 
     return blErrorMat
