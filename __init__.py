@@ -78,7 +78,6 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         return True
 
     def invoke(self, context, event):
-        self.materialPreset = "COLORED"
         return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context):
@@ -1536,10 +1535,10 @@ class GZRS2_PT_Realspace(Panel):
         output, shader, add, transparent, clip = getRelevantShaderNodes(nodes)
         shaderValid, addValid, transparentValid, clipValid = checkShaderNodeValidity(output, shader, add, transparent, clip, links)
 
-        shaderLabel =       'Not Found' if shaderValid          is None else ('Invalid' if shaderValid ==           False else 'Valid')
-        addLabel =          'Not Found' if addValid             is None else ('Invalid' if addValid ==              False else 'Valid')
-        transparentLabel =  'Not Found' if transparentValid     is None else ('Invalid' if transparentValid ==      False else 'Valid')
-        clipLabel =         'Not Found' if clipValid            is None else ('Invalid' if clipValid ==             False else 'Valid')
+        shaderLabel =       '' if shaderValid       is None else ('Invalid' if shaderValid ==       False else 'Valid')
+        addLabel =          '' if addValid          is None else ('Invalid' if addValid ==          False else 'Valid')
+        transparentLabel =  '' if transparentValid  is None else ('Invalid' if transparentValid ==  False else 'Valid')
+        clipLabel =         '' if clipValid         is None else ('Invalid' if clipValid ==         False else 'Valid')
 
         box = column.box()
         column2 = box.column()

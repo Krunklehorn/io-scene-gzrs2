@@ -415,11 +415,11 @@ def getMatNode(bpy, blMat, nodes, texpath, alphamode, x, y, loadFake, state):
 
 def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, nodes, shader, state):
     if not texName:
-        self.report({ 'ERROR' }, f"GZRS2: Bsp material with empty texture name: { m }, { name }")
+        self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with empty texture name: { m }, { name }")
         return
 
     if not isValidTextureName(texName):
-        self.report({ 'ERROR' }, f"GZRS2: Bsp material with invalid texture name, must not be a directory: { m }, { name }, { texName }")
+        self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with invalid texture name, must not be a directory: { m }, { name }, { texName }")
         return
 
     loadFake = False
@@ -428,7 +428,7 @@ def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, nodes, sha
         texpath = textureSearch(self, texName, '', False, state)
 
         if texpath is None:
-            self.report({ 'ERROR' }, f"GZRS2: Texture not found for bsp material: { m }, { name }, { texName }")
+            self.report({ 'ERROR' }, f"GZRS2: Texture not found for .rs.xml material: { m }, { name }, { texName }")
             texpath = texName
             loadFake = True
     else:
@@ -473,7 +473,6 @@ def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, nodes, sha
 
     if usealphatest:
         blMat.surface_render_method = 'DITHERED'
-        blMat.shadow_method = 'CLIP'
         blMat.alpha_threshold = alphatest
 
         clip = nodes.new('ShaderNodeMath')
@@ -487,13 +486,11 @@ def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, nodes, sha
         clip.inputs[1].default_value = alphatest
     elif useopacity:
         blMat.surface_render_method = 'DITHERED'
-        blMat.shadow_method = 'HASHED'
 
         tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
 
     if additive:
         blMat.surface_render_method = 'BLENDED'
-        blMat.shadow_method = 'NONE'
 
         output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
 
@@ -517,6 +514,7 @@ def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, nodes, sha
 
     if usealphatest or useopacity or additive:
         blMat.use_transparency_overlap = True
+        blMat.use_transparent_shadow = True
         blMat.use_backface_culling = False
         blMat.use_backface_culling_shadow = False
         blMat.use_backface_culling_lightprobe_volume = False
@@ -583,7 +581,6 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
 
         if alphatest > 0:
             blMat.surface_render_method = 'DITHERED'
-            blMat.shadow_method = 'CLIP'
             blMat.alpha_threshold = alphatest
 
             clip = nodes.new('ShaderNodeMath')
@@ -597,7 +594,6 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
             clip.inputs[1].default_value = alphatest
         else:
             blMat.surface_render_method = 'DITHERED'
-            blMat.shadow_method = 'HASHED'
 
             tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
     elif texType == 'NORMALMAP':
@@ -612,19 +608,83 @@ def processRS3TexLayer(self, texlayer, blMat, tree, nodes, shader, emission, alp
         tree.links.new(texture.outputs[0], normal.inputs[1])
         tree.links.new(normal.outputs[0], shader.inputs[5]) # Normal
 
-def setupErrorMat(state):
-    blErrorMat = bpy.data.materials.new(f"{ state.filename }_Error")
-    blErrorMat.use_nodes = False
-    blErrorMat.diffuse_color = (1.0, 0.0, 1.0, 1.0)
-    blErrorMat.roughness = 1.0
-    blErrorMat.surface_render_method = 'BLENDED'
-    blErrorMat.shadow_method = 'NONE'
-    blErrorMat.use_transparency_overlap = True
-    blErrorMat.use_backface_culling = False
-    blErrorMat.use_backface_culling_shadow = False
-    blErrorMat.use_backface_culling_lightprobe_volume = False
+def setupDebugMat(name, color):
+    blDebugMat = bpy.data.materials.new(name)
+    blDebugMat.use_nodes = True
+    blDebugMat.diffuse_color = color
+    blDebugMat.roughness = 1.0
+    blDebugMat.surface_render_method = 'BLENDED'
+    blDebugMat.use_transparency_overlap = True
+    blDebugMat.use_transparent_shadow = True
+    blDebugMat.use_backface_culling = False
+    blDebugMat.use_backface_culling_shadow = False
+    blDebugMat.use_backface_culling_lightprobe_volume = False
+
+    if color[3] < 1.0:
+        tree = blDebugMat.node_tree
+        nodes = tree.nodes
+        nodes.remove(getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled'))
+
+        output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
+
+        transparent = nodes.new('ShaderNodeBsdfTransparent')
+        transparent.location = (120, 300)
+
+        tree.links.new(transparent.outputs[0], output.inputs[0])
+
+    return blDebugMat
+
+def getErrorMat(state):
+    blErrorMat = state.blErrorMat
+
+    if blErrorMat is not None:
+        return blErrorMat
+
+    errName = f"{ state.filename }_Error"
+    blErrorMat = bpy.data.materials.get(errName)
+
+    if blErrorMat is not None:
+        return blErrorMat
+
+    blErrorMat = setupDebugMat(errName, (1.0, 0.0, 1.0, 1.0))
+
+    setObjDebugFlags(blErrorMat)
 
     state.blErrorMat = blErrorMat
+
+    return blErrorMat
+
+def setObjDebugFlags(blObj):
+    # Visibility
+    blObj.visible_camera = False
+    blObj.visible_diffuse = False
+    blObj.visible_glossy = False
+    blObj.visible_volume_scatter = False
+    blObj.visible_transmission = False
+    blObj.visible_shadow = False
+
+    # Viewport Display
+    blObj.show_wire = True
+    blObj.display.show_shadows = False
+
+def setupColMesh(name, state):
+    blColMat = setupDebugMat(name, (1.0, 0.0, 1.0, 0.25))
+
+    blColGeo = bpy.data.meshes.new(name)
+    blColObj = bpy.data.objects.new(name, blColGeo)
+
+    blColGeo.from_pydata(state.colVerts, [], [tuple(range(i, i + 3)) for i in range(0, len(state.colVerts), 3)])
+    blColGeo.update()
+
+    setObjDebugFlags(blColObj)
+
+    state.blColMat = blColMat
+    state.blColGeo = blColGeo
+    state.blColObj = blColObj
+
+    blColObj.data.materials.append(blColMat)
+
+    return blColObj
 
 def setupEluMat(self, m, eluMat, state):
     elupath = eluMat.elupath
@@ -665,6 +725,7 @@ def setupEluMat(self, m, eluMat, state):
 
         blEluMatAtIndex = state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})
         blEluMatAtIndex[subMatID] = blMat2
+
         return
 
     matName = texName or f"Material_{ m }"
@@ -725,7 +786,6 @@ def setupEluMat(self, m, eluMat, state):
 
         if alphatest > 0:
             blMat.surface_render_method = 'DITHERED'
-            blMat.shadow_method = 'CLIP'
             blMat.alpha_threshold = alphatest
 
             clip = nodes.new('ShaderNodeMath')
@@ -740,14 +800,12 @@ def setupEluMat(self, m, eluMat, state):
             clip.inputs[1].default_value = alphatest
         elif useopacity:
             blMat.surface_render_method = 'DITHERED'
-            blMat.shadow_method = 'HASHED'
 
             alphaLink = tree.links.new(texture.outputs[1], shader.inputs[4]) # Alpha
             alphaLink.is_muted = texpath is None
 
         if additive:
             blMat.surface_render_method = 'BLENDED'
-            blMat.shadow_method = 'NONE'
 
             add = nodes.new('ShaderNodeAddShader')
             transparent = nodes.new('ShaderNodeBsdfTransparent')
@@ -768,6 +826,7 @@ def setupEluMat(self, m, eluMat, state):
 
         if alphatest > 0 or useopacity or additive:
             blMat.use_transparency_overlap = True
+            blMat.use_transparent_shadow = True
             blMat.use_backface_culling = False
             blMat.use_backface_culling_shadow = False
             blMat.use_backface_culling_lightprobe_volume = False
@@ -842,7 +901,6 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
 
     if additive:
         blMat.surface_render_method = 'BLENDED'
-        blMat.shadow_method = 'NONE'
 
         add = nodes.new('ShaderNodeAddShader')
         transparent = nodes.new('ShaderNodeBsdfTransparent')
@@ -859,6 +917,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
 
     if alphatest > 0 or additive:
         blMat.use_transparency_overlap = True
+        blMat.use_transparent_shadow = True
         blMat.use_backface_culling = False
         blMat.use_backface_culling_shadow = False
         blMat.use_backface_culling_lightprobe_volume = False
@@ -1095,15 +1154,15 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
                         elif s in blEluMatAtIndex:  blMesh.materials.append(blEluMatAtIndex[s])
                         else:
                             self.report({ 'WARNING' }, f"GZRS2: Failed to find .elu sub-material for mesh at index/sub-index: { meshName }, { eluMatID }/{ s }")
-                            blMesh.materials.append(state.blErrorMat)
+                            blMesh.materials.append(getErrorMat(state))
                 else:
                     baseMat = blEluMatAtIndex[-1]
             else:
                 self.report({ 'WARNING' }, f"GZRS2: Missing .elu material for mesh at index: { meshName }, { eluMatID }")
-                baseMat = state.blErrorMat
+                baseMat = getErrorMat(state)
         else:
             self.report({ 'WARNING' }, f"GZRS2: Missing .elu materials for mesh: { meshName }")
-            baseMat = state.blErrorMat
+            baseMat = getErrorMat(state)
 
         if baseMat is not None:
             for s in range(slotCount):
@@ -1115,14 +1174,14 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
                 if not eluMesh.drawFlags & RM_FLAG_HIDE:
                     self.report({ 'WARNING' }, f"GZRS2: Double negative material index: { meshName }, { eluMatID }, { slotIDs }")
 
-                    blMesh.materials.append(state.blErrorMat)
+                    blMesh.materials.append(getErrorMat(state))
             elif elupath in state.blXmlEluMats:
                 for blXmlEluMat in state.blXmlEluMats[elupath]:
                     blMesh.materials.append(blXmlEluMat)
             else:
                 self.report({ 'WARNING' }, f"GZRS2: No .elu.xml material available after negative index: { meshName }, { eluMatID }")
 
-                blMesh.materials.append(state.blErrorMat)
+                blMesh.materials.append(getErrorMat(state))
         else:
             if elupath in state.blXmlEluMats:
                 if len(state.blXmlEluMats[elupath]) > eluMatID:
@@ -1130,11 +1189,11 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
                 else:
                     self.report({ 'WARNING' }, f"GZRS2: Missing .elu.xml material for mesh at index: { meshName }, { eluMatID }")
 
-                    blMesh.materials.append(state.blErrorMat)
+                    blMesh.materials.append(getErrorMat(state))
             else:
                 self.report({ 'WARNING' }, f"GZRS2: No .elu.xml materials available for mesh: { meshName }")
 
-                blMesh.materials.append(state.blErrorMat)
+                blMesh.materials.append(getErrorMat(state))
 
     collection.objects.link(blMeshObj)
 

@@ -106,8 +106,6 @@ def importElu(self, context):
     rootMesh = collections.new(state.filename)
     context.collection.children.link(rootMesh)
 
-    setupErrorMat(state)
-
     for m, eluMat in enumerate(state.eluMats):
         setupEluMat(self, m, eluMat, state)
 
