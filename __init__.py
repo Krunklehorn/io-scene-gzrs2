@@ -4,7 +4,9 @@ from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rsl
 from . import export_rselu, export_rslm
 
 from .constants_gzrs2 import *
-from .lib_gzrs2 import getRelevantShaderNodes, checkShaderNodeValidity, getLinkedImageNodes, getValidImageNodePathSilent
+from .lib_gzrs2 import getEluExportConstants, getMatTreeLinksNodes, getRelevantShaderNodes, checkShaderNodeValidity
+from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender
+from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
 
 bl_info = {
     "name": "GZRS2/3 Format",
@@ -86,18 +88,74 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
     def execute(self, context):
         bpy.ops.ed.undo_push()
 
-        # TODO: All presets should include a value node labeled "Visibility" with a driver and fallback
+        version, maxPathLength = getEluExportConstants()
+
+        blMat = context.active_object.active_material
+        tree, links, nodes = getMatTreeLinksNodes(blMat)
+
+        output, shader, add, transparent, clip, visibility = getRelevantShaderNodes(nodes)
+        shaderValid, addValid, transparentValid, clipValid = checkShaderNodeValidity(output, shader, add, transparent, clip, links)
+
+        texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid, validOnly = False)
+
+        # Reuse existing image texture nodes
+        texture = texture or emission or alpha or getShaderNodeByID(nodes, 'ShaderNodeTexImage')
+        emission = emission or texture or alpha
+        alpha = alpha or texture or emission
+
+        texpath =       getValidImageNodePathSilent(texture     if texture.image    is not None else None, maxPathLength) if texture    else None
+        emitpath =      getValidImageNodePathSilent(emission    if emission.image   is not None else None, maxPathLength) if emission   else None
+        alphapath =     getValidImageNodePathSilent(alpha       if alpha.image      is not None else None, maxPathLength) if alpha      else None
+
+        twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emission, alpha)
+
+        # We avoid links.clear() to preserve the user's material as much as possible
+        relevantNodes = [output, shader, add, transparent, clip, visibility]
+
+        for link in links:
+            if link.from_node in relevantNodes or link.to_node in relevantNodes:
+                links.remove(link)
+
+        # We assume the setup functions modify valid inputs and only create what is missing
+        blMat, tree, links, nodes, shader, output = setupMatBase(blMat.name, blMat = blMat, shader = shader, output = output)
+        links.new(shader.outputs[0], output.inputs[0])
 
         if self.materialPreset == 'COLORED':
-            pass
-        elif self.materialPreset == 'TEXTURED':
-            pass
-        elif self.materialPreset == 'BLENDED':
-            pass
+            return { 'FINISHED' }
+
+        texture = texture or nodes.new('ShaderNodeTexImage')
+        texture.location = (-440, 300)
+        texture.select = False
+
+        links.new(texture.outputs[0], shader.inputs[0]) # Base Color
+
+        if self.materialPreset == 'TEXTURED':
+            return { 'FINISHED' }
+
+        visibility = visibility or nodes.new('ShaderNodeValue')
+        visibility.location = (-440, 420)
+        visibility.select = True # Required for animation keyframes to appear in the dopesheet
+        visibility.label = 'Visibility'
+        nodes.active = visibility
+
+        if self.materialPreset == 'BLENDED':
+            alphatest = 0
+            usealphatest = alphatest > 0
+            useopacity = True
+
+            clip = setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest, useopacity, texture, shader, clip = clip)
         elif self.materialPreset == 'TESTED':
-            pass
+            alphatest = 255.0 / 2.0
+            usealphatest = alphatest > 0
+            useopacity = False
+
+            clip = setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest, useopacity, texture, shader, clip = clip)
         elif self.materialPreset == 'ADDITIVE':
-            pass
+            additive = True
+
+            add, transparent = setupMatNodesAdditive(blMat, tree, links, nodes, additive, texture, shader, output, add = add, transparent = transparent)
+
+        setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
 
         return { 'FINISHED' }
 
@@ -1498,11 +1556,30 @@ class GZRS2_PT_Realspace(Panel):
         layout = self.layout
         layout.use_property_split = True
 
+        version, maxPathLength = getEluExportConstants()
+
         blMat = context.active_object.active_material
+        tree, links, nodes = getMatTreeLinksNodes(blMat)
+
+        output, shader, add, transparent, clip, visibility = getRelevantShaderNodes(nodes)
+        shaderValid, addValid, transparentValid, clipValid = checkShaderNodeValidity(output, shader, add, transparent, clip, links)
+
+        if shaderValid:
+            texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid)
+            texpath = getValidImageNodePathSilent(texture, maxPathLength)
+            alphapath = getValidImageNodePathSilent(alpha, maxPathLength)
+
+            twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emission, alpha)
+
+        shaderLabel =       '' if shaderValid           is None else ('Invalid' if shaderValid ==           False else 'Valid')
+        addLabel =          '' if addValid              is None else ('Invalid' if addValid ==              False else 'Valid')
+        transparentLabel =  '' if transparentValid      is None else ('Invalid' if transparentValid ==      False else 'Valid')
+        clipLabel =         '' if clipValid             is None else ('Invalid' if clipValid ==             False else 'Valid')
+        clipLabel =         '' if clipValid             is None else ('Invalid' if clipValid ==             False else 'Valid')
+
         props = blMat.gzrs2
 
         column = layout.column()
-
         column.prop(props, 'matID')
         column.prop(props, 'isBase')
 
@@ -1514,104 +1591,55 @@ class GZRS2_PT_Realspace(Panel):
         row.prop(props, 'subMatCount')
         row.enabled = props.isBase
 
+        column = layout.column()
         column.prop(props, 'ambient')
         column.prop(props, 'diffuse')
         column.prop(props, 'specular')
 
+        column = layout.column()
         column.prop(props, 'visibility')
 
-        box = column.box()
-        row = box.row()
-        row.label(text = 'Preset: Unknown')
-        row.operator(GZRS2_OT_Apply_Material_Preset.bl_idname, text = "Change Preset")
+        column = layout.column()
+        column.operator(GZRS2_OT_Apply_Material_Preset.bl_idname, text = "Change Preset")
 
-        version = ELU_5007
-        maxPathLength = ELU_NAME_LENGTH if version <= ELU_5005 else ELU_PATH_LENGTH
-
-        tree = blMat.node_tree
-        links = tree.links.values()
-        nodes = tree.nodes
-
-        output, shader, add, transparent, clip = getRelevantShaderNodes(nodes)
-        shaderValid, addValid, transparentValid, clipValid = checkShaderNodeValidity(output, shader, add, transparent, clip, links)
-
-        shaderLabel =       '' if shaderValid       is None else ('Invalid' if shaderValid ==       False else 'Valid')
-        addLabel =          '' if addValid          is None else ('Invalid' if addValid ==          False else 'Valid')
-        transparentLabel =  '' if transparentValid  is None else ('Invalid' if transparentValid ==  False else 'Valid')
-        clipLabel =         '' if clipValid         is None else ('Invalid' if clipValid ==         False else 'Valid')
-
-        box = column.box()
-        column2 = box.column()
-        row = column2.row()
+        box = layout.box()
+        column = box.column()
+        row = column.row()
         row.label(text = 'Principled BSDF:')
         row.label(text = shaderLabel)
-        row = column2.row()
+        row = column.row()
         row.label(text = 'Add Shader:')
         row.label(text = addLabel)
-        row = column2.row()
+        row = column.row()
         row.label(text = 'Transparent Shader:')
         row.label(text = transparentLabel)
-        row = column2.row()
+        row = column.row()
         row.label(text = 'Clip Math:')
         row.label(text = clipLabel)
 
-        if shaderValid:
-            texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid)
-            texpath = getValidImageNodePathSilent(texture, maxPathLength)
-            alphapath = getValidImageNodePathSilent(alpha, maxPathLength)
+        box = layout.box()
+        column = box.column()
+        row = column.row()
+        row.label(text = 'Texpath:')
+        row.label(text = texpath if shaderValid else 'N/A')
+        row = column.row()
+        row.label(text = 'Alphapath:')
+        row.label(text = alphapath if shaderValid else 'N/A')
 
-            twosided = not blMat.use_backface_culling
-            additive = blMat.surface_render_method == 'BLENDED' and addValid and transparentValid and emission is not None
-            alphatest = int(min(max(0, clip.inputs[1].default_value), 1) * 255) if clipValid else 0 # Threshold
-            useopacity = alpha is not None
-
-            box = column.box()
-            column2 = box.column()
-            row = column2.row()
-            row.label(text = 'Texpath:')
-            row.label(text = texpath)
-            row = column2.row()
-            row.label(text = 'Alphapath:')
-            row.label(text = alphapath)
-
-            box = column.box()
-            column2 = box.column()
-            row = column2.row()
-            row.label(text = 'Twosided:')
-            row.label(text = str(twosided))
-            row = column2.row()
-            row.label(text = 'Additive:')
-            row.label(text = str(additive))
-            row = column2.row()
-            row.label(text = 'Alphatest:')
-            row.label(text = str(alphatest))
-            row = column2.row()
-            row.label(text = 'Use Opacity:')
-            row.label(text = str(useopacity))
-        else:
-            box = column.box()
-            column2 = box.column()
-            row = column2.row()
-            row.label(text = 'Texpath:')
-            row.label(text = 'N/A')
-            row = column2.row()
-            row.label(text = 'Alphapath:')
-            row.label(text = 'N/A')
-
-            box = column.box()
-            column2 = box.column()
-            row = column2.row()
-            row.label(text = 'Twosided:')
-            row.label(text = 'N/A')
-            row = column2.row()
-            row.label(text = 'Additive:')
-            row.label(text = 'N/A')
-            row = column2.row()
-            row.label(text = 'Alphatest:')
-            row.label(text = 'N/A')
-            row = column2.row()
-            row.label(text = 'Use Opacity:')
-            row.label(text = 'N/A')
+        box = layout.box()
+        column = box.column()
+        row = column.row()
+        row.label(text = 'Twosided:')
+        row.label(text = str(twosided) if shaderValid else 'N/A')
+        row = column.row()
+        row.label(text = 'Additive:')
+        row.label(text = str(additive) if shaderValid else 'N/A')
+        row = column.row()
+        row.label(text = 'Alphatest:')
+        row.label(text = str(alphatest) if shaderValid else 'N/A')
+        row = column.row()
+        row.label(text = 'Use Opacity:')
+        row.label(text = str(useopacity) if shaderValid else 'N/A')
 
 classes = (
     GZRS2_OT_Apply_Material_Preset,

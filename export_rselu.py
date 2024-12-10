@@ -71,7 +71,7 @@ def exportElu(self, context):
     filename = splitname[0]
 
     id = ELU_ID
-    version = ELU_5007
+    version, maxPathLength = getEluExportConstants()
 
     objects = getFilteredObjects(context, state)
 
@@ -270,8 +270,6 @@ def exportElu(self, context):
 
     eluMats = []
 
-    maxPathLength = ELU_NAME_LENGTH if version <= ELU_5005 else ELU_PATH_LENGTH
-
     for m, blMat in enumerate(blMats):
         matID = blMat.gzrs2.matID
         isBase = blMat.gzrs2.isBase
@@ -293,11 +291,9 @@ def exportElu(self, context):
 
         if not isinstance(blMat, RSELUExportMaterialPlaceholder):
             matName = blMat.name
-            tree = blMat.node_tree
-            links = tree.links.values()
-            nodes = tree.nodes
+            tree, links, nodes = getMatTreeLinksNodes(blMat)
 
-            output, shader, add, transparent, clip = getRelevantShaderNodes(nodes)
+            output, shader, add, transparent, clip, _ = getRelevantShaderNodes(nodes)
             shaderValid, addValid, transparentValid, clipValid = checkShaderNodeValidity(output, shader, add, transparent, clip, links)
 
             if not shaderValid:
@@ -316,13 +312,10 @@ def exportElu(self, context):
             texpath = getValidImageNodePath(self, texture, maxPathLength, matID, matName)
             alphapath = getValidImageNodePath(self, alpha, maxPathLength, matID, matName)
 
-            if texpath == False or alphapath == False:
+            if texpath is None or alphapath is None:
                 return { 'CANCELLED' }
 
-            twosided = not blMat.use_backface_culling
-            additive = blMat.surface_render_method == 'BLENDED' and addValid and transparentValid and emission is not None
-            alphatest = int(min(max(0, clip.inputs[1].default_value), 1) * 255) if clipValid else 0 # Threshold
-            useopacity = alpha is not None
+            twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emission, alpha)
 
         if state.logEluMats:
             print(f"===== Material { m } =====")

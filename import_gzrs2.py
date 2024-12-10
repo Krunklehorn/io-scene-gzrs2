@@ -271,7 +271,7 @@ def importRS2(self, context):
 
     for m, xmlRsMat in enumerate(state.xmlRsMats):
         xmlRsMatName = xmlRsMat.get('name', f"Material_{ m }")
-        blMat, tree, nodes, shader, output = createMatBase(xmlRsMatName)
+        blMat, tree, links, nodes, shader, output = setupMatBase(xmlRsMatName)
 
         shader.inputs[12].default_value = 0.0 # Specular IOR Level
 
@@ -279,7 +279,7 @@ def importRS2(self, context):
 
         texName = xmlRsMat.get('DIFFUSEMAP')
 
-        processRS2Texlayer(self, m, xmlRsMatName, texName, blMat, xmlRsMat, tree, nodes, shader, state)
+        processRS2Texlayer(self, m, xmlRsMatName, texName, blMat, xmlRsMat, tree, links, nodes, shader, state)
 
         state.blXmlRsMats.append(blMat)
 
@@ -622,12 +622,12 @@ def importRS2(self, context):
 
             blFogMat = bpy.data.materials.new(fogName)
             blFogMat.use_nodes = True
-            tree = blFogMat.node_tree
-            nodes = tree.nodes
+
+            tree, links, nodes = getMatTreeLinksNodes(blFogMat)
 
             nodes.remove(getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled'))
-
             output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
+            output.select = False
 
             if min(color[:3]) > 0.5:
                 shader = nodes.new('ShaderNodeVolumeScatter')
@@ -641,10 +641,7 @@ def importRS2(self, context):
             shader.location = (120, 300)
             shader.select = False
 
-            tree.links.new(shader.outputs[0], output.inputs[1])
-
-            nodes.active = shader
-            output.select = False
+            links.new(shader.outputs[0], output.inputs[1])
 
             bpy.ops.mesh.primitive_cube_add(location = center, scale = hdims)
             deleteInfoReports(1, context)
