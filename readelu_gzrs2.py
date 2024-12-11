@@ -182,40 +182,24 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
             print(f"Use Opacity:        { useopacity }")
             print()
 
-        texBase, texName, texExt, texDir = None, None, None, None
-        isAniTex, frameCount, frameSpeed, frameGap = False, 0, 0, 0.0
+        texBase, texName, texExt, texDir = decomposeTexpath(texpath)
+        success, isEffect, isAniTex, frameCount, frameSpeed, frameGap = processTexParameters(texBase, texName, texExt, texDir)
 
-        if texpath:
-            texDir = os.path.dirname(texpath)
-            texBase = os.path.basename(texpath)
-            texName, texExt = os.path.splitext(texBase)
-            isAniTex = texBase.startswith('txa')
+        if not success:
+            return { 'CANCELLED' }
 
-            if state.logEluMats:
+        if state.logEluMats:
+            if texpath:
                 print(f"Texture Base:       { texBase }")
                 print(f"Name:               { texName }")
                 print(f"Extension:          { texExt }")
                 print(f"Directory:          { texDir }")
+                print()
+                print(f"Is Effect:          { isEffect }")
                 print(f"Is Animated:        { isAniTex }")
                 print()
 
-            if isAniTex:
-                texName = texName[:len(texName) - 2]
-                texParams = texName.replace('_', ' ').split(' ')
-
-                if len(texParams) < 4:
-                    self.report({ 'ERROR' }, f"GZRS2: Unable to split animated texture name! { texName }, { texParams } ")
-                    return { 'CANCELLED' }
-
-                try:
-                    frameCount, frameSpeed = int(texParams[1]), int(texParams[2])
-                except ValueError:
-                    self.report({ 'ERROR' }, f"GZRS2: Animated texture name must use integers for frame count and speed! { texName } ")
-                    return { 'CANCELLED' }
-                else:
-                    frameGap = frameSpeed / frameCount
-
-                if state.logEluMats:
+                if isAniTex:
                     print(f"Frame Count:        { frameCount }")
                     print(f"Frame Speed:        { frameSpeed }")
                     print(f"Frame Gap:          { frameGap }")
@@ -226,7 +210,7 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
                              subMatCount, texpath, alphapath,
                              twosided, additive, alphatest, useopacity,
                              texBase, texName, texExt, texDir,
-                             isAniTex, frameCount, frameSpeed, frameGap)
+                             isAniTex, isEffect, frameCount, frameSpeed, frameGap)
 
         eluMats.append(eluMat)
         state.eluMats.append(eluMat)

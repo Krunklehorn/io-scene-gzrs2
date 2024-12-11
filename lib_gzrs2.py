@@ -459,6 +459,43 @@ def getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emissi
 
     return twosided, additive, alphatest, usealphatest, useopacity
 
+def decomposeTexpath(texpath):
+    if not texpath:
+        return None, None, None, None
+
+    texBase = os.path.basename(texpath)
+    texName, texExt = os.path.splitext(texBase)
+    texDir = os.path.dirname(texpath)
+
+    return texBase, texName, texExt, texDir
+
+def processTexParameters(texBase, texName, texExt, texDir, *, silent = False):
+    isEffect = False if texName is None else ('_ef' in texName or 'ef_' in texName)
+    isAniTex = False if texBase is None else texBase.startswith('txa')
+
+    if not isAniTex:
+        return True, isEffect, isAniTex, None, None, None
+
+    # texNameStart = texName[-2:]
+    texNameShort = texName[:-2]
+    texParams = texNameShort.replace('_', ' ').split(' ')
+
+    if len(texParams) < 4:
+        if not silent:
+            self.report({ 'ERROR' }, f"GZRS2: Unable to split animated texture name! { texNameShort }, { texParams } ")
+        return False, isEffect, isAniTex, None, None, None
+
+    try:
+        frameCount, frameSpeed = int(texParams[1]), int(texParams[2])
+    except ValueError:
+        if not silent:
+            self.report({ 'ERROR' }, f"GZRS2: Animated texture name must use integers for frame count and speed! { texNameShort } ")
+        return False, isEffect, isAniTex, None, None, None
+    else:
+        frameGap = frameSpeed / frameCount
+
+    return True, isEffect, isAniTex, frameCount, frameSpeed, frameGap
+
 def setMatFlagsTransparency(blMat, transparent, *, twosided = False):
     blMat.use_transparent_shadow = True # Settings
     blMat.use_transparency_overlap = True # Viewport Display

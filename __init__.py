@@ -5,7 +5,7 @@ from . import export_rselu, export_rslm
 
 from .constants_gzrs2 import *
 from .lib_gzrs2 import getEluExportConstants, getMatTreeLinksNodes, getRelevantShaderNodes, checkShaderNodeValidity
-from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender
+from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender, decomposeTexpath, processTexParameters
 from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
 
 bl_info = {
@@ -108,6 +108,9 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         alphapath =     getValidImageNodePathSilent(alpha       if alpha.image      is not None else None, maxPathLength) if alpha      else None
 
         twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emission, alpha)
+
+        # texBase, texName, texExt, texDir = decomposeTexpath(texpath)
+        # success, isEffect, isAniTex, frameCount, frameSpeed, frameGap = processTexParameters(texBase, texName, texExt, texDir, silent = True)
 
         # We avoid links.clear() to preserve the user's material as much as possible
         relevantNodes = [output, shader, add, transparent, clip, visibility]
@@ -1571,6 +1574,9 @@ class GZRS2_PT_Realspace(Panel):
 
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emission, alpha)
 
+            texBase, texName, texExt, texDir = decomposeTexpath(texpath)
+            success, isEffect, isAniTex, frameCount, frameSpeed, frameGap = processTexParameters(texBase, texName, texExt, texDir, silent = True)
+
         shaderLabel =       '' if shaderValid           is None else ('Invalid' if shaderValid ==           False else 'Valid')
         addLabel =          '' if addValid              is None else ('Invalid' if addValid ==              False else 'Valid')
         transparentLabel =  '' if transparentValid      is None else ('Invalid' if transparentValid ==      False else 'Valid')
@@ -1640,6 +1646,24 @@ class GZRS2_PT_Realspace(Panel):
         row = column.row()
         row.label(text = 'Use Opacity:')
         row.label(text = str(useopacity) if shaderValid else 'N/A')
+
+        box = layout.box()
+        column = box.column()
+        row = column.row()
+        row.label(text = 'Is Effect:')
+        row.label(text = str(isEffect) if shaderValid and success else 'N/A')
+        row = column.row()
+        row.label(text = 'Is Animated:')
+        row.label(text = str(isAniTex) if shaderValid and success else 'N/A')
+        row = column.row()
+        row.label(text = 'Frame Count:')
+        row.label(text = str(frameCount) if shaderValid and success else 'N/A')
+        row = column.row()
+        row.label(text = 'Frame Speed:')
+        row.label(text = str(frameSpeed) if shaderValid and success else 'N/A')
+        row = column.row()
+        row.label(text = 'Frame Gap:')
+        row.label(text = str(frameGap) if shaderValid and success else 'N/A')
 
 classes = (
     GZRS2_OT_Apply_Material_Preset,

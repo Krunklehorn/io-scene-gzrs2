@@ -214,6 +214,7 @@ class EluMaterial:
     texName:            str = ""
     texExt:             str = ""
     texDir:             str = ""
+    isEffect:           bool = False
     isAniTex:           bool = False
     frameCount:         int = 0
     frameSpeed:         int = 0
