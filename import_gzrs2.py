@@ -442,6 +442,7 @@ def importRS2(self, context):
 
             setupElu(self, eluMesh, True, rootProps, context, state)
 
+    processEluIsEffect(state)
     processEluHeirarchy(self, state)
 
     if len(state.gzrsValidBones) > 0:

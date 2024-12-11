@@ -183,7 +183,8 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
             print()
 
         texBase, texName, texExt, texDir = decomposeTexpath(texpath)
-        success, isEffect, isAniTex, frameCount, frameSpeed, frameGap = processTexParameters(texBase, texName, texExt, texDir)
+        isAniTex = checkIsAniTex(texBase)
+        success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName)
 
         if not success:
             return { 'CANCELLED' }
@@ -194,8 +195,6 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
                 print(f"Name:               { texName }")
                 print(f"Extension:          { texExt }")
                 print(f"Directory:          { texDir }")
-                print()
-                print(f"Is Effect:          { isEffect }")
                 print(f"Is Animated:        { isAniTex }")
                 print()
 
@@ -210,7 +209,7 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
                              subMatCount, texpath, alphapath,
                              twosided, additive, alphatest, useopacity,
                              texBase, texName, texExt, texDir,
-                             isAniTex, isEffect, frameCount, frameSpeed, frameGap)
+                             isAniTex, frameCount, frameSpeed, frameGap)
 
         eluMats.append(eluMat)
         state.eluMats.append(eluMat)
@@ -263,6 +262,7 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
         meshCount = readUShort(file)
 
     usesDummies = False
+    usesEffects = False
     totalSlotIDs = set()
     matIDs = set()
     weightIDs = set()
@@ -374,8 +374,11 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
             print(output)
 
         isDummy = len(vertices) == 0 or len(faces) == 0
+        isEffect = checkIsEffectFile(path) or checkIsEffectNode(meshName)
+
         if state.logEluMeshNodes:
             if isDummy: usesDummies = True
+            if isEffect: usesEffects = True
             print(f"Is Dummy:           { isDummy }")
             print()
 
@@ -469,13 +472,14 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
         state.eluMeshes.append(EluMeshNode(path, version, meshName, parentName, 0, worldMatrix,
                                            vertices, tuple(normals), tuple(uv1s), (),
                                            colors, tuple(faces), tuple(weights), (),
-                                           slotIDs, isDummy, matID))
+                                           slotIDs, isDummy, isEffect, matID))
 
     if state.logEluMeshNodes:
         print("===== Mesh Summary =====")
         print()
 
         print(f"Uses Dummies:       { usesDummies }")
+        print(f"Uses Effects:       { usesEffects }")
         print(f"Slot IDs:           { totalSlotIDs }")
         print(f"Material IDs:       { matIDs }")
         print(f"Weight IDs:         { weightIDs }")
@@ -858,7 +862,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
         state.eluMeshes.append(EluMeshNode(path, version, meshName, parentName, drawFlags, localMatrix,
                                            vertices, normals, uv1s, uv2s,
                                            colors, tuple(faces), tuple(weights), tuple(slots),
-                                           slotIDs, isDummy, matID))
+                                           slotIDs, isDummy, None, matID))
 
     if state.logEluMeshNodes:
         print("===== Mesh Summary =====")

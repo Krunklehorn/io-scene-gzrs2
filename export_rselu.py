@@ -48,6 +48,7 @@ def exportElu(self, context):
     state.selectedOnly = self.selectedOnly
     state.includeChildren = self.includeChildren and self.selectedOnly
     state.visibleOnly = self.visibleOnly
+    state.implicitEffects = self.implicitEffects
 
     if self.panelLogging:
         print()
@@ -317,6 +318,17 @@ def exportElu(self, context):
 
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emission, alpha)
 
+            texBase, texName, texExt, texDir = decomposeTexpath(texpath)
+            isEffect = checkIsEffectFile(filename)
+            isAniTex = checkIsAniTex(texBase)
+            success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName)
+
+            if not success:
+                return { 'CANCELLED' }
+
+            if isEffect and state.implicitEffects:
+                additive = False
+
         if state.logEluMats:
             print(f"===== Material { m } =====")
             print(f"Mat ID:             { matID }")
@@ -336,6 +348,22 @@ def exportElu(self, context):
             print(f"Alpha Test:         { alphatest }")
             print(f"Use Opacity:        { useopacity }")
             print()
+
+            if texpath:
+                print(f"Texture Base:       { texBase }")
+                print(f"Name:               { texName }")
+                print(f"Extension:          { texExt }")
+                print(f"Directory:          { texDir }")
+                print()
+                print(f"Is Effect:          { isEffect }")
+                print(f"Is Animated:        { isAniTex }")
+                print()
+
+                if isAniTex:
+                    print(f"Frame Count:        { frameCount }")
+                    print(f"Frame Speed:        { frameSpeed }")
+                    print(f"Frame Gap:          { frameGap }")
+                    print()
 
         eluMats.append(EluMaterialExport(matID, subMatID,
                                          ambient, diffuse, specular, power,

@@ -469,12 +469,18 @@ def decomposeTexpath(texpath):
 
     return texBase, texName, texExt, texDir
 
-def processTexParameters(texBase, texName, texExt, texDir, *, silent = False):
-    isEffect = False if texName is None else ('_ef' in texName or 'ef_' in texName)
-    isAniTex = False if texBase is None else texBase.startswith('txa')
+def checkIsEffectFile(filename):
+    return False if filename is None else ('_ef' in filename or 'ef_' in filename)
 
+def checkIsEffectNode(nodename):
+    return False if nodename is None else '_ef' in nodename
+
+def checkIsAniTex(texBase):
+    return False if texBase is None else texBase.startswith('txa')
+
+def processAniTexParameters(isAniTex, texName, *, silent = False):
     if not isAniTex:
-        return True, isEffect, isAniTex, None, None, None
+        return True, None, None, None
 
     # texNameStart = texName[-2:]
     texNameShort = texName[:-2]
@@ -483,18 +489,18 @@ def processTexParameters(texBase, texName, texExt, texDir, *, silent = False):
     if len(texParams) < 4:
         if not silent:
             self.report({ 'ERROR' }, f"GZRS2: Unable to split animated texture name! { texNameShort }, { texParams } ")
-        return False, isEffect, isAniTex, None, None, None
+        return False, None, None, None
 
     try:
         frameCount, frameSpeed = int(texParams[1]), int(texParams[2])
     except ValueError:
         if not silent:
             self.report({ 'ERROR' }, f"GZRS2: Animated texture name must use integers for frame count and speed! { texNameShort } ")
-        return False, isEffect, isAniTex, None, None, None
+        return False, None, None, None
     else:
         frameGap = frameSpeed / frameCount
 
-    return True, isEffect, isAniTex, frameCount, frameSpeed, frameGap
+    return True, frameCount, frameSpeed, frameGap
 
 def setMatFlagsTransparency(blMat, transparent, *, twosided = False):
     blMat.use_transparent_shadow = True # Settings
@@ -625,6 +631,10 @@ def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, links, nod
     additive = xmlRsMat['ADDITIVE']
     twosided = xmlRsMat['TWOSIDED']
 
+    texBase, texName, _, _ = decomposeTexpath(texpath)
+    # Pretty sure isEffect is not checked for in .xml.rs materials
+    isAniTex = checkIsAniTex(texBase)
+
     output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
     source = mix if state.doLightmap else texture
 
@@ -637,7 +647,7 @@ def processRS3TexLayer(self, texlayer, blMat, tree, links, nodes, shader, emissi
     texName = texlayer['name']
     useopacity = texType == 'OPACITYMAP'
 
-    if not texType in XMLELU_TEXTYPES:
+    if texType not in XMLELU_TEXTYPES:
         self.report({ 'ERROR' }, f"GZRS2: Unsupported texture type for .elu.xml material: { texName }, { texType }")
         return useopacity
 
@@ -842,6 +852,9 @@ def setupEluMat(self, m, eluMat, state):
 
         links.new(texture.outputs[0], shader.inputs[0]) # Base Color
         usealphatest = alphatest > 0
+
+        texBase, texName, _, _ = decomposeTexpath(texpath)
+        isAniTex = checkIsAniTex(texBase)
 
         setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest, useopacity, texture, shader)
         setupMatNodesAdditive(blMat, tree, links, nodes, additive, texture, shader, output)
@@ -1073,8 +1086,15 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     blMesh.validate()
     blMesh.update()
 
-    if oneOfMany and eluMesh.version <= ELU_5007: # Rotates GunZ 1 elus to face forward when loading from a map
+    if oneOfMany and eluMesh.version <= ELU_5007:
+        # Rotate GunZ 1 elus to face forward when loading from a map
         blMeshObj.matrix_world = Matrix.Rotation(math.radians(-180.0), 4, 'Z') @ eluMesh.transform
+
+        # Prevent skyboxes from catching rays
+        if meshName.startswith(('obj_sky_', 'obj_ef_sky')):
+            blMeshObj.visible_volume_scatter = False
+            blMeshObj.visible_transmission = False
+            blMeshObj.visible_shadow = False
     else:
         blMeshObj.matrix_world = eluMesh.transform
 
@@ -1215,6 +1235,35 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
         blMeshObj.hide_render = True
 
     state.blObjPairs.append((eluMesh, blMeshObj))
+
+def processEluIsEffect(state):
+    for eluMesh, blMeshObj in state.blObjPairs:
+        if eluMesh.isDummy or eluMesh.meshName in state.gzrsValidBones:
+            continue
+
+        if not eluMesh.isEffect:
+            continue
+
+        # We assume the user's data is consistent with the vanilla assets
+        # Per-object material properties are difficult to handle in Blender, so we just apply to every linked material instead
+        for slot in blMeshObj.material_slots:
+            blMat = slot.material
+
+            if blMat is None:
+                continue
+
+            tree, links, nodes = getMatTreeLinksNodes(blMat)
+
+            output, shader, add, transparent, clip, _ = getRelevantShaderNodes(nodes)
+            _, _, _, clipValid = checkShaderNodeValidity(output, shader, add, transparent, clip, links)
+
+            texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid, validOnly = False)
+            texture = texture or emission or alpha or getShaderNodeByID(nodes, 'ShaderNodeTexImage') # Reuse existing image texture nodes
+
+            twosided = not blMat.use_backface_culling
+
+            setupMatNodesAdditive(blMat, tree, links, nodes, True, texture, shader, output, add = add, transparent = transparent)
+            setMatFlagsTransparency(blMat, True, twosided = twosided)
 
 def processEluHeirarchy(self, state):
     for child, childObj in state.blObjPairs:

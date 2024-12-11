@@ -214,7 +214,6 @@ class EluMaterial:
     texName:            str = ""
     texExt:             str = ""
     texDir:             str = ""
-    isEffect:           bool = False
     isAniTex:           bool = False
     frameCount:         int = 0
     frameSpeed:         int = 0
@@ -238,6 +237,7 @@ class EluMeshNode:
     slots:              tuple = field(default_factory = tuple)
     slotIDs:            tuple = field(default_factory = tuple)
     isDummy:            bool = False
+    isEffect:           bool = False
     matID:              int = 0
 
 @dataclass

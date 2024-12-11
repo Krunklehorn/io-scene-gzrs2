@@ -5,7 +5,8 @@ from . import export_rselu, export_rslm
 
 from .constants_gzrs2 import *
 from .lib_gzrs2 import getEluExportConstants, getMatTreeLinksNodes, getRelevantShaderNodes, checkShaderNodeValidity
-from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender, decomposeTexpath, processTexParameters
+from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender
+from .lib_gzrs2 import decomposeTexpath, checkIsEffectNode, checkIsAniTex, processAniTexParameters
 from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
 
 bl_info = {
@@ -90,7 +91,8 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
 
         version, maxPathLength = getEluExportConstants()
 
-        blMat = context.active_object.active_material
+        blObj = context.active_object
+        blMat = blObj.active_material
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
         output, shader, add, transparent, clip, visibility = getRelevantShaderNodes(nodes)
@@ -109,8 +111,10 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
 
         twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emission, alpha)
 
-        # texBase, texName, texExt, texDir = decomposeTexpath(texpath)
-        # success, isEffect, isAniTex, frameCount, frameSpeed, frameGap = processTexParameters(texBase, texName, texExt, texDir, silent = True)
+        texBase, texName, _, _ = decomposeTexpath(texpath)
+        isEffect = checkIsEffectNode(blObj.name)
+        isAniTex = checkIsAniTex(texBase)
+        # success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
 
         # We avoid links.clear() to preserve the user's material as much as possible
         relevantNodes = [output, shader, add, transparent, clip, visibility]
@@ -156,9 +160,9 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         elif self.materialPreset == 'ADDITIVE':
             additive = True
 
-            add, transparent = setupMatNodesAdditive(blMat, tree, links, nodes, additive, texture, shader, output, add = add, transparent = transparent)
+            add, transparent = setupMatNodesAdditive(blMat, tree, links, nodes, additive or isEffect, texture, shader, output, add = add, transparent = transparent)
 
-        setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
+        setMatFlagsTransparency(blMat, usealphatest or useopacity or additive or isEffect, twosided = twosided)
 
         return { 'FINISHED' }
 
@@ -1276,6 +1280,12 @@ class ExportRSELU(Operator, ExportHelper):
         default = False
     )
 
+    implicitEffects: BoolProperty(
+        name = "Implicit Effects",
+        description = "Nullifies the Additive flag for Realspace2 file names containing '_ef' and object names containing either '_ef' or 'ef_'. Disable this to take manual control",
+        default = True
+    )
+
     logEluHeaders: BoolProperty(
         name = "Elu Headers",
         description = "Log ELU header data",
@@ -1338,6 +1348,7 @@ class RSELU_PT_Export_Main(Panel):
         column.enabled = operator.selectedOnly
 
         layout.prop(operator, "visibleOnly")
+        layout.prop(operator, "implicitEffects")
 
 class RSELU_PT_Export_Logging(Panel):
     bl_space_type = "FILE_BROWSER"
@@ -1561,7 +1572,8 @@ class GZRS2_PT_Realspace(Panel):
 
         version, maxPathLength = getEluExportConstants()
 
-        blMat = context.active_object.active_material
+        blObj = context.active_object
+        blMat = blObj.active_material
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
         output, shader, add, transparent, clip, visibility = getRelevantShaderNodes(nodes)
@@ -1575,7 +1587,9 @@ class GZRS2_PT_Realspace(Panel):
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emission, alpha)
 
             texBase, texName, texExt, texDir = decomposeTexpath(texpath)
-            success, isEffect, isAniTex, frameCount, frameSpeed, frameGap = processTexParameters(texBase, texName, texExt, texDir, silent = True)
+            isEffect = checkIsEffectNode(blObj.name)
+            isAniTex = checkIsAniTex(texBase)
+            success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
 
         shaderLabel =       '' if shaderValid           is None else ('Invalid' if shaderValid ==           False else 'Valid')
         addLabel =          '' if addValid              is None else ('Invalid' if addValid ==              False else 'Valid')
@@ -1651,10 +1665,10 @@ class GZRS2_PT_Realspace(Panel):
         column = box.column()
         row = column.row()
         row.label(text = 'Is Effect:')
-        row.label(text = str(isEffect) if shaderValid and success else 'N/A')
+        row.label(text = str(isEffect) if shaderValid else 'N/A')
         row = column.row()
         row.label(text = 'Is Animated:')
-        row.label(text = str(isAniTex) if shaderValid and success else 'N/A')
+        row.label(text = str(isAniTex) if shaderValid else 'N/A')
         row = column.row()
         row.label(text = 'Frame Count:')
         row.label(text = str(frameCount) if shaderValid and success else 'N/A')

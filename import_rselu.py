@@ -138,6 +138,7 @@ def importElu(self, context):
         else:
             setupElu(self, eluMesh, False, rootMesh, context, state)
 
+    processEluIsEffect(state)
     processEluHeirarchy(self, state)
 
     if len(state.gzrsValidBones) > 0:
