@@ -95,7 +95,7 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         blMat = blObj.active_material
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
-        shader, output, info, transparent, mix, add, clip = getRelevantShaderNodes(nodes)
+        shader, output, info, transparent, mix, clip, add = getRelevantShaderNodes(nodes)
         shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links)
 
         texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid, validOnly = False)
@@ -117,7 +117,7 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         # success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
 
         # We avoid links.clear() to preserve the user's material as much as possible
-        relevantNodes = [shader, output, info, transparent, mix, add, clip]
+        relevantNodes = [shader, output, info, transparent, mix, clip, add]
 
         for link in links:
             if link.from_node in relevantNodes or link.to_node in relevantNodes:
@@ -1552,7 +1552,7 @@ class GZRS2_PT_Realspace(Panel):
         blMat = blObj.active_material
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
-        shader, output, info, transparent, mix, add, clip = getRelevantShaderNodes(nodes)
+        shader, output, info, transparent, mix, clip, add = getRelevantShaderNodes(nodes)
         shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links)
 
         if shaderValid:

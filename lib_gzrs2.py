@@ -279,8 +279,8 @@ def getRelevantShaderNodes(nodes):
     info            = getShaderNodeByID(nodes, 'ShaderNodeObjectInfo')
     transparent     = getShaderNodeByID(nodes, 'ShaderNodeBsdfTransparent')
     mix             = getShaderNodeByID(nodes, 'ShaderNodeMixShader')
-    add             = getShaderNodeByID(nodes, 'ShaderNodeAddShader')
     clip            = getShaderNodeByID(nodes, 'ShaderNodeMath')
+    add             = getShaderNodeByID(nodes, 'ShaderNodeAddShader')
 
     for node in nodes:
         if node.bl_idname == 'ShaderNodeMath' and node.operation == 'GREATER_THAN':
@@ -288,18 +288,18 @@ def getRelevantShaderNodes(nodes):
     else:
         clip = getShaderNodeByID(nodes, 'ShaderNodeMath')
 
-    return shader, output, info, transparent, mix, add, clip
+    return shader, output, info, transparent, mix, clip, add
 
 def checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links):
-    shaderValid         = False if shader       is not None     else None
-    infoValid           = False if info         is not None     else None
-    transparentValid    = False if transparent  is not None     else None
-    mixValid            = False if mix          is not None     else None
-    clipValid           = False if clip         is not None     else None
-    addValid            = False if add          is not None     else None
-    addValid1           = False if add          is not None     else None
-    addValid2           = False if add          is not None     else None
-    addValid3           = False if add          is not None     else None
+    shaderValid         = False if shader           and mix                             else None
+    infoValid           = False if info             and mix                             else None
+    transparentValid    = False if transparent      and mix                             else None
+    mixValid            = False if mix              and output                          else None
+    clipValid           = False if clip             and shader                          else None
+    addValid            = False if add              and shader and transparent and mix  else None
+    addValid1           = False if add              and shader                          else None
+    addValid2           = False if add              and transparent                     else None
+    addValid3           = False if add              and mix                             else None
 
     for link in links:
         if link.is_hidden or not link.is_valid:
@@ -1274,7 +1274,7 @@ def processEluIsEffect(state):
 
             tree, links, nodes = getMatTreeLinksNodes(blMat)
 
-            shader, output, info, transparent, mix, add, clip = getRelevantShaderNodes(nodes)
+            shader, output, info, transparent, mix, clip, add = getRelevantShaderNodes(nodes)
             _, _, _, _, clipValid, _ = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links)
 
             texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid, validOnly = False)

@@ -294,7 +294,7 @@ def exportElu(self, context):
             matName = blMat.name
             tree, links, nodes = getMatTreeLinksNodes(blMat)
 
-            shader, output, info, transparent, mix, add, clip = getRelevantShaderNodes(nodes)
+            shader, output, info, transparent, mix, clip, add = getRelevantShaderNodes(nodes)
             shaderValid, _, transparentValid, _, clipValid, addValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links)
 
             if not shaderValid:
