@@ -369,43 +369,50 @@ def importRS2(self, context):
 
     if state.doLights:
         for light in state.xmlLits:
-            name = light['name']
-            softness = (light['ATTENUATIONEND'] - light['ATTENUATIONSTART']) / light['ATTENUATIONEND']
+            lightName = light['name']
+            attEnd = light['ATTENUATIONEND']
+            attStart = light['ATTENUATIONSTART']
+            softness = (attEnd - attStart) / attEnd
             hardness = 0.001 / (1 - min(softness, 0.9999))
+            castshadow = light['CASTSHADOW']
 
-            lit = bpy.data.lights.new(f"{ state.filename }_Light_{ name }", 'POINT')
-            lit.color = light['COLOR']
-            lit.energy = light['INTENSITY'] * pow(light['ATTENUATIONEND'], 2) * 2
-            lit.shadow_soft_size = hardness * light['ATTENUATIONEND']
-            lit.cycles.cast_shadow = light['CASTSHADOW']
-
-            litObj = bpy.data.objects.new(f"{ state.filename }_Light_{ name }", lit)
-            litObj.location = light['POSITION']
-
-            state.blLights.append(lit)
-            state.blLightObjs.append(litObj)
+            blLight = bpy.data.lights.new(lightName, 'POINT')
+            blLight.color = light['COLOR']
+            blLight.energy = light['INTENSITY'] * pow(attEnd, 2) * 2
+            blLight.shadow_soft_size = hardness * attEnd
+            blLight.cycles.cast_shadow = castshadow
 
             # Some simple tweaks to help with contrast and shadow sharpness. The numbers were
             # tuned for outdoor maps with sunlight like Battle Arena, Castle and Factory, but
             # should be a decent starting point for other maps too.
             if self.tweakLights and softness <= 0.1:
-                if light['CASTSHADOW']:
+                if castshadow:
                     if state.doFog:
-                        lit.energy *= 100
-                        lit.shadow_soft_size = 0
+                        blLight.energy *= 100
+                        blLight.shadow_soft_size = 0
                     else:
-                        lit.energy *= 10
+                        blLight.energy *= 10
                 else:
-                    lit.energy /= 100
+                    blLight.energy /= 100
 
-            if name.startswith(('main_Omni', 'sun_omni', 'Omni_main', 'Omni_sun', 'Omni_def', 'Omni_shadow')):
-                rootLightsMain.objects.link(litObj)
+            blLightObj = bpy.data.objects.new(lightName, blLight)
+            blLightObj.location = light['POSITION']
+
+            state.blLights.append(blLight)
+            state.blLightObjs.append(blLightObj)
+
+            if lightName.lower().startswith(('main_omni', 'sun_omni', 'omni_main', 'omni_sun', 'omni_def', 'omni_shadow')):
+                rootLightsMain.objects.link(blLightObj)
             elif softness <= 0.1:
-                if light['CASTSHADOW']: rootLightsHardCasters.objects.link(litObj)
-                else: rootLightsHardAmbient.objects.link(litObj)
+                if castshadow: rootLightsHardCasters.objects.link(blLightObj)
+                else: rootLightsHardAmbient.objects.link(blLightObj)
             else:
-                if light['CASTSHADOW']: rootLightsSoftCasters.objects.link(litObj)
-                else: rootLightsSoftAmbient.objects.link(litObj)
+                if castshadow: rootLightsSoftCasters.objects.link(blLightObj)
+                else: rootLightsSoftAmbient.objects.link(blLightObj)
+
+            if lightName.lower().startswith('obj_'):
+                for viewLayer in context.scene.view_layers:
+                    blLightObj.hide_set(True, view_layer = viewLayer)
 
     if state.doDummies:
         propDums = []
@@ -608,13 +615,13 @@ def importRS2(self, context):
             p1 = Vector((math.inf, math.inf, math.inf))
             p2 = Vector((-math.inf, -math.inf, -math.inf))
 
-            for litObj in state.blLightObjs:
-                p1.x = min(p1.x, litObj.location.x)
-                p1.y = min(p1.y, litObj.location.y)
-                p1.z = min(p1.z, litObj.location.z)
-                p2.x = max(p2.x, litObj.location.x)
-                p2.y = max(p2.y, litObj.location.y)
-                p2.z = max(p2.z, litObj.location.z)
+            for blLightObj in state.blLightObjs:
+                p1.x = min(p1.x, blLightObj.location.x)
+                p1.y = min(p1.y, blLightObj.location.y)
+                p1.z = min(p1.z, blLightObj.location.z)
+                p2.x = max(p2.x, blLightObj.location.x)
+                p2.y = max(p2.y, blLightObj.location.y)
+                p2.z = max(p2.z, blLightObj.location.z)
 
             hdims = (p2 - p1) / 2
             center = p1 + hdims
