@@ -124,7 +124,7 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
                 links.remove(link)
 
         # We assume the setup functions modify valid inputs and only create what is missing
-        blMat, tree, links, nodes, shader, output = setupMatBase(blMat.name, blMat = blMat, shader = shader, output = output)
+        blMat, tree, links, nodes, shader, output, visibility = setupMatBase(blMat.name, blMat = blMat, shader = shader, output = output, visibility = visibility)
         links.new(shader.outputs[0], output.inputs[0])
 
         if self.materialPreset == 'COLORED':
@@ -138,12 +138,6 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
 
         if self.materialPreset == 'TEXTURED':
             return { 'FINISHED' }
-
-        visibility = visibility or nodes.new('ShaderNodeValue')
-        visibility.location = (-440, 420)
-        visibility.select = True # Required for animation keyframes to appear in the dopesheet
-        visibility.label = 'Visibility'
-        nodes.active = visibility
 
         if self.materialPreset == 'BLENDED':
             alphatest = 0

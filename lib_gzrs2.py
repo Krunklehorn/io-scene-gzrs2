@@ -288,7 +288,7 @@ def getRelevantShaderNodes(nodes):
         clip = getShaderNodeByID(nodes, 'ShaderNodeMath')
 
     for node in nodes:
-        if node.bl_idname == 'ShaderNodeValue' and node.label == 'Visibility':
+        if node.bl_idname == 'ShaderNodeValue' and node.name == 'Visibility' and node.label == 'Visibility':
             visibility = node
     else:
         visibility = getShaderNodeByID(nodes, 'ShaderNodeValue')
@@ -516,7 +516,7 @@ def setMatFlagsTransparency(blMat, transparent, *, twosided = False):
         blMat.use_backface_culling_shadow = not twosided
         blMat.use_backface_culling_lightprobe_volume = not twosided
 
-def setupMatBase(name, *, blMat = None, shader = None, output = None):
+def setupMatBase(name, *, blMat = None, shader = None, output = None, visibility = None):
     blMat = blMat or bpy.data.materials.new(name)
     blMat.use_nodes = True
     blMat.surface_render_method = 'BLENDED'
@@ -537,7 +537,18 @@ def setupMatBase(name, *, blMat = None, shader = None, output = None):
 
     setMatFlagsTransparency(blMat, False)
 
-    return blMat, tree, links, nodes, shader, output
+    visibility = visibility or nodes.new('ShaderNodeValue')
+    visibility.location = (-440, 420)
+    visibility.select = True # Required for animation keyframes to appear in the dopesheet
+    visibility.name = 'Visibility'
+    visibility.label = 'Visibility'
+
+    visibility.outputs[0].default_value = blMat.gzrs2.visibility
+    createDriver(blMat, 'gzrs2.visibility', visibility.outputs[0], 'default_value', idType = 'MATERIAL')
+
+    nodes.active = visibility
+
+    return blMat, tree, links, nodes, shader, output, visibility
 
 def setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest, useopacity, source, destination, *, clip = False):
     if usealphatest:
@@ -584,7 +595,7 @@ def setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, destinati
 
     return add, transparent
 
-def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, links, nodes, shader, state):
+def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, links, nodes, shader, output, state):
     if not texName:
         self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with empty texture name: { m }, { name }")
         return
@@ -635,7 +646,6 @@ def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, links, nod
     # Pretty sure isEffect is not checked for in .xml.rs materials
     isAniTex = checkIsAniTex(texBase)
 
-    output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
     source = mix if state.doLightmap else texture
 
     setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest, useopacity, texture, shader)
@@ -821,7 +831,7 @@ def setupEluMat(self, m, eluMat, state):
         return
 
     matName = texName or f"Material_{ m }"
-    blMat, tree, links, nodes, shader, output = setupMatBase(matName)
+    blMat, tree, links, nodes, shader, output, _ = setupMatBase(matName)
 
     shader.inputs[2].default_value = 1.0 - (power / 100.0) # Roughness
 
@@ -903,7 +913,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
             return
 
     matName = xmlEluMat['name']
-    blMat, tree, links, nodes, shader, output = setupMatBase(matName)
+    blMat, tree, links, nodes, shader, output, _ = setupMatBase(matName)
 
     shader.inputs[6].default_value = glossiness / 100.0 # Metallic
     shader.inputs[12].default_value = specular / 100.0 # Specular IOR Level
@@ -1676,29 +1686,43 @@ def groupLights(lights):
 
     return groups
 
-def createArrayDriver(target, targetProp, sources, sourceProp):
-    target[targetProp] = getattr(sources, sourceProp)
-    curves = sources.driver_add(sourceProp)
+def setNested(object, path, data):
+    if '.' in path:
+        path, prop = path.rsplit(".", 1)
+        path = path.split(".")
+
+        while path:
+            element, path = path[0], path[1:]
+            object = getattr(object, element)
+    else:
+        prop = path
+
+    object[prop] = data
+
+def createArrayDriver(target, targetPath, source, sourceProp):
+    setNested(target, targetPath, getattr(source, sourceProp))
+    curves = source.driver_add(sourceProp)
 
     for c, curve in enumerate(curves):
         driver = curve.driver
         var = driver.variables.new()
         var.name = sourceProp
         var.targets[0].id = target
-        var.targets[0].data_path = f"[\"{ targetProp }\"][{ c }]"
-        driver.expression = var.name
+        var.targets[0].data_path = f"[\"{ targetPath }\"][{ c }]"
+        driver.expression = sourceProp
 
     return curves
 
-def createDriver(target, targetProp, source, sourceProp):
-    target[targetProp] = getattr(source, sourceProp)
+def createDriver(target, targetPath, source, sourceProp, *, idType = 'OBJECT'):
+    setNested(target, targetPath, getattr(source, sourceProp))
     curve = source.driver_add(sourceProp)
 
     driver = curve.driver
     var = driver.variables.new()
     var.name = sourceProp
+    var.targets[0].id_type = idType
     var.targets[0].id = target
-    var.targets[0].data_path = f"[\"{ targetProp }\"]"
-    driver.expression = var.name
+    var.targets[0].data_path = f"[\"{ targetPath }\"]"
+    driver.expression = sourceProp
 
     return driver
