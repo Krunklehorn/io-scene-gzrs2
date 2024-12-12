@@ -1686,35 +1686,21 @@ def groupLights(lights):
 
     return groups
 
-def setNested(object, path, data):
-    if '.' in path:
-        path, prop = path.rsplit(".", 1)
-        path = path.split(".")
-
-        while path:
-            element, path = path[0], path[1:]
-            object = getattr(object, element)
-    else:
-        prop = path
-
-    object[prop] = data
-
-def createArrayDriver(target, targetPath, source, sourceProp):
-    setNested(target, targetPath, getattr(source, sourceProp))
+def createArrayDriver(target, targetPath, source, sourceProp, *, idType = 'OBJECT'):
     curves = source.driver_add(sourceProp)
 
     for c, curve in enumerate(curves):
         driver = curve.driver
         var = driver.variables.new()
         var.name = sourceProp
+        var.targets[0].id_type = idType
         var.targets[0].id = target
-        var.targets[0].data_path = f"[\"{ targetPath }\"][{ c }]"
+        var.targets[0].data_path = f"{ targetPath }[{ c }]"
         driver.expression = sourceProp
 
     return curves
 
 def createDriver(target, targetPath, source, sourceProp, *, idType = 'OBJECT'):
-    setNested(target, targetPath, getattr(source, sourceProp))
     curve = source.driver_add(sourceProp)
 
     driver = curve.driver
@@ -1722,7 +1708,7 @@ def createDriver(target, targetPath, source, sourceProp, *, idType = 'OBJECT'):
     var.name = sourceProp
     var.targets[0].id_type = idType
     var.targets[0].id = target
-    var.targets[0].data_path = f"[\"{ targetPath }\"]"
+    var.targets[0].data_path = targetPath
     driver.expression = sourceProp
 
     return driver

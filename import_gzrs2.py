@@ -682,9 +682,13 @@ def importRS2(self, context):
                     softnessProp = f"{ property } Softness"
 
                     for light in group:
-                        state.blDrivers.append((createArrayDriver(driverObj, colorProp, light, 'color'),
-                                                createDriver(driverObj, energyProp, light, 'energy'),
-                                                createDriver(driverObj, softnessProp, light, 'shadow_soft_size')))
+                        driverObj[colorProp] = light.color
+                        driverObj[energyProp] = light.energy
+                        driverObj[softnessProp] = light.shadow_soft_size
+
+                        state.blDrivers.append((createArrayDriver(driverObj, f"[\"{ colorProp }\"]", light, 'color'),
+                                                createDriver(driverObj, f"[\"{ energyProp }\"]", light, 'energy'),
+                                                createDriver(driverObj, f"[\"{ softnessProp }\"]", light, 'shadow_soft_size')))
 
                     driverObj.id_properties_ui(colorProp).update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
                     driverObj.id_properties_ui(energyProp).update(subtype = 'POWER', min = 0.0, max = math.inf, soft_min = 0.0, soft_max = math.inf, precision = 1, step = 100)
@@ -692,12 +696,17 @@ def importRS2(self, context):
 
             if state.doFogDriver:
                 shader = state.blFogShader
+                colorProp = 'GZRS2 Fog Color'
+                densityProp = 'GZRS2 Fog Density'
 
-                state.blDrivers.append(createArrayDriver(driverObj, 'GZRS2 Fog Color', shader.inputs[0], 'default_value'))
-                driverObj.id_properties_ui('GZRS2 Fog Color').update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
+                driverObj[colorProp] = shader.inputs[0].default_value
+                driverObj[densityProp] = shader.inputs[1].default_value
 
-                state.blDrivers.append(createDriver(driverObj, 'GZRS2 Fog Density', shader.inputs[1], 'default_value'))
-                driverObj.id_properties_ui('GZRS2 Fog Density').update(subtype = 'NONE', min = 0.000001, max = 1.0, soft_min = 0.000001, soft_max = 1.0, precision = 5, step = 0.001)
+                state.blDrivers.append(createArrayDriver(driverObj, f"[\"{ colorProp }\"]", shader.inputs[0], 'default_value'))
+                state.blDrivers.append(createDriver(driverObj, f"[\"{ densityProp }\"]", shader.inputs[1], 'default_value'))
+
+                driverObj.id_properties_ui(colorProp).update(subtype = 'COLOR', min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, precision = 3, step = 1.0)
+                driverObj.id_properties_ui(densityProp).update(subtype = 'NONE', min = 0.000001, max = 1.0, soft_min = 0.000001, soft_max = 1.0, precision = 5, step = 0.001)
 
             state.blDriverObj = driverObj
             rootExtras.objects.link(driverObj)
