@@ -271,7 +271,7 @@ def importRS2(self, context):
 
     for m, xmlRsMat in enumerate(state.xmlRsMats):
         xmlRsMatName = xmlRsMat.get('name', f"Material_{ m }")
-        blMat, tree, links, nodes, shader, output, _ = setupMatBase(xmlRsMatName)
+        blMat, tree, links, nodes, shader, _, _, transparent, mix = setupMatBase(xmlRsMatName)
 
         shader.inputs[12].default_value = 0.0 # Specular IOR Level
 
@@ -279,7 +279,7 @@ def importRS2(self, context):
 
         texName = xmlRsMat.get('DIFFUSEMAP')
 
-        processRS2Texlayer(self, m, xmlRsMatName, texName, blMat, xmlRsMat, tree, links, nodes, shader, output, state)
+        processRS2Texlayer(self, m, xmlRsMatName, texName, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state)
 
         state.blXmlRsMats.append(blMat)
 

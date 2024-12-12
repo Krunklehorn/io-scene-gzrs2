@@ -294,8 +294,8 @@ def exportElu(self, context):
             matName = blMat.name
             tree, links, nodes = getMatTreeLinksNodes(blMat)
 
-            output, shader, add, transparent, clip, _ = getRelevantShaderNodes(nodes)
-            shaderValid, addValid, transparentValid, clipValid = checkShaderNodeValidity(output, shader, add, transparent, clip, links)
+            shader, output, info, transparent, mix, add, clip = getRelevantShaderNodes(nodes)
+            shaderValid, _, transparentValid, _, clipValid, addValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links)
 
             if not shaderValid:
                 self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
@@ -316,7 +316,7 @@ def exportElu(self, context):
             if texpath is None or alphapath is None:
                 return { 'CANCELLED' }
 
-            twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emission, alpha)
+            twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
             texBase, texName, texExt, texDir = decomposeTexpath(texpath)
             isEffect = checkIsEffectFile(filename)

@@ -274,12 +274,13 @@ def getShaderNodeByID(nodes, id):
             return node
 
 def getRelevantShaderNodes(nodes):
-    output          = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
     shader          = getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled')
-    add             = getShaderNodeByID(nodes, 'ShaderNodeAddShader')
+    output          = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
+    info            = getShaderNodeByID(nodes, 'ShaderNodeObjectInfo')
     transparent     = getShaderNodeByID(nodes, 'ShaderNodeBsdfTransparent')
+    mix             = getShaderNodeByID(nodes, 'ShaderNodeMixShader')
+    add             = getShaderNodeByID(nodes, 'ShaderNodeAddShader')
     clip            = getShaderNodeByID(nodes, 'ShaderNodeMath')
-    visibility      = getShaderNodeByID(nodes, 'ShaderNodeValue')
 
     for node in nodes:
         if node.bl_idname == 'ShaderNodeMath' and node.operation == 'GREATER_THAN':
@@ -287,39 +288,45 @@ def getRelevantShaderNodes(nodes):
     else:
         clip = getShaderNodeByID(nodes, 'ShaderNodeMath')
 
-    for node in nodes:
-        if node.bl_idname == 'ShaderNodeValue' and node.name == 'Visibility' and node.label == 'Visibility':
-            visibility = node
-    else:
-        visibility = getShaderNodeByID(nodes, 'ShaderNodeValue')
+    return shader, output, info, transparent, mix, add, clip
 
-    return output, shader, add, transparent, clip, visibility
-
-def checkShaderNodeValidity(output, shader, add, transparent, clip, links):
+def checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links):
     shaderValid         = False if shader       is not None     else None
-    addValid            = False if add          is not None     else None
+    infoValid           = False if info         is not None     else None
     transparentValid    = False if transparent  is not None     else None
+    mixValid            = False if mix          is not None     else None
     clipValid           = False if clip         is not None     else None
+    addValid            = False if add          is not None     else None
+    addValid1           = False if add          is not None     else None
+    addValid2           = False if add          is not None     else None
+    addValid3           = False if add          is not None     else None
 
     for link in links:
         if link.is_hidden or not link.is_valid:
             continue
 
-        if      shaderValid         == False    and link.from_socket == shader.outputs[0]       and link.to_socket == output.inputs[0]:     shaderValid         = True
-        elif    addValid            == False    and link.from_socket == add.outputs[0]          and link.to_socket == output.inputs[0]:     addValid            = True
-        elif    transparentValid    == False    and link.from_socket == transparent.outputs[0]  and link.to_socket == add.inputs[1]:        transparentValid    = True
+        if      shaderValid         == False    and link.from_socket == shader.outputs[0]       and link.to_socket == mix.inputs[2]:        shaderValid         = True
+        elif    infoValid           == False    and link.from_socket == info.outputs[2]         and link.to_socket == mix.inputs[0]:        infoValid           = True
+        elif    transparentValid    == False    and link.from_socket == transparent.outputs[0]  and link.to_socket == mix.inputs[1]:        transparentValid    = True
+        elif    mixValid            == False    and link.from_socket == mix.outputs[0]          and link.to_socket == output.inputs[0]:     mixValid            = True
         elif    clipValid           == False    and link.from_socket == clip.outputs[0]         and link.to_socket == shader.inputs[4]:     clipValid           = True
-
-    for link in links:
-        if link.is_hidden or not link.is_valid:
-            continue
-
-        if addValid and transparentValid        and link.from_socket == shader.outputs[0]       and link.to_socket == add.inputs[0]:        shaderValid = True
+        elif    addValid1           == False    and link.from_socket == shader.outputs[0]       and link.to_socket == add.inputs[0]:        addValid1           = True
+        elif    addValid2           == False    and link.from_socket == transparent.outputs[0]  and link.to_socket == add.inputs[1]:        addValid2           = True
+        elif    addValid3           == False    and link.from_socket == add.outputs[0]          and link.to_socket == mix.inputs[2]:        addValid3           = True
 
     if clipValid and clip.operation != 'GREATER_THAN':
         clipValid = False
 
-    return shaderValid, addValid, transparentValid, clipValid
+    if addValid == False and addValid1 == True and addValid2 == True and addValid3 == True:
+        addValid = True
+
+    for link in links:
+        if link.is_hidden or not link.is_valid:
+            continue
+
+        if addValid                             and link.from_socket == add.outputs[0]          and link.to_socket == mix.inputs[2]:        shaderValid         = True
+
+    return shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid
 
 def getLinkedImageNodes(shader, links, clip, clipValid, *, validOnly = True):
     texture = None
@@ -450,9 +457,9 @@ def getMatImageTextureNode(bpy, blMat, nodes, texpath, alphamode, x, y, loadFake
 
     return matNodes[texpath][alphamode]
 
-def getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emission, alpha):
+def getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha):
     twosided = not blMat.use_backface_culling
-    additive = blMat.surface_render_method == 'BLENDED' and addValid and transparentValid and emission is not None
+    additive = blMat.surface_render_method == 'BLENDED' and addValid and emission is not None
     alphatest = int(min(max(0, clip.inputs[1].default_value), 1) * 255) if clipValid else 0 # Threshold
     usealphatest = alphatest > 0
     useopacity = alpha is not None
@@ -516,10 +523,10 @@ def setMatFlagsTransparency(blMat, transparent, *, twosided = False):
         blMat.use_backface_culling_shadow = not twosided
         blMat.use_backface_culling_lightprobe_volume = not twosided
 
-def setupMatBase(name, *, blMat = None, shader = None, output = None, visibility = None):
+def setupMatBase(name, *, blMat = None, shader = None, output = None, info = None, transparent = None, mix = None):
     blMat = blMat or bpy.data.materials.new(name)
     blMat.use_nodes = True
-    blMat.surface_render_method = 'BLENDED'
+    blMat.surface_render_method = 'DITHERED'
 
     tree, links, nodes = getMatTreeLinksNodes(blMat)
 
@@ -537,18 +544,26 @@ def setupMatBase(name, *, blMat = None, shader = None, output = None, visibility
 
     setMatFlagsTransparency(blMat, False)
 
-    visibility = visibility or nodes.new('ShaderNodeValue')
-    visibility.location = (-440, 420)
-    visibility.select = True # Required for animation keyframes to appear in the dopesheet
-    visibility.name = 'Visibility'
-    visibility.label = 'Visibility'
+    info = info or nodes.new('ShaderNodeObjectInfo')
+    info.location = (120, 480)
+    info.select = False
 
-    visibility.outputs[0].default_value = blMat.gzrs2.visibility
-    createDriver(blMat, 'gzrs2.visibility', visibility.outputs[0], 'default_value', idType = 'MATERIAL')
+    transparent = transparent or nodes.new('ShaderNodeBsdfTransparent')
+    transparent.location = (120, -40)
+    transparent.select = False
 
-    nodes.active = visibility
+    mix = mix or nodes.new('ShaderNodeMixShader')
+    mix.location = (300, 140)
+    mix.select = False
 
-    return blMat, tree, links, nodes, shader, output, visibility
+    mix.inputs[0].default_value = 1.0 # Factor
+
+    links.new(info.outputs[2], mix.inputs[0])
+    links.new(transparent.outputs[0], mix.inputs[1])
+    links.new(shader.outputs[0], mix.inputs[2])
+    links.new(mix.outputs[0], output.inputs[0])
+
+    return blMat, tree, links, nodes, shader, output, info, transparent, mix
 
 def setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest, useopacity, source, destination, *, clip = False):
     if usealphatest:
@@ -570,20 +585,15 @@ def setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest
 
         links.new(source.outputs[1], destination.inputs[4]) # Alpha
 
-def setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, destination, output, *, add = None, transparent = None):
+def setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, destination, transparent, mix, *, add = None):
     if not additive:
         return
 
     blMat.surface_render_method = 'BLENDED'
 
     add = add or nodes.new('ShaderNodeAddShader')
-    transparent = transparent or nodes.new('ShaderNodeBsdfTransparent')
-
-    add.location = (300, 140)
-    transparent.location = (300, 20)
-
+    add.location = (300, 0)
     add.select = False
-    transparent.select = False
 
     if source:
         links.new(source.outputs[0], destination.inputs[26]) # Emission Color
@@ -591,11 +601,11 @@ def setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, destinati
 
     links.new(destination.outputs[0], add.inputs[0])
     links.new(transparent.outputs[0], add.inputs[1])
-    links.new(add.outputs[0], output.inputs[0])
+    links.new(add.outputs[0], mix.inputs[2])
 
-    return add, transparent
+    return add
 
-def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, links, nodes, shader, output, state):
+def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state):
     if not texName:
         self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with empty texture name: { m }, { name }")
         return
@@ -614,25 +624,25 @@ def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, links, nod
     if state.doLightmap:
         lightmap = nodes.new('ShaderNodeTexImage')
         uvmap = nodes.new('ShaderNodeUVMap')
-        mix = nodes.new('ShaderNodeGroup')
+        group = nodes.new('ShaderNodeGroup')
 
         lightmap.image = state.blLmImage
         uvmap.uv_map = 'UVMap.002'
-        mix.node_tree = state.lmMixGroup
+        group.node_tree = state.lmMixGroup
 
         lightmap.location = (-440, -20)
         uvmap.location = (-640, -20)
-        mix.location = (-160, 300)
+        group.location = (-160, 300)
 
         texture.select = False
         lightmap.select = False
         uvmap.select = False
-        mix.select = False
+        group.select = False
 
-        links.new(texture.outputs[0], mix.inputs[0])
-        links.new(lightmap.outputs[0], mix.inputs[1])
+        links.new(texture.outputs[0], group.inputs[0])
+        links.new(lightmap.outputs[0], group.inputs[1])
         links.new(uvmap.outputs[0], lightmap.inputs[0])
-        links.new(mix.outputs[0], shader.inputs[0]) # Base Color
+        links.new(group.outputs[0], shader.inputs[0]) # Base Color
     else:
         links.new(texture.outputs[0], shader.inputs[0]) # Base Color
 
@@ -646,10 +656,10 @@ def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, links, nod
     # Pretty sure isEffect is not checked for in .xml.rs materials
     isAniTex = checkIsAniTex(texBase)
 
-    source = mix if state.doLightmap else texture
+    source = group if state.doLightmap else texture
 
     setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest, useopacity, texture, shader)
-    setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, shader, output)
+    setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, shader, transparent, mix)
     setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
 
 def processRS3TexLayer(self, texlayer, blMat, tree, links, nodes, shader, emission, alphatest, usealphatest, state):
@@ -831,7 +841,7 @@ def setupEluMat(self, m, eluMat, state):
         return
 
     matName = texName or f"Material_{ m }"
-    blMat, tree, links, nodes, shader, output, _ = setupMatBase(matName)
+    blMat, tree, links, nodes, shader, _, _, transparent, mix = setupMatBase(matName)
 
     shader.inputs[2].default_value = 1.0 - (power / 100.0) # Roughness
 
@@ -867,7 +877,7 @@ def setupEluMat(self, m, eluMat, state):
         isAniTex = checkIsAniTex(texBase)
 
         setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest, useopacity, texture, shader)
-        setupMatNodesAdditive(blMat, tree, links, nodes, additive, texture, shader, output)
+        setupMatNodesAdditive(blMat, tree, links, nodes, additive, texture, shader, transparent, mix)
         setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
 
     blEluMatAtIndex = state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})
@@ -913,7 +923,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
             return
 
     matName = xmlEluMat['name']
-    blMat, tree, links, nodes, shader, output, _ = setupMatBase(matName)
+    blMat, tree, links, nodes, shader, _, _, transparent, mix = setupMatBase(matName)
 
     shader.inputs[6].default_value = glossiness / 100.0 # Metallic
     shader.inputs[12].default_value = specular / 100.0 # Specular IOR Level
@@ -924,7 +934,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     for texlayer in xmlEluMat['textures']:
         useopacity = useopacity or processRS3TexLayer(self, texlayer, blMat, tree, links, nodes, shader, emission, alphatest, usealphatest, state)
 
-    setupMatNodesAdditive(blMat, tree, links, nodes, additive, None, shader, output)
+    setupMatNodesAdditive(blMat, tree, links, nodes, additive, None, shader, transparent, mix)
     setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
 
     state.blXmlEluMats.setdefault(elupath, []).append(blMat)
@@ -1264,15 +1274,15 @@ def processEluIsEffect(state):
 
             tree, links, nodes = getMatTreeLinksNodes(blMat)
 
-            output, shader, add, transparent, clip, _ = getRelevantShaderNodes(nodes)
-            _, _, _, clipValid = checkShaderNodeValidity(output, shader, add, transparent, clip, links)
+            shader, output, info, transparent, mix, add, clip = getRelevantShaderNodes(nodes)
+            _, _, _, _, clipValid, _ = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links)
 
             texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid, validOnly = False)
             texture = texture or emission or alpha or getShaderNodeByID(nodes, 'ShaderNodeTexImage') # Reuse existing image texture nodes
 
             twosided = not blMat.use_backface_culling
 
-            setupMatNodesAdditive(blMat, tree, links, nodes, True, texture, shader, output, add = add, transparent = transparent)
+            setupMatNodesAdditive(blMat, tree, links, nodes, True, texture, shader, transparent, mix, add = add)
             setMatFlagsTransparency(blMat, True, twosided = twosided)
 
 def processEluHeirarchy(self, state):
@@ -1373,8 +1383,6 @@ def getFilteredObjects(context, state):
         objects = context.scene.objects
 
     objects = tuple(object for object in objects if object.visible_get()) if state.visibleOnly else tuple(objects)
-
-    print(objects)
 
     return objects
 

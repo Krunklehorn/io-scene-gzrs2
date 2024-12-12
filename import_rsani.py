@@ -64,6 +64,7 @@ def importAni(self, context):
     action.frame_end = state.aniMaxTick / ANI_TICKS_PER_FRAME
     action.use_cyclic = True
     action.use_frame_range = True
+    action.fcurves.clear()
 
     bpy.context.scene.frame_set(0)
 
@@ -71,12 +72,9 @@ def importAni(self, context):
     aniTypeEnum = ANI_TYPES_ENUM.get(aniType, aniType)
     aniTypePretty = ANI_TYPES_PRETTY.get(aniTypeEnum, aniTypeEnum)
 
-    if state.overwriteAction:
-        action.fcurves.clear()
-
     if aniType is AniNodeVertex:
         nodeMeshNames = tuple(node.meshName for node in state.aniNodes)
-        blObjs = { object.name: object for object in getFilteredObjects(context, state) if object.name in nodeMeshNames and object.type == 'MESH'}
+        blValidObjs = { object.name: object for object in getFilteredObjects(context, state) if object.name in nodeMeshNames and object.type == 'MESH'}
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
 
@@ -85,7 +83,7 @@ def importAni(self, context):
                 continue
 
             meshName = node.meshName
-            blObj = blObjs.get(meshName)
+            blObj = blValidObjs.get(meshName)
 
             if blObj is None:
                 if node.vertexKeyCount == 0:
@@ -209,7 +207,7 @@ def importAni(self, context):
 
         blEditBones = blArmature.edit_bones
 
-        blValidObjs = []
+        blValidObjs = {}
 
         for node in state.aniNodes:
             meshName = node.meshName
@@ -229,23 +227,21 @@ def importAni(self, context):
             blEditBone.tail = (0.0, 0.0, 0.1)
             blEditBone.matrix = blObj.matrix_world @ reorientBone
 
-            blValidObjs.append(blObj)
+            blValidObjs[meshName] = blObj
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
 
-        for blObj in blValidObjs:
+        for objName, blObj in blValidObjs.items():
             transform = blObj.matrix_world
 
             blObj.parent = blArmatureObj
-            blObj.parent_bone = blObj.name
+            blObj.parent_bone = objName
             blObj.parent_type = 'BONE'
 
             blObj.matrix_world = transform
 
-        blObj = blArmatureObj
-
-        blObjAnimData = blObj.animation_data or blObj.animation_data_create()
-        blObjAnimData.action = action
+        blArmatureObjAnimData = blArmatureObj.animation_data or blArmatureObj.animation_data_create()
+        blArmatureObjAnimData.action = action
 
         bpy.ops.object.mode_set(mode = 'POSE')
 
@@ -276,9 +272,9 @@ def importAni(self, context):
                 blPoseBone.matrix = worldMat @ reorientWorld
                 bpy.context.view_layer.update()
 
-                blObj.keyframe_insert(data_path = locPath, frame = frame, group = meshName)
-                blObj.keyframe_insert(data_path = rotPath, frame = frame, group = meshName)
-                blObj.keyframe_insert(data_path = scaPath, frame = frame, group = meshName)
+                blArmatureObj.keyframe_insert(data_path = locPath, frame = frame, group = meshName)
+                blArmatureObj.keyframe_insert(data_path = rotPath, frame = frame, group = meshName)
+                blArmatureObj.keyframe_insert(data_path = scaPath, frame = frame, group = meshName)
 
             for k in range(node.tmKeyCount):
                 frame = int(round(node.tmTicks[k] / ANI_TICKS_PER_FRAME))
@@ -291,19 +287,21 @@ def importAni(self, context):
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
     else:
-        blObj = bpy.context.active_object
+        blObjs = { object.name: object for object in context.scene.objects }
 
-        if blObj is None or blObj.type != 'ARMATURE':
+        blArmatureObj = bpy.context.active_object
+
+        if blArmatureObj is None or blArmatureObj.type != 'ARMATURE':
             self.report({ 'ERROR' }, f"GZRS2: ANI import of type { aniTypePretty } requires a selected armature as a reference!")
             return { 'CANCELLED' }
 
-        blObjAnimData = blObj.animation_data or blObj.animation_data_create()
-        blObjAnimData.action = action
+        blArmatureObjAnimData = blArmatureObj.animation_data or blArmatureObj.animation_data_create()
+        blArmatureObjAnimData.action = action
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
         bpy.ops.object.mode_set(mode = 'POSE')
 
-        blPoseBones = blObj.pose.bones
+        blPoseBones = blArmatureObj.pose.bones
 
         for blPoseBone in blPoseBones:
             if blPoseBone.parent is not None:
@@ -317,15 +315,30 @@ def importAni(self, context):
         bpy.ops.object.mode_set(mode = 'OBJECT')
 
         bpy.context.view_layer.update()
-        blObj.update_from_editmode()
+        blArmatureObj.update_from_editmode()
 
         bpy.ops.object.mode_set(mode = 'EDIT')
 
-        for blEditBone in blObj.data.edit_bones:
+        for blEditBone in blArmatureObj.data.edit_bones:
             blEditBone.use_connect = False
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
         bpy.ops.object.mode_set(mode = 'POSE')
+
+        blValidObjs = {}
+
+        for node in state.aniNodes:
+            meshName = node.meshName
+            blObj = blObjs.get(meshName)
+
+            if blObj is None:
+                if node.posKeyCount == 0 and node.rotKeyCount == 0:
+                    continue
+
+                self.report({ 'INFO' }, f"GZRS2: ANI import of type { aniTypePretty } failed to find a matching object, skipping: { meshName }")
+                continue
+
+            blValidObjs[meshName] = blObj
 
         reorientPose = Matrix.Rotation(math.radians(180.0), 4, 'Y') @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
 
@@ -351,13 +364,13 @@ def importAni(self, context):
             rotPath = pathPrefix + 'rotation_quaternion'
 
             def applyPoseMat(frame, poseMat):
-                nonlocal blObj, meshName, blPoseBone, locPath, rotPath
+                nonlocal blArmatureObj, meshName, blPoseBone, locPath, rotPath
 
                 blPoseBone.matrix = poseMat @ reorientPose
                 bpy.context.view_layer.update()
 
-                blObj.keyframe_insert(data_path = locPath, frame = frame, group = meshName)
-                blObj.keyframe_insert(data_path = rotPath, frame = frame, group = meshName)
+                blArmatureObj.keyframe_insert(data_path = locPath, frame = frame, group = meshName)
+                blArmatureObj.keyframe_insert(data_path = rotPath, frame = frame, group = meshName)
 
             if node.posKeyCount > 0 or node.rotKeyCount > 0:
                 keyframeMats = {}
@@ -388,5 +401,31 @@ def importAni(self, context):
             applyPoseMat(0, baseMat)
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
+
+    for node in state.aniNodes:
+        meshName = node.meshName
+        blObj = blValidObjs.get(meshName)
+
+        if node.visKeyCount == 0:
+            continue
+
+        if blObj is None:
+            self.report({ 'INFO' }, f"GZRS2: ANI import of type { aniTypePretty } failed to find a matching object, skipping: { meshName }")
+            continue
+
+        blObjAnimData = blObj.animation_data or blObj.animation_data_create()
+        blObjAnimData.action = blObjAnimData.action or bpy.data.actions.new(f"{ state.filename }_{ meshName }")
+        blObjAnimData.action.fcurves.clear()
+
+        visCurve = blObjAnimData.action.fcurves.new('color', index = 3, action_group = meshName)
+        visCurve.keyframe_points.add(node.visKeyCount)
+
+        for k in range(node.visKeyCount):
+            frame = int(round(node.visTicks[k] / ANI_TICKS_PER_FRAME))
+            visValue = node.visValues[k]
+
+            visCurve.keyframe_points[k].co = Vector((frame + 1, visValue))
+
+        visCurve.update()
 
     return { 'FINISHED' }

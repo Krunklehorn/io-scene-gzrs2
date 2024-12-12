@@ -95,8 +95,8 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         blMat = blObj.active_material
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
-        output, shader, add, transparent, clip, visibility = getRelevantShaderNodes(nodes)
-        shaderValid, addValid, transparentValid, clipValid = checkShaderNodeValidity(output, shader, add, transparent, clip, links)
+        shader, output, info, transparent, mix, add, clip = getRelevantShaderNodes(nodes)
+        shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links)
 
         texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid, validOnly = False)
 
@@ -109,7 +109,7 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         emitpath =      getValidImageNodePathSilent(emission    if emission.image   is not None else None, maxPathLength) if emission   else None
         alphapath =     getValidImageNodePathSilent(alpha       if alpha.image      is not None else None, maxPathLength) if alpha      else None
 
-        twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emission, alpha)
+        twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
         texBase, texName, _, _ = decomposeTexpath(texpath)
         isEffect = checkIsEffectNode(blObj.name)
@@ -117,15 +117,14 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         # success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
 
         # We avoid links.clear() to preserve the user's material as much as possible
-        relevantNodes = [output, shader, add, transparent, clip, visibility]
+        relevantNodes = [shader, output, info, transparent, mix, add, clip]
 
         for link in links:
             if link.from_node in relevantNodes or link.to_node in relevantNodes:
                 links.remove(link)
 
         # We assume the setup functions modify valid inputs and only create what is missing
-        blMat, tree, links, nodes, shader, output, visibility = setupMatBase(blMat.name, blMat = blMat, shader = shader, output = output, visibility = visibility)
-        links.new(shader.outputs[0], output.inputs[0])
+        blMat, tree, links, nodes, shader, output, info, transparent, mix = setupMatBase(blMat.name, blMat = blMat, shader = shader, output = output, info = info, transparent = transparent, mix = mix)
 
         if self.materialPreset == 'COLORED':
             return { 'FINISHED' }
@@ -154,7 +153,7 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         elif self.materialPreset == 'ADDITIVE':
             additive = True
 
-            add, transparent = setupMatNodesAdditive(blMat, tree, links, nodes, additive or isEffect, texture, shader, output, add = add, transparent = transparent)
+            add = setupMatNodesAdditive(blMat, tree, links, nodes, additive or isEffect, texture, shader, transparent, mix, add = add)
 
         setMatFlagsTransparency(blMat, usealphatest or useopacity or additive or isEffect, twosided = twosided)
 
@@ -1489,7 +1488,6 @@ class GZRS2Properties(PropertyGroup):
         if 'isBase' not in self: self['isBase'] = True
         if 'subMatID' not in self: self['subMatID'] = -1
         if 'subMatCount' not in self: self['subMatCount'] = 0
-        if 'visibility' not in self: self['visibility'] = 1.0
 
     def onUpdate(self, context):
         self.ensureAll()
@@ -1513,20 +1511,6 @@ class GZRS2Properties(PropertyGroup):
         self.ensureAll()
         self['subMatCount'] = value if self['isBase'] else 0
 
-    def onGetVisibility(self):
-        self.ensureAll()
-        return self['visibility']
-
-    def onSetVisibility(self, value):
-        self.ensureAll()
-        self['visibility'] = value
-
-        for area in bpy.context.screen.areas:
-            if area.type in [ 'PROPERTIES', 'NODE_EDITOR']:
-                for region in area.regions:
-                    if region.type == 'WINDOW':
-                        region.tag_redraw()
-
     matID: bpy.props.IntProperty(name = 'Material ID', default = 0, min = 0, max = 2**31 - 1, soft_min = 0, soft_max = 256, subtype = 'UNSIGNED', update = onUpdate)
     isBase: bpy.props.BoolProperty(name = 'Base', default = True, update = onUpdate)
     subMatID: bpy.props.IntProperty(name = 'Sub Material ID', default = -1, min = -1, max = 2**31 - 1, soft_min = -1, soft_max = 31, update = onUpdate, get = onGetSubMatID, set = onSetSubMatID)
@@ -1536,8 +1520,6 @@ class GZRS2Properties(PropertyGroup):
     ambient: bpy.props.FloatVectorProperty(name = 'Ambient', default = (0.588235, 0.588235, 0.588235), min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'COLOR', size = 3)
     diffuse: bpy.props.FloatVectorProperty(name = 'Diffuse', default = (0.588235, 0.588235, 0.588235), min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'COLOR', size = 3)
     specular: bpy.props.FloatVectorProperty(name = 'Specular', default = (0.9, 0.9, 0.9), min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'COLOR', size = 3)
-
-    visibility: bpy.props.FloatProperty(name = 'Visibility', description = 'Drives shader parameters. Exports to .ani, not .elu', default = 1.0, min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'FACTOR', update = onUpdate, get = onGetVisibility, set = onSetVisibility)
 
     @classmethod
     def register(cls):
@@ -1570,15 +1552,15 @@ class GZRS2_PT_Realspace(Panel):
         blMat = blObj.active_material
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
-        output, shader, add, transparent, clip, visibility = getRelevantShaderNodes(nodes)
-        shaderValid, addValid, transparentValid, clipValid = checkShaderNodeValidity(output, shader, add, transparent, clip, links)
+        shader, output, info, transparent, mix, add, clip = getRelevantShaderNodes(nodes)
+        shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links)
 
         if shaderValid:
             texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid)
             texpath = getValidImageNodePathSilent(texture, maxPathLength)
             alphapath = getValidImageNodePathSilent(alpha, maxPathLength)
 
-            twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, transparentValid, clipValid, emission, alpha)
+            twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
             texBase, texName, texExt, texDir = decomposeTexpath(texpath)
             isEffect = checkIsEffectNode(blObj.name)
@@ -1586,10 +1568,11 @@ class GZRS2_PT_Realspace(Panel):
             success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
 
         shaderLabel =       '' if shaderValid           is None else ('Invalid' if shaderValid ==           False else 'Valid')
-        addLabel =          '' if addValid              is None else ('Invalid' if addValid ==              False else 'Valid')
+        infoLabel =         '' if infoValid             is None else ('Invalid' if infoValid ==             False else 'Valid')
         transparentLabel =  '' if transparentValid      is None else ('Invalid' if transparentValid ==      False else 'Valid')
+        mixLabel =          '' if mixValid              is None else ('Invalid' if mixValid ==              False else 'Valid')
         clipLabel =         '' if clipValid             is None else ('Invalid' if clipValid ==             False else 'Valid')
-        clipLabel =         '' if clipValid             is None else ('Invalid' if clipValid ==             False else 'Valid')
+        addLabel =          '' if addValid              is None else ('Invalid' if addValid ==              False else 'Valid')
 
         props = blMat.gzrs2
 
@@ -1611,9 +1594,6 @@ class GZRS2_PT_Realspace(Panel):
         column.prop(props, 'specular')
 
         column = layout.column()
-        column.prop(props, 'visibility')
-
-        column = layout.column()
         column.operator(GZRS2_OT_Apply_Material_Preset.bl_idname, text = "Change Preset")
 
         box = layout.box()
@@ -1622,14 +1602,20 @@ class GZRS2_PT_Realspace(Panel):
         row.label(text = 'Principled BSDF:')
         row.label(text = shaderLabel)
         row = column.row()
-        row.label(text = 'Add Shader:')
-        row.label(text = addLabel)
+        row.label(text = 'Object Info:')
+        row.label(text = infoLabel)
         row = column.row()
         row.label(text = 'Transparent Shader:')
         row.label(text = transparentLabel)
         row = column.row()
+        row.label(text = 'Mix Shader:')
+        row.label(text = mixLabel)
+        row = column.row()
         row.label(text = 'Clip Math:')
         row.label(text = clipLabel)
+        row = column.row()
+        row.label(text = 'Add Shader:')
+        row.label(text = addLabel)
 
         box = layout.box()
         column = box.column()
