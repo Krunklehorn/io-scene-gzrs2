@@ -140,7 +140,6 @@ ANI_TYPES_PRETTY =              {
 ANI_IMPORT_TYPES =              [ ANI_TYPE_TRANSFORM, ANI_TYPE_VERTEX, ANI_TYPE_BONE, ANI_TYPE_TM ]
 
 ANI_VERTEX_THRESHOLD =          0.0001
-ANI_TM_ARMATURE_NAME =          "GZRS2_ANI_TM_Armature"
 
 DDSD_CAPS =                     0x00000001
 DDSD_HEIGHT =                   0x00000002

@@ -55,22 +55,23 @@ def importAni(self, context):
 
     bpy.ops.ed.undo_push()
 
-    action = None
-    actionName = state.filename
-
-    if state.overwriteAction:   action = bpy.data.actions.get(actionName) or bpy.data.actions.new(actionName)
-    else:                       action = bpy.data.actions.new(actionName)
-
-    action.frame_end = state.aniMaxTick / ANI_TICKS_PER_FRAME
-    action.use_cyclic = True
-    action.use_frame_range = True
-    action.fcurves.clear()
-
     bpy.context.scene.frame_set(0)
 
     aniType = type(state.aniNodes[0]) # We assume the entire list is homogeneous
     aniTypeEnum = ANI_TYPES_ENUM.get(aniType, aniType)
     aniTypePretty = ANI_TYPES_PRETTY.get(aniTypeEnum, aniTypeEnum)
+
+    if aniType is not AniNodeTM:
+        action = None
+        actionName = state.filename
+
+        if state.overwriteAction:   action = bpy.data.actions.get(actionName) or bpy.data.actions.new(actionName)
+        else:                       action = bpy.data.actions.new(actionName)
+
+        action.frame_end = state.aniMaxTick / ANI_TICKS_PER_FRAME
+        action.use_cyclic = True
+        action.use_frame_range = True
+        action.fcurves.clear()
 
     if aniType is AniNodeVertex:
         nodeMeshNames = tuple(node.meshName for node in state.aniNodes)
@@ -167,45 +168,7 @@ def importAni(self, context):
     elif aniType is AniNodeTM:
         blObjs = { object.name: object for object in getFilteredObjects(context, state) }
 
-        # Ignore filter since objects have unique names anyways
-        blArmatureObj = bpy.context.scene.objects.get(ANI_TM_ARMATURE_NAME)
-
-        if blArmatureObj is not None:
-            if blArmatureObj.type != 'ARMATURE':
-                blArmatureObj.name = f'{ blArmatureObj.name }.001'
-                blArmatureObj = None
-
-        if blArmatureObj is None:
-            blArmature = bpy.data.armatures.new(ANI_TM_ARMATURE_NAME)
-            blArmatureObj = bpy.data.objects.new(ANI_TM_ARMATURE_NAME, blArmature)
-
-            blArmatureObj.display_type = 'WIRE'
-            blArmatureObj.show_in_front = True
-
-            context.collection.objects.link(blArmatureObj)
-
-            for viewLayer in context.scene.view_layers:
-                viewLayer.objects.active = blArmatureObj
-
-        blArmature = blArmatureObj.data
-
-        reorientBone = Matrix.Rotation(math.radians(-90.0), 4, 'X')
-        reorientWorld = Matrix.Rotation(math.radians(180.0), 4, 'X')
-
-        bpy.context.view_layer.objects.active = blArmatureObj
-
         bpy.ops.object.mode_set(mode = 'OBJECT')
-        bpy.ops.object.mode_set(mode = 'POSE')
-
-        blPoseBones = blArmatureObj.pose.bones
-
-        for blPoseBone in blPoseBones:
-            blPoseBone.matrix_basis.identity()
-
-        bpy.ops.object.mode_set(mode = 'OBJECT')
-        bpy.ops.object.mode_set(mode = 'EDIT')
-
-        blEditBones = blArmature.edit_bones
 
         blValidObjs = {}
 
@@ -214,78 +177,78 @@ def importAni(self, context):
             blObj = blObjs.get(meshName)
 
             if blObj is None:
-                if node.tmKeyCount == 0:
+                if node.tmKeyCount == 0 and node.visKeyCount == 0:
                     continue
 
                 self.report({ 'INFO' }, f"GZRS2: ANI import of type { aniTypePretty } failed to find a matching object, skipping: { meshName }")
                 continue
 
-            blEditBone = blEditBones.get(meshName) or blArmature.edit_bones.new(meshName)
-            blEditBone.matrix = Matrix.Identity(4)
-            bpy.context.view_layer.update()
-
-            blEditBone.tail = (0.0, 0.0, 0.1)
-            blEditBone.matrix = blObj.matrix_world @ reorientBone
-
             blValidObjs[meshName] = blObj
 
-        bpy.ops.object.mode_set(mode = 'OBJECT')
-
-        for objName, blObj in blValidObjs.items():
-            transform = blObj.matrix_world
-
-            blObj.parent = blArmatureObj
-            blObj.parent_bone = objName
-            blObj.parent_type = 'BONE'
-
-            blObj.matrix_world = transform
-
-        blArmatureObjAnimData = blArmatureObj.animation_data or blArmatureObj.animation_data_create()
-        blArmatureObjAnimData.action = action
-
-        bpy.ops.object.mode_set(mode = 'POSE')
+        reorientWorld = Matrix.Rotation(math.radians(-90.0), 4, 'X')
 
         for node in state.aniNodes:
             meshName = node.meshName
-            blPoseBone = blPoseBones.get(meshName)
+            blObj = blValidObjs.get(meshName)
+            blObj.rotation_mode = 'QUATERNION'
 
-            if blPoseBone is None:
-                if node.tmKeyCount == 0:
-                    continue
-
-                self.report({ 'INFO' }, f"GZRS2: ANI import of type { aniTypePretty } failed to find a matching bone, skipping: { meshName }")
+            if node.tmKeyCount == 0 and node.visKeyCount == 0:
                 continue
 
-            blPoseBone.matrix_basis.identity()
-            bpy.context.view_layer.update()
+            if blObj is None:
+                self.report({ 'INFO' }, f"GZRS2: ANI import of type { aniTypePretty } failed to find a matching object, skipping: { meshName }")
+                continue
 
-            firstMat = node.firstMat
+            actionName = f"{ state.filename }_{ meshName }"
 
-            pathPrefix = f'pose.bones[\"{ meshName }\"].'
-            locPath = pathPrefix + 'location'
-            rotPath = pathPrefix + 'rotation_quaternion'
-            scaPath = pathPrefix + 'scale'
+            if state.overwriteAction:   action = bpy.data.actions.get(actionName) or bpy.data.actions.new(actionName)
+            else:                       action = bpy.data.actions.new(actionName)
 
-            def applyWorldMat(frame, worldMat):
-                nonlocal blPoseBone, meshName
+            action.frame_end = state.aniMaxTick / ANI_TICKS_PER_FRAME
+            action.use_cyclic = True
+            action.use_frame_range = True
+            action.fcurves.clear()
 
-                blPoseBone.matrix = worldMat @ reorientWorld
-                bpy.context.view_layer.update()
+            blObjAnimData = blObj.animation_data or blObj.animation_data_create()
+            blObjAnimData.action = action
 
-                blArmatureObj.keyframe_insert(data_path = locPath, frame = frame, group = meshName)
-                blArmatureObj.keyframe_insert(data_path = rotPath, frame = frame, group = meshName)
-                blArmatureObj.keyframe_insert(data_path = scaPath, frame = frame, group = meshName)
+            if node.tmKeyCount > 0:
+                locCurves = tuple(action.fcurves.new('location',              index = i) for i in range(3))
+                rotCurves = tuple(action.fcurves.new('rotation_quaternion',   index = i) for i in range(4))
+                scaCurves = tuple(action.fcurves.new('scale',                 index = i) for i in range(3))
 
-            for k in range(node.tmKeyCount):
-                frame = int(round(node.tmTicks[k] / ANI_TICKS_PER_FRAME))
-                worldMat = node.tmMats[k]
+                for i in range(3): locCurves[i].keyframe_points.add(node.tmKeyCount)
+                for i in range(4): rotCurves[i].keyframe_points.add(node.tmKeyCount)
+                for i in range(3): scaCurves[i].keyframe_points.add(node.tmKeyCount)
 
-                applyWorldMat(frame + 1, worldMat)
+                for k in range(node.tmKeyCount):
+                    frame = int(round(node.tmTicks[k] / ANI_TICKS_PER_FRAME))
+                    worldMat = node.tmMats[k] @ reorientWorld
+                    loc, rot, sca = worldMat.decompose()
 
-            blPoseBone.matrix = firstMat @ reorientWorld
-            bpy.context.view_layer.update()
+                    print(rot)
 
-        bpy.ops.object.mode_set(mode = 'OBJECT')
+                    for i in range(3): locCurves[i].keyframe_points[k].co = Vector((frame + 1, loc[i]))
+                    for i in range(4): rotCurves[i].keyframe_points[k].co = Vector((frame + 1, rot[i]))
+                    for i in range(3): scaCurves[i].keyframe_points[k].co = Vector((frame + 1, sca[i]))
+
+                for i in range(3): locCurves[i].update()
+                for i in range(4): rotCurves[i].update()
+                for i in range(3): scaCurves[i].update()
+
+                blObj.matrix_world = node.firstMat @ reorientWorld
+
+            if node.visKeyCount > 0:
+                visCurve = blObjAnimData.action.fcurves.new('color', index = 3)
+                visCurve.keyframe_points.add(node.visKeyCount)
+
+                for k in range(node.visKeyCount):
+                    frame = int(round(node.visTicks[k] / ANI_TICKS_PER_FRAME))
+                    visValue = node.visValues[k]
+
+                    visCurve.keyframe_points[k].co = Vector((frame + 1, visValue))
+
+                visCurve.update()
     else:
         blObjs = { object.name: object for object in context.scene.objects }
 
@@ -402,30 +365,31 @@ def importAni(self, context):
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
 
-    for node in state.aniNodes:
-        meshName = node.meshName
-        blObj = blValidObjs.get(meshName)
+    if aniType is not AniNodeTM:
+        for node in state.aniNodes:
+            meshName = node.meshName
+            blObj = blValidObjs.get(meshName)
 
-        if node.visKeyCount == 0:
-            continue
+            if node.visKeyCount == 0:
+                continue
 
-        if blObj is None:
-            self.report({ 'INFO' }, f"GZRS2: ANI import of type { aniTypePretty } failed to find a matching object, skipping: { meshName }")
-            continue
+            if blObj is None:
+                self.report({ 'INFO' }, f"GZRS2: ANI import of type { aniTypePretty } failed to find a matching object, skipping: { meshName }")
+                continue
 
-        blObjAnimData = blObj.animation_data or blObj.animation_data_create()
-        blObjAnimData.action = blObjAnimData.action or bpy.data.actions.new(f"{ state.filename }_{ meshName }")
-        blObjAnimData.action.fcurves.clear()
+            blObjAnimData = blObj.animation_data or blObj.animation_data_create()
+            blObjAnimData.action = blObjAnimData.action or bpy.data.actions.new(f"{ state.filename }_{ meshName }")
+            blObjAnimData.action.fcurves.clear()
 
-        visCurve = blObjAnimData.action.fcurves.new('color', index = 3, action_group = meshName)
-        visCurve.keyframe_points.add(node.visKeyCount)
+            visCurve = blObjAnimData.action.fcurves.new('color', index = 3)
+            visCurve.keyframe_points.add(node.visKeyCount)
 
-        for k in range(node.visKeyCount):
-            frame = int(round(node.visTicks[k] / ANI_TICKS_PER_FRAME))
-            visValue = node.visValues[k]
+            for k in range(node.visKeyCount):
+                frame = int(round(node.visTicks[k] / ANI_TICKS_PER_FRAME))
+                visValue = node.visValues[k]
 
-            visCurve.keyframe_points[k].co = Vector((frame + 1, visValue))
+                visCurve.keyframe_points[k].co = Vector((frame + 1, visValue))
 
-        visCurve.update()
+            visCurve.update()
 
     return { 'FINISHED' }
