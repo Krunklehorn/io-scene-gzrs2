@@ -14,104 +14,61 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 # Latest Update
 
-[***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.5***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.5)
+[***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.5.1***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.5)
 
 * NEW: .ani import support for GunZ 1 versions: 0x0012, 0x1001, 0x1002 and 0x1003
   * Animations become Actions, manage them with the Timeline or Dopesheet areas, combine them using NLA tracks
+  * Per-object visibility is controlled through the object's viewport alpha channel (Object -> Viewport Display -> Color)
   * Bone type: Animates the selected armature's bones, disconnects bones to allow translation, controls bone position and rotation, but not scale
-  * TM type: Similar to Bone, but generates it's own armature, controls object position, rotation and scale
+  * TM type: Controls object world space matrices, supports scaling but does not support parenting
   * Vertex type: Adds absolute mode shape keys, animates by keying Evaluation Time, may fail for meshes with duplicate or overlapping vertices
-* NEW: Material guidelines for .elu export have been added, see below!
+* NEW: Material guidelines for .elu export have been simplified, see below!
+* NEW: Reconfigured shader nodes and implemented material presets
+* NEW: Added material info to the Realspace panel
+* Implicit effects now control additive rendering ('\_ef' and 'ef\_' prefixes)
+* Sky objects no longer catch rays ('obj\_sky\_' and 'obj\_ef\_sky' prefixes)
 * Mesh nodes beginning with "Dummy" are now treated as bones
+* Other minor fixes
 
 # Current Import Features
 
-* supported filetypes: .rs, .elu, .ani, .col, .lm, .scene.xml, .prop.xml, .cl2
-* displays world geometry, occlusion planes and collision data using mesh objects
-* displays BSP bounding boxes, sounds, spawns, powerups and other dummies using empties
-* approximates fog using a volume scatter or volume absorption shader
-* groups lights with similar properties, re-interprets the data to be useful in Blender
-* displays lightmaps using a linked node group for quick toggling
-* creates a driver object for quickly tuning lights and fog
+* Fully supported filetypes: .elu, .ani, .col, .cl2
+* Mostly supported filetypes: .rs, .lm
+* Partially supported filetypes: .scene.xml, .prop.xml
+
+<!-- -->
+
+* Displays world geometry, occlusion planes and collision data using mesh objects
+* Displays BSP bounding boxes, sounds, spawns, powerups and other dummies using empties
+* Approximates fog using a volume scatter or volume absorption shader
+* Groups lights with similar properties, re-interprets the data to be useful in Blender
+* Displays lightmaps using a linked node group for quick toggling
+* Creates a driver object for quickly tuning lights and fog
 
 # Current Export Features
 
-## Model Export (.elu)
+### Model Export (.elu)
 
 * GunZ 1 version 0x5007
-* supports both static and skinned meshes
-* automatically triangulates quads
+* Supports both static and skinned meshes
+* Automatically triangulates quads
 
 <!-- -->
 
-* exports smooth normals if custom split normals are included
-* exports bone weight data from vertex groups
-* exports UV data from UV channel 0
-* exports cloth physics data from color attribute channel 0
+* Exports smooth normals if custom split normals are included
+* Exports bone weight data from vertex groups
+* Exports UV data from UV channel 0
+* Exports cloth physics data from color attribute channel 0
 
 <!-- -->
 
-* requires valid materials in each slot, if present (see below)
-* requires bones be contained in an Armature object
-* requires Armatures be linked using an Armature modifier (not parented!)
-* requires vertex groups corresponding to bones by exact name (case-sensitive!)
-* requires unique names for all bones across all linked armatures
+* Requires valid materials in each slot, if present (see below)
+* Requires bones be contained in an Armature object
+* Requires Armatures be linked using an Armature modifier (not parented!)
+* Requires vertex groups corresponding to bones by exact name (case-sensitive!)
+* Requires unique names for all bones across all linked armatures
 
-## Required Material Nodes
-
-### Standard Materials
-
-| Type | Socket Configuration |
-| :---: | :---: |
-| Material Output | BSDF -> Surface |
-| Principled BSDF | BSDF -> Surface |
-
-### Additive Materials
-
-| Type | Socket Configuration |
-| :---: | :---: |
-| Principled BSDF | BSDF -> Shader (1) |
-| Transparent BSDF | BSDF -> Shader (2) |
-| Add Shader | Shader -> Surface |
-
-### Optional Nodes
-
-| Type | Default | Label<br />(right click -> rename) | Details |
-| :---: | :---: | :---: | :---: |
-| Image Texture | N/A | If labeled, represents a path relative to GunZ.exe | Color -> PBSDF Base Color |
-| Math (Greater Than) | 0 || Required for alpha-testing, parameter 2 controls the cutoff, must link Image Texture Alpha -> Math Value (1) -> PBSDF Alpha |
-
-### Render Method
-
-| Style | Render Method | Details | Socket Configuration |
-| :---: | :---: | :---: | :---: |
-| Alpha Blending | Dithered || Image Texture Alpha -> PBSDF Alpha |
-| Alpha Testing | Dithered || Image Texture Alpha -> Math Node (Greater Than) -> PBSDF Alpha |
-| Additive | Blended || Image Texture Color -> PBSDF Emission |
-
-### Extra Parameters (Material Properties -> Realspace)
-
-| Name | Type | Default | Details |
-| :---: | :---: | :---: | :---: |
-| Base | Bool | True | Base-materials can have sub-materials, which may be required for certain effects  |
-| Sub Material ID | Integer | -1 | Only valid for sub-materials |
-| Sub Material Count | Integer | 0 | Only valid for base-materials |
-| Ambient | Color | 0.588235, 0.588235, 0.588235 ||
-| Diffuse | Color | 0.588235, 0.588235, 0.588235 ||
-| Specular | Color | 0.9, 0.9, 0.9 ||
-
-### Extra Parameters (Material Properties -> Viewport Display -> Settings)
-
-| Control | Details |
-| :---: | :---: |
-| Two-sided | Controlled by the Backface Culling checkboxes (keep all three in sync) |
-| Specular Power | Controlled by the the Principled BSDF Roughness value, lower is smoother & glossier |
-
-![Basic Material](meta/basicmaterial_240927.jpg)
-
-![Alphatest Material](meta/alphatestmaterial_240927.jpg)
-
-![Additive Material](meta/additivematerial_240927.jpg)
+![Basic Material](meta/basicmaterial_241215.jpg)
 
 ### Material ID/Sub-ID Guidelines
 
@@ -128,8 +85,6 @@ The following guidelines help you set your material IDs and sub-IDs to sane valu
 *No. 4 is handled for you automatically. Future updates will handle more.
 
 These guidelines are based on patterns found in the vanilla GunZ content. Please submit an issue if you belive these guidelines are too restrictive or in error.
-
-The Maiet Character Viewer (MCV) can be used to change these after exporting if you need to do something more advanced.
 
 ### Notes on texture paths, labels and valid data subdirectories...
 
@@ -153,6 +108,8 @@ To work around this difference, you can control what path is written during expo
 
 The plugin will automatically truncate and verify the result for you. It will also remove double extensions (tex.bmp.dds -> tex.bmp) and sanitize double dds errors. (tex.dds.dds -> tex.dds)
 
+Advanced users can still use the Maiet Character Viewer (MCV) to modify material paths after exporting.
+
 ### Examples of valid path labels:
 - "model\woman\shoes.tga"
 - "Documents\My Custom Gunz Content\SFX\fireball.bmp.dds"
@@ -174,9 +131,11 @@ The plugin will automatically truncate and verify the result for you. It will al
 
 # Planned Features
 
+* GunZ 1: .rs smoke.xml support
+* GunZ 1: .rs flag.xml support
 * GunZ 1: alpha .elu versions: 0x11, 0x5001, 0x5002 and 0x5003
-* GunZ 1: .ani support
 * GunZ 1: .nav support
+* GunZ 1: lightmap export UV generation
 
 <!-- -->
 
