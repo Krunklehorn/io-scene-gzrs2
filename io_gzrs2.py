@@ -13,7 +13,7 @@ def readChar(file):                         return unpack('<b', file.read(1))[0]
 def readUChar(file):                        return unpack('<B', file.read(1))[0]
 def readCharBool(file):                     return False if readChar(file) < 0 else True
 def readBool(file):                         return unpack('<?', file.read(1))[0]
-def readBool32(file):                       return unpack('<xxx?', file.read(4))[0]
+def readBool32(file):                       return unpack('<?xxx', file.read(4))[0]
 def readUShort(file):                       return unpack('<H', file.read(2))[0]
 def readShort(file):                        return unpack('<h', file.read(2))[0]
 def readUInt(file):                         return unpack('<I', file.read(4))[0]

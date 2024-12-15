@@ -131,8 +131,6 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
         if version <= ELU_5002:
             if power == 20:
                 power = 0
-        else:
-            power *= 100
 
         if state.logEluMats:
             print("Ambient:            ({:>5.03f}, {:>5.03f}, {:>5.03f}, {:>5.03f})".format(*ambient))
