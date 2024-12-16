@@ -89,7 +89,7 @@ def importElu(self, context):
         eluxmlpath = pathExists(f"{ elupath }.{ ext }")
 
         if eluxmlpath:
-            with open(eluxmlpath, encoding = 'utf8') as file:
+            with open(eluxmlpath, encoding = 'utf-8') as file:
                 eluxmlstring = file.read()
                 eluxmlstring = regex.sub(r"(<Umbra Synchronization[^>]+\/>)", '', eluxmlstring)
                 eluxmlstring = eluxmlstring.replace("\"unreducible=true\"", "\" unreducible=true\"")

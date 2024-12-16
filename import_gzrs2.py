@@ -115,7 +115,8 @@ def importRS2(self, context):
         rsxmlpath = pathExists(f"{ rspath }.{ ext }")
 
         if rsxmlpath:
-            xmlRs = minidom.parse(rsxmlpath)
+            with open(rsxmlpath, encoding = 'utf-8') as file:
+                xmlRs = minidom.parseString(file.read())
             break
 
     if not rsxmlpath:
@@ -135,7 +136,8 @@ def importRS2(self, context):
             spawnxmlpath = pathExists(os.path.join(state.directory, f"spawn.{ ext }"))
 
             if spawnxmlpath:
-                xmlSpawn = minidom.parse(spawnxmlpath)
+                with open(spawnxmlpath, encoding = 'utf-8') as file:
+                    xmlSpawn = minidom.parseString(file.read())
                 break
 
         if not spawnxmlpath: self.report({ 'INFO' }, "GZRS2: Items requested but spawn.xml not found, no items to generate.")
@@ -193,7 +195,8 @@ def importRS2(self, context):
                 eluxmlpath = pathExists(f"{ elupath }.{ ext }")
 
                 if eluxmlpath:
-                    state.xmlEluMats[p] = parseEluXML(self, minidom.parse(eluxmlpath), state)
+                    with open(eluxmlpath, encoding = 'utf-8') as file:
+                        state.xmlEluMats[p] = minidom.parseString(file.read())
                     break
 
             readElu(self, elupath, state)
