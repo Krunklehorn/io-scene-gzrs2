@@ -70,9 +70,11 @@ def isValidTextureName(texName):
     return True
 
 def texMatchDownward(root, texBase, ddsBase):
+    matchBases = [texBase.lower(), ddsBase.lower()]
+
     for dirpath, _, filenames in os.walk(root):
         for filename in filenames:
-            if filename == texBase or filename == ddsBase:
+            if filename.lower() in matchBases:
                 return os.path.join(dirpath, filename)
 
 def matchRSDataDirectory(self, dirpath, dirbase, isRS3, state):
@@ -103,28 +105,25 @@ def ensureRS3DataDict(self, state):
         for filename in filenames:
             splitname = filename.split(os.extsep)
 
-            if splitname[-1].lower() in ['xml', 'elu', 'dds']:
+            if splitname[-1].lower() in RS3_DATA_DICT_EXTENSIONS:
                 resourcepath = pathExists(os.path.join(dirpath, filename))
 
-                if resourcepath: state.rs3DataDict[filename] = resourcepath
-                else: self.report({ 'ERROR' }, f"GZRS2: Resource found but pathExists() failed, potential case sensitivity issue: { filename }")
+                if not resourcepath:
+                    self.report({ 'ERROR' }, f"GZRS2: Resource found but pathExists() failed, potential case sensitivity issue: { filename }")
+                    return
+
+                state.rs3DataDict[filename.lower()] = resourcepath
 
 def ensureRS3DataDirectory(self, state):
     if state.rs3DataDir: return
 
     currentDir = state.directory
 
-    for _ in range(RS3_UPWARD_DIRECTORY_SEARCH):
-        currentBase = os.path.basename(currentDir)
-
-        if currentBase.lower() == 'data':
-            state.rs3DataDir = currentDir
-            break
-
+    for _ in range(RES_UPWARD_SEARCH_LIMIT):
         _, dirnames, _ = next(os.walk(currentDir))
 
         for dirname in dirnames:
-            if dirname.lower() == 'data':
+            if dirname.lower() in RS3_VALID_DATA_SUBDIRS_LOWER:
                 state.rs3DataDir = os.path.join(currentDir, dirname)
                 break
 
@@ -138,85 +137,89 @@ def ensureRS3DataDirectory(self, state):
 
 def textureSearch(self, texBase, texDir, isRS3, state):
     if not isValidTextureName(texBase):
-        self.report({ 'ERROR' }, f"GZRS2: textureSearch() called with an invalid texture path, must not be a directory: { texBase }")
+        self.report({ 'ERROR' }, f"GZRS2: Texture search attempted with an invalid texture name: { texBase }")
         return
 
     ddsBase = f"{ texBase }.dds".replace('.dds.dds', '.dds')
-    ddspath = os.path.join(state.directory, ddsBase)
-    texpath = os.path.join(state.directory, texBase)
 
-    ddsExists = pathExists(ddspath)
-    if ddsExists: return ddsExists
+    if isRS3:
+        ensureRS3DataDict(self, state)
 
-    texExists = pathExists(texpath)
-    if texExists: return texExists
+        result = state.rs3DataDict.get(texBase.lower())
+        if result: return result
 
-    if texDir is None: return
-    elif texDir != '':
-        texpath = os.path.join(state.directory, texDir, texBase)
-        ddspath = os.path.join(state.directory, texDir, ddsBase)
+        result = state.rs3DataDict.get(ddsBase.lower())
+        if result: return result
 
-        ddsExists = pathExists(ddspath)
-        if ddsExists: return ddsExists
+        self.report({ 'WARNING' }, f"GZRS2: Texture search failed, no entry in data dictionary: { texBase }")
 
-        texExists = pathExists(texpath)
-        if texExists: return texExists
+    if texDir != '':
+        # Check the local folder
+        result = pathExists(os.path.join(state.directory, texBase))
+        if result: return result
 
-        parentDir = os.path.dirname(state.directory)
-        targetname = texDir.split(os.sep)[0]
+        result = pathExists(os.path.join(state.directory, ddsBase))
+        if result: return result
 
-        for _ in range(RS2_UPWARD_DIRECTORY_SEARCH):
-            _, dirnames, _ = next(os.walk(parentDir))
+        # Check a specific sub-folder relative to the local one
+        result = pathExists(os.path.join(state.directory, texDir, texBase))
+        if result: return result
 
-            for dirname in dirnames:
-                if dirname.lower() == targetname.lower():
-                    texpath = os.path.join(parentDir, texDir, texBase)
-                    ddspath = os.path.join(parentDir, texDir, ddsBase)
+        result = pathExists(os.path.join(state.directory, texDir, ddsBase))
+        if result: return result
 
-                    ddsExists = pathExists(ddspath)
-                    if ddsExists: return ddsExists
+        if self.texSearchMode == 'PATH':
+            dataDir = state.rs3DataDir if isRS3 else state.rs2DataDir
 
-                    texExists = pathExists(texpath)
-                    if texExists: return texExists
+            # Check a specific sub-folder relative to the data folder
+            result = pathExists(os.path.join(dataDir, texDir, texBase))
+            if result: return result
 
-                    return
+            result = pathExists(os.path.join(dataDir, texDir, ddsBase))
+            if result: return result
+        elif self.texSearchMode == 'BRUTE':
+            parentDir = os.path.dirname(state.directory)
+            targetname = texDir.split(os.sep)[0]
 
-            parentDir = os.path.dirname(parentDir)
+            # This isn't too bad, it only checks directory names
+            for _ in range(TEX_UPWARD_SEARCH_LIMIT):
+                _, dirnames, _ = next(os.walk(parentDir))
 
-        self.report({ 'WARNING' }, f"GZRS2: Texture search failed, directory not found: { texBase }, { texDir }")
-    elif not isRS3:
+                for dirname in dirnames:
+                    if dirname.lower() == targetname.lower():
+                        # Check a specific sub-folder relative to the parent folder
+                        result = pathExists(os.path.join(parentDir, texDir, texBase))
+                        if result: return result
+
+                        result = pathExists(os.path.join(parentDir, texDir, ddsBase))
+                        if result: return result
+
+                parentDir = os.path.dirname(parentDir)
+
+            self.report({ 'WARNING' }, f"GZRS2: Texture search failed, no upward directory match: { texBase }, { texDir }")
+    else:
+        # Check the local folder and all sub-folders
         result = texMatchDownward(state.directory, texBase, ddsBase)
         if result: return result
 
-        if not state.rs2DataDir:
-            currentDir = os.path.dirname(state.directory)
+        if self.texSearchMode == 'PATH':
+            # Check the data folder and all sub-folders
+            result = texMatchDownward(state.rs3DataDir if isRS3 else state.rs2DataDir, texBase, ddsBase)
+            if result: return result
+        elif self.texSearchMode == 'BRUTE':
+            parentDir = os.path.dirname(state.directory)
 
-            for u in range(RS2_UPWARD_DIRECTORY_SEARCH):
-                result = texMatchDownward(currentDir, texBase, ddsBase)
+            # This is incredibly inefficient, it checks ALL directories and ALL files
+            # We could improve this with downward search caching and early exits for known system folders
+            # Both of those depend on the operating system so screw it
+            for _ in range(TEX_UPWARD_SEARCH_LIMIT):
+                # Check the parent folder and all sub-folders
+                result = texMatchDownward(parentDir, texBase, ddsBase)
                 if result: return result
 
-                currentBase = os.path.basename(currentDir)
+                parentDir = os.path.dirname(parentDir)
 
-                if matchRSDataDirectory(self, currentDir, currentBase, False, state):
-                    self.report({ 'INFO' }, f"GZRS2: Upward directory search found a valid data subdirectory: { u }, { currentDir }")
-                    break
-
-                currentDir = os.path.dirname(currentDir)
-
-        result = texMatchDownward(state.rs2DataDir, texBase, ddsBase)
-        if result: return result
-
-        if state.rs2DataDir:
-            self.report({ 'WARNING' }, f"GZRS2: Texture search failed, no downward match: { texBase }")
-        else:
-            self.report({ 'WARNING' }, f"GZRS2: Texture search failed, no downward match and no data directory: { texBase }")
-    else:
-        ensureRS3DataDirectory(self, state)
-
-        if texBase in state.rs3DataDict: return state.rs3DataDict[texBase]
-        elif ddsBase in state.rs3DataDict: return state.rs3DataDict[ddsBase]
-
-        self.report({ 'WARNING' }, f"GZRS2: Texture search failed, no entry in data dictionary: { texBase }")
+            self.report({ 'WARNING' }, f"GZRS2: Texture search failed, no upward file match: { texBase }")
 
 def textureSearchLoadFake(self, texBase, texDir, isRS3, state):
     if state.texSearchMode == 'SKIP':
@@ -230,21 +233,23 @@ def textureSearchLoadFake(self, texBase, texDir, isRS3, state):
     return True, texpath, False
 
 def resourceSearch(self, resourcename, state):
-    resourcepath = os.path.join(state.directory, resourcename)
-    if pathExists(resourcepath): return resourcepath
+    result = pathExists(os.path.join(state.directory, resourcename))
+    if result: return result
 
     ensureRS3DataDirectory(self, state)
 
-    if resourcename in state.rs3DataDict:
-        return state.rs3DataDict[resourcename]
+    result = state.rs3DataDict.get(resourcename.lower())
+    if result: return result
 
     splitname = resourcename.split(os.extsep)
 
     if splitname[-1].lower() in ['xml'] and splitname[-2].lower() in ['scene', 'prop']:
         eluname = f"{ splitname[0] }.elu"
-        if eluname in state.rs3DataDict:
-            self.report({ 'ERROR' }, f"GZRS2: Resource found after missing scene.xml or prop.xml: { resourcename }, { eluname }")
-            return state.rs3DataDict[eluname]
+
+        result = state.rs3DataDict.get(eluname.lower())
+        if result:
+            self.report({ 'WARNING' }, f"GZRS2: Resource found after missing scene.xml or prop.xml: { resourcename }, { eluname }")
+            return result
 
     self.report({ 'ERROR' }, f"GZRS2: Resource search failed: { resourcename }")
 
@@ -605,19 +610,23 @@ def setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, destinati
 
     return add
 
-def processRS2Texlayer(self, m, name, texName, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state):
-    if not texName:
-        self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with empty texture name: { m }, { name }")
+def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state):
+    texpath = xmlRsMat.get('DIFFUSEMAP')
+
+    if not texpath:
+        self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with empty texture path: { blMat.name }")
         return
 
-    if not isValidTextureName(texName):
-        self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with invalid texture name, must not be a directory: { m }, { name }, { texName }")
+    texBase, texName, texExt, texDir = decomposeTexpath(texpath)
+
+    if not isValidTextureName(texBase):
+        self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with invalid texture name: { blMat.name }, { texBase }")
         return
 
-    success, texpath, loadFake = textureSearchLoadFake(self, texName, '', False, state)
+    success, texpath, loadFake = textureSearchLoadFake(self, texBase, texDir, False, state)
 
     if not success:
-        self.report({ 'ERROR' }, f"GZRS2: Texture not found for .rs.xml material: { m }, { name }, { texName }")
+        self.report({ 'WARNING' }, f"GZRS2: Texture not found for .rs.xml material: { blMat.name }, { texBase }, { texDir }")
 
     texture = getMatImageTextureNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, loadFake, state)
 
@@ -676,13 +685,13 @@ def processRS3TexLayer(self, texlayer, blMat, tree, links, nodes, shader, emissi
         return useopacity
 
     if not isValidTextureName(texName):
-        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with invalid texture name, must not be a directory: { texName }, { texType }")
+        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with invalid texture name: { texName }, { texType }")
         return useopacity
 
     success, texpath, loadFake = textureSearchLoadFake(self, texName, '', True, state)
 
     if not success:
-        self.report({ 'ERROR' }, f"GZRS2: Texture not found for .elu.xml material: { texName }, { texType }")
+        self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu.xml material: { texName }, { texType }")
 
     if texType == 'DIFFUSEMAP':
         texture = getMatImageTextureNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, loadFake, state)

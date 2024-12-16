@@ -1,7 +1,7 @@
 import os
 
-RS2_UPWARD_DIRECTORY_SEARCH =   4
-RS3_UPWARD_DIRECTORY_SEARCH =   5
+TEX_UPWARD_SEARCH_LIMIT =       4
+RES_UPWARD_SEARCH_LIMIT =       5
 XMLELU_TEXTYPES =               ['DIFFUSEMAP', 'SPECULARMAP', 'SELFILLUMINATIONMAP', 'OPACITYMAP', 'NORMALMAP']
 
 if os.name == 'nt':
@@ -13,6 +13,9 @@ else:
 
 RS2_VALID_DATA_SUBDIRS =        ['Interface', 'Maps', 'Model', 'Quest', 'Sfx', 'Shader', 'Sound', 'System']
 RS3_VALID_DATA_SUBDIRS =        ['Data', 'EngineRes']
+RS3_VALID_DATA_SUBDIRS_LOWER =  ['data', 'engineres']
+
+RS3_DATA_DICT_EXTENSIONS =      ['xml', 'elu', 'dds']
 
 RS2_ID =                        0x12345678
 RS2_VERSION =                   7

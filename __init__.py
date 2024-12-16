@@ -325,7 +325,7 @@ class ImportGZRS2(Operator, ImportHelper):
     texSearchMode: EnumProperty(
         name = "Texture Mode",
         items = (('PATH',       "Path",         "Search for textures using the specified path (faster)"),
-                 ('SMART',      "Smart",        "Search for textures in surrounding filesystem (slow, may freeze)"),
+                 ('BRUTE',      "Brute",        "Search for textures in surrounding filesystem (slow, may freeze)"),
                  ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
     )
 
@@ -670,7 +670,7 @@ class ImportGZRS3(Operator, ImportHelper):
     texSearchMode: EnumProperty(
         name = "Texture Mode",
         items = (('PATH',       "Path",         "Search for textures using the specified path (faster)"),
-                 ('SMART',      "Smart",        "Search for textures in surrounding filesystem (slow, may freeze)"),
+                 ('BRUTE',      "Brute",        "Search for textures in surrounding filesystem (slow, may freeze)"),
                  ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
     )
 
@@ -816,7 +816,7 @@ class ImportRSELU(Operator, ImportHelper):
     texSearchMode: EnumProperty(
         name = "Texture Mode",
         items = (('PATH',       "Path",         "Search for textures using the specified path (faster)"),
-                 ('SMART',      "Smart",        "Search for textures in surrounding filesystem (slow, may freeze)"),
+                 ('BRUTE',      "Brute",        "Search for textures in surrounding filesystem (slow, may freeze)"),
                  ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
     )
 

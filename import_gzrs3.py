@@ -61,6 +61,8 @@ def importRS3(self, context):
             return { 'CANCELLED' }
 
         ensureRS3DataDict(self, state)
+    else:
+        ensureRS3DataDirectory(self, state)
 
     state.convertUnits = self.convertUnits
     state.texSearchMode = self.texSearchMode

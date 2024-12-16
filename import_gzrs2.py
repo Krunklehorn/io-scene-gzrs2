@@ -280,9 +280,7 @@ def importRS2(self, context):
 
         blMat.gzrs2.matID = m
 
-        texName = xmlRsMat.get('DIFFUSEMAP')
-
-        processRS2Texlayer(self, m, xmlRsMatName, texName, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state)
+        processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state)
 
         state.blXmlRsMats.append(blMat)
 
