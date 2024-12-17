@@ -569,12 +569,13 @@ def importRS2(self, context):
                 blColObj.hide_set(True, view_layer = viewLayer)
 
         if state.doNavigation:
-            navName = f"{ state.filename }_Navigation"
-            blNavObj = setupNavMesh(navName, state)
-            rootExtras.objects.link(blNavObj)
+            blNavFacesObj, blNavLinksObj = setupNavMesh(state)
+            rootExtras.objects.link(blNavFacesObj)
+            rootExtras.objects.link(blNavLinksObj)
 
             for viewLayer in context.scene.view_layers:
-                blNavObj.hide_set(True, view_layer = viewLayer)
+                blNavFacesObj.hide_set(True, view_layer = viewLayer)
+                blNavLinksObj.hide_set(True, view_layer = viewLayer)
 
         if state.doOcclusion:
             occName = f"{ state.filename }_Occlusion"
@@ -597,7 +598,7 @@ def importRS2(self, context):
             blOccGeo = bpy.data.meshes.new(occName)
             blOccObj = bpy.data.objects.new(occName, blOccGeo)
 
-            blOccGeo.from_pydata(occVerts, [], occFaces)
+            blOccGeo.from_pydata(occVerts, (), occFaces)
             blOccGeo.validate()
             blOccGeo.update()
 

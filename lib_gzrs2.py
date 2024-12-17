@@ -794,7 +794,9 @@ def setupColMesh(name, state):
     blColGeo = bpy.data.meshes.new(name)
     blColObj = bpy.data.objects.new(name, blColGeo)
 
-    blColGeo.from_pydata(state.colVerts, [], [tuple(range(i, i + 3)) for i in range(0, len(state.colVerts), 3)])
+    colFaces = tuple(tuple(range(i, i + 3)) for i in range(0, len(state.colVerts), 3))
+
+    blColGeo.from_pydata(state.colVerts, (), colFaces)
     blColGeo.validate()
     blColGeo.update()
 
@@ -808,25 +810,41 @@ def setupColMesh(name, state):
 
     return blColObj
 
-def setupNavMesh(name, state):
-    blNavMat = setupDebugMat(name, (0.0, 1.0, 0.0, 0.25))
+def setupNavMesh(state):
+    facesName = f"{ state.filename }_Navmesh"
+    linksName = f"{ state.filename }_Navlinks"
 
-    blNavGeo = bpy.data.meshes.new(name)
-    blNavObj = bpy.data.objects.new(name, blNavGeo)
+    blNavMat = setupDebugMat(facesName, (0.0, 1.0, 0.0, 0.25))
 
-    blNavGeo.from_pydata(state.navVerts, [], state.navFaces)
-    blNavGeo.validate()
-    blNavGeo.update()
+    blNavFaces = bpy.data.meshes.new(facesName)
+    blNavLinks = bpy.data.meshes.new(linksName)
 
-    setObjFlagsDebug(blNavObj)
+    blNavFacesObj = bpy.data.objects.new(facesName, blNavFaces)
+    blNavLinksObj = bpy.data.objects.new(linksName, blNavLinks)
+
+    blNavFaces.from_pydata(state.navVerts, (), state.navFaces)
+    blNavFaces.validate()
+    blNavFaces.update()
+
+    linksVerts = tuple((state.navVerts[face[0]] + state.navVerts[face[1]] + state.navVerts[face[2]]) / 3.0 for face in state.navFaces)
+    linksEdges = tuple((l, link[i]) for i in range(3) for l, link in enumerate(state.navLinks) if link[i] >= 0)
+
+    blNavLinks.from_pydata(linksVerts, linksEdges, ())
+    blNavLinks.validate()
+    blNavLinks.update()
+
+    setObjFlagsDebug(blNavFacesObj)
+    setObjFlagsDebug(blNavLinksObj)
 
     state.blNavMat = blNavMat
-    state.blNavGeo = blNavGeo
-    state.blNavObj = blNavObj
+    state.blNavFaces = blNavFaces
+    state.blNavLinks = blNavLinks
+    state.blNavFacesObj = blNavFacesObj
+    state.blNavLinksObj = blNavLinksObj
 
-    blNavObj.data.materials.append(blNavMat)
+    blNavFacesObj.data.materials.append(blNavMat)
 
-    return blNavObj
+    return blNavFacesObj, blNavLinksObj
 
 def setupEluMat(self, m, eluMat, state):
     elupath = eluMat.elupath
@@ -1025,7 +1043,7 @@ def setupRsMesh(self, m, blMesh, state):
         self.report({ 'INFO' }, f"GZRS2: Unused rs material slot: { m }, { state.xmlRsMats[m]['name'] }")
         return False
 
-    blMesh.from_pydata(meshVerts, [], meshFaces)
+    blMesh.from_pydata(meshVerts, (), meshFaces)
 
     blMesh.normals_split_custom_set_from_vertices(meshNorms)
 
@@ -1111,7 +1129,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
         if doSlots: meshSlots.append(face.slotID)
         index += degree
 
-    blMesh.from_pydata(meshVerts, [], meshFaces)
+    blMesh.from_pydata(meshVerts, (), meshFaces)
 
     if doNorms:
         blMesh.normals_split_custom_set_from_vertices(meshNorms)

@@ -40,11 +40,11 @@ def importNav(self, context):
     if readNav(self, navpath, state):
         return { 'CANCELLED' }
 
-    navName = f"{ state.filename }_Navigation"
-    blNavObj = setupNavMesh(navName, state)
-    context.collection.objects.link(blNavObj)
+    blNavFacesObj, blNavLinksObj = setupNavMesh(state)
+    context.collection.objects.link(blNavFacesObj)
+    context.collection.objects.link(blNavLinksObj)
 
     for viewLayer in context.scene.view_layers:
-        viewLayer.objects.active = blNavObj
+        viewLayer.objects.active = blNavFacesObj
 
     return { 'FINISHED' }

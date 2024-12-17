@@ -116,8 +116,10 @@ class GZRS2State:
     blColObj:           Object      = None
 
     blNavMat:           Material    = None
-    blNavGeo:           Mesh        = None
-    blNavObj:           Object      = None
+    blNavFaces:         Mesh        = None
+    blNavLinks:         Mesh        = None
+    blNavFacesObj:      Object      = None
+    blNavLinksObj:      Object      = None
 
     blLmImage:          list = field(default_factory = list)
 
