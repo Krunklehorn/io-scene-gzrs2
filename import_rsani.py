@@ -55,7 +55,7 @@ def importAni(self, context):
 
     bpy.ops.ed.undo_push()
 
-    bpy.context.scene.frame_set(0)
+    context.scene.frame_set(0)
 
     aniType = type(state.aniNodes[0]) # We assume the entire list is homogeneous
     aniTypeEnum = ANI_TYPES_ENUM.get(aniType, aniType)
@@ -96,7 +96,7 @@ def importAni(self, context):
             blObjAnimData = blObj.animation_data or blObj.animation_data_create()
             blObjAnimData.action = action
 
-            bpy.context.view_layer.update()
+            context.view_layer.update()
             worldMatrixInv = blObj.matrix_world.inverted()
 
             worldPositions = [worldMatrixInv @ localPos for localPos in node.vertexPositions]
@@ -252,7 +252,7 @@ def importAni(self, context):
     else:
         blObjs = { object.name: object for object in context.scene.objects }
 
-        blArmatureObj = bpy.context.active_object
+        blArmatureObj = context.active_object if context.active_object in context.selected_objects else None
 
         if blArmatureObj is None or blArmatureObj.type != 'ARMATURE':
             self.report({ 'ERROR' }, f"GZRS2: ANI import of type { aniTypePretty } requires a selected armature as a reference!")
@@ -277,7 +277,7 @@ def importAni(self, context):
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
 
-        bpy.context.view_layer.update()
+        context.view_layer.update()
         blArmatureObj.update_from_editmode()
 
         bpy.ops.object.mode_set(mode = 'EDIT')
@@ -330,7 +330,7 @@ def importAni(self, context):
                 nonlocal blArmatureObj, meshName, blPoseBone, locPath, rotPath
 
                 blPoseBone.matrix = poseMat @ reorientPose
-                bpy.context.view_layer.update()
+                context.view_layer.update()
 
                 blArmatureObj.keyframe_insert(data_path = locPath, frame = frame, group = meshName)
                 blArmatureObj.keyframe_insert(data_path = rotPath, frame = frame, group = meshName)

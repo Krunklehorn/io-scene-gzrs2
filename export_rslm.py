@@ -102,7 +102,7 @@ def exportLm(self, context):
     filename = splitname[0]
 
     if state.doUVs:
-        blMeshObj = context.active_object
+        blMeshObj = context.active_object if context.active_object in context.selected_objects else None
 
         if blMeshObj is None or blMeshObj.type != 'MESH' or not blMeshObj.select_get():
             self.report({ 'ERROR' }, "GZRS2: Lightmap UV export requires an active mesh object with valid UVs in channel 3!")
