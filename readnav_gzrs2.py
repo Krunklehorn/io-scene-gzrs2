@@ -36,7 +36,6 @@ def readNav(self, path, state):
     if id != R_NAV_ID or version != R_NAV_VERSION:
         self.report({ 'ERROR' }, f"GZRS2: NAV header invalid! { hex(id) }, { hex(version) }")
         file.close()
-
         return { 'CANCELLED' }
 
     vertexCount = readInt(file)
@@ -66,7 +65,6 @@ def readNav(self, path, state):
     if invalidCount > 0:
         self.report({ 'ERROR' }, f"GZRS2: NAV import contained { invalidCount } invalid face indices! { path }")
         file.close()
-
         return { 'CANCELLED' }
 
     linkIndices = readIntArray(file, faceCount * 3)
@@ -80,7 +78,6 @@ def readNav(self, path, state):
     if invalidCount > 0:
         self.report({ 'ERROR' }, f"GZRS2: NAV import contained { invalidCount } negative link indices! { path }")
         file.close()
-
         return { 'CANCELLED' }
 
     state.navLinks = tuple(tuple(linkIndices[f * 3 + i] for i in range(3)) for f in range(faceCount))

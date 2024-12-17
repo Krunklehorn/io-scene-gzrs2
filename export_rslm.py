@@ -130,7 +130,6 @@ def exportLm(self, context):
         if not (id == RS2_ID or id == RS3_ID) or version < RS3_VERSION1:
             self.report({ 'ERROR' }, f"GZRS2: RS header invalid! { hex(id) }, { hex(version) }")
             file.close()
-
             return { 'CANCELLED' }
 
         if id == RS2_ID and version == RS2_VERSION:
@@ -153,7 +152,6 @@ def exportLm(self, context):
         else:
             self.report({ 'ERROR' }, f"GZRS2: RS file must be for GunZ 1! { hex(id) }, { hex(version) }")
             file.close()
-
             return { 'CANCELLED' }
 
         file.close()
@@ -257,12 +255,6 @@ def exportLm(self, context):
         print(f"ID:                 { hex(id) }")
         print(f"Version:            { hex(version) }")
         print()
-
-    if id != R_LM_ID or (version != R_LM_VERSION and version != R_LM_VERSION_EXT):
-        self.report({ 'ERROR' }, f"GZRS2: LM header invalid! { hex(id) }, { hex(version) }")
-        file.close()
-
-        return { 'CANCELLED' }
 
     skipBytes(file, 4 + 4) # skip invalid (auxiliary?) polygon count and unused node count
 

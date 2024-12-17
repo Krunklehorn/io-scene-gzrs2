@@ -65,13 +65,11 @@ def readElu(self, path, state):
     if id != ELU_ID or version not in ELU_VERSIONS:
         self.report({ 'ERROR' }, f"GZRS2: ELU header invalid! { hex(id) }, { hex(version) }")
         file.close()
-
         return { 'CANCELLED' }
 
     if version not in ELU_IMPORT_VERSIONS:
         self.report({ 'ERROR' }, f"GZRS2: Importing this ELU version is not supported yet! Model will not load properly! { path }, { hex(version) }")
         file.close()
-
         return { 'CANCELLED' }
 
     result = None

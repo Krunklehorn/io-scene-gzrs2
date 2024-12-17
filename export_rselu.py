@@ -74,6 +74,14 @@ def exportElu(self, context):
     id = ELU_ID
     version, maxPathLength = getEluExportConstants()
 
+    if id != ELU_ID or version not in ELU_VERSIONS:
+        self.report({ 'ERROR' }, f"GZRS2: ELU header invalid! { hex(id) }, { hex(version) }")
+        return { 'CANCELLED' }
+
+    if version not in ELU_EXPORT_VERSIONS:
+        self.report({ 'ERROR' }, f"GZRS2: Exporting this ELU version is not supported yet! { elupath }, { hex(version) }")
+        return { 'CANCELLED' }
+
     objects = getFilteredObjects(context, state)
 
     blObjs = []
@@ -724,14 +732,6 @@ def exportElu(self, context):
         print(f"Mat Count:          { matCount }")
         print(f"Mesh Count:         { meshCount }")
         print()
-
-    if id != ELU_ID or version not in ELU_VERSIONS:
-        self.report({ 'ERROR' }, f"GZRS2: ELU header invalid! { hex(id) }, { hex(version) }")
-        return { 'CANCELLED' }
-
-    if version not in ELU_EXPORT_VERSIONS:
-        self.report({ 'ERROR' }, f"GZRS2: Exporting this ELU version is not supported yet! { elupath }, { hex(version) }")
-        return { 'CANCELLED' }
 
     if os.path.isfile(elupath):
         shutil.copy2(elupath, os.path.join(directory, filename + "_backup") + '.' + splitname[1])
