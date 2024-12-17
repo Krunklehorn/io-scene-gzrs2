@@ -15,6 +15,7 @@ class GZRS2State:
     texSearchMode:      str = ""
     overwriteAction:    bool = False
     doCollision:        bool = False
+    doNavigation:       bool = False
     doLightmap:         bool = False
     doLights:           bool = False
     doProps:            bool = False

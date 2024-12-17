@@ -795,6 +795,7 @@ def setupColMesh(name, state):
     blColObj = bpy.data.objects.new(name, blColGeo)
 
     blColGeo.from_pydata(state.colVerts, [], [tuple(range(i, i + 3)) for i in range(0, len(state.colVerts), 3)])
+    blColGeo.validate()
     blColGeo.update()
 
     setObjFlagsDebug(blColObj)
@@ -814,6 +815,7 @@ def setupNavMesh(name, state):
     blNavObj = bpy.data.objects.new(name, blNavGeo)
 
     blNavGeo.from_pydata(state.navVerts, [], state.navFaces)
+    blNavGeo.validate()
     blNavGeo.update()
 
     setObjFlagsDebug(blNavObj)

@@ -336,6 +336,12 @@ class ImportGZRS2(Operator, ImportHelper):
         default = True
     )
 
+    doNavigation: BoolProperty(
+        name = "Navigation",
+        description = "Import navigation data",
+        default = True
+    )
+
     doLightmap: BoolProperty(
         name = "Lightmap",
         description = "Import lightmap data",
@@ -468,6 +474,18 @@ class ImportGZRS2(Operator, ImportHelper):
         default = False
     )
 
+    logNavHeaders: BoolProperty(
+        name = "Nav Headers",
+        description = "Log Nav header data",
+        default = True
+    )
+
+    logNavData: BoolProperty(
+        name = "Nav Data",
+        description = "Log Nav data",
+        default = True
+    )
+
     logLmHeaders: BoolProperty(
         name = "Lm Headers",
         description = "Log Lm header data",
@@ -546,6 +564,7 @@ class GZRS2_PT_Import_Main(Panel):
 
         column = layout.column()
         column.prop(operator, "doCollision")
+        column.prop(operator, "doNavigation")
         column.enabled = operator.meshMode != 'BAKE'
 
         layout.prop(operator, "doLightmap")
@@ -626,6 +645,8 @@ class GZRS2_PT_Import_Logging(Panel):
         layout.prop(operator, "logColHeaders")
         layout.prop(operator, "logColNodes")
         layout.prop(operator, "logColTris")
+        layout.prop(operator, "logNavHeaders")
+        layout.prop(operator, "logNavData")
         layout.prop(operator, "logLmHeaders")
         layout.prop(operator, "logLmImages")
         layout.prop(operator, "logEluHeaders")
@@ -1215,7 +1236,7 @@ class ImportRSNAV(Operator, ImportHelper):
     logNavData: BoolProperty(
         name = "Nav Data",
         description = "Log Nav data",
-        default = False
+        default = True
     )
 
     def draw(self, context):

@@ -43,6 +43,7 @@ from .classes_gzrs2 import *
 from .parse_gzrs2 import *
 from .readrs_gzrs2 import *
 from .readcol_gzrs2 import *
+from .readnav_gzrs2 import *
 from .readlm_gzrs2 import *
 from .readelu_gzrs2 import *
 from .lib_gzrs2 import *
@@ -61,23 +62,24 @@ def importRS2(self, context):
             self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory! Verify your path in the plugin's preferences!")
             return { 'CANCELLED' }
 
-    state.convertUnits = self.convertUnits
-    state.meshMode = self.meshMode
-    state.texSearchMode = self.texSearchMode
-    state.doCollision = self.doCollision and self.meshMode != 'BAKE'
-    state.doLightmap = self.doLightmap
-    state.doLights = self.doLights
-    state.tweakLights = self.tweakLights and self.doLights
-    state.doProps = self.doProps
-    state.doDummies = self.doDummies and self.meshMode != 'BAKE'
-    state.doOcclusion = self.doOcclusion and self.meshMode != 'BAKE'
-    state.doFog = self.doFog
-    state.doSounds = self.doSounds and self.meshMode != 'BAKE'
-    state.doItems = self.doItems and self.meshMode != 'BAKE'
-    state.doBspBounds = self.doBspBounds and self.meshMode != 'BAKE'
-    state.doLightDrivers = self.doLightDrivers
-    state.doFogDriver = self.doFogDriver
-    state.doCleanup = self.doCleanup
+    state.convertUnits      = self.convertUnits
+    state.meshMode          = self.meshMode
+    state.texSearchMode     = self.texSearchMode
+    state.doCollision       = self.doCollision      and self.meshMode != 'BAKE'
+    state.doNavigation      = self.doNavigation     and self.meshMode != 'BAKE'
+    state.doLightmap        = self.doLightmap
+    state.doLights          = self.doLights
+    state.tweakLights       = self.tweakLights      and self.doLights
+    state.doProps           = self.doProps
+    state.doDummies         = self.doDummies        and self.meshMode != 'BAKE'
+    state.doOcclusion       = self.doOcclusion      and self.meshMode != 'BAKE'
+    state.doFog             = self.doFog
+    state.doSounds          = self.doSounds         and self.meshMode != 'BAKE'
+    state.doItems           = self.doItems          and self.meshMode != 'BAKE'
+    state.doBspBounds       = self.doBspBounds      and self.meshMode != 'BAKE'
+    state.doLightDrivers    = self.doLightDrivers
+    state.doFogDriver       = self.doFogDriver
+    state.doCleanup         = self.doCleanup
 
     if self.panelLogging:
         print()
@@ -88,23 +90,25 @@ def importRS2(self, context):
         print("=======================================================================")
         print()
 
-        state.logRsPortals = self.logRsPortals
-        state.logRsCells = self.logRsCells
-        state.logRsGeometry = self.logRsGeometry
-        state.logRsTrees = self.logRsTrees
-        state.logRsLeaves = self.logRsLeaves
-        state.logRsVerts = self.logRsVerts
-        state.logColHeaders = self.logColHeaders
-        state.logColNodes = self.logColNodes
-        state.logColTris = self.logColTris
-        state.logLmHeaders = self.logLmHeaders
-        state.logLmImages = self.logLmImages
-        state.logEluHeaders = self.logEluHeaders
-        state.logEluMats = self.logEluMats
-        state.logEluMeshNodes = self.logEluMeshNodes
-        state.logVerboseIndices = self.logVerboseIndices and self.logEluMeshNodes
-        state.logVerboseWeights = self.logVerboseWeights and self.logEluMeshNodes
-        state.logCleanup = self.logCleanup
+        state.logRsPortals          = self.logRsPortals
+        state.logRsCells            = self.logRsCells
+        state.logRsGeometry         = self.logRsGeometry
+        state.logRsTrees            = self.logRsTrees
+        state.logRsLeaves           = self.logRsLeaves
+        state.logRsVerts            = self.logRsVerts
+        state.logColHeaders         = self.logColHeaders
+        state.logColNodes           = self.logColNodes
+        state.logColTris            = self.logColTris
+        state.logNavHeaders         = self.logNavHeaders
+        state.logNavData            = self.logNavData
+        state.logLmHeaders          = self.logLmHeaders
+        state.logLmImages           = self.logLmImages
+        state.logEluHeaders         = self.logEluHeaders
+        state.logEluMats            = self.logEluMats
+        state.logEluMeshNodes       = self.logEluMeshNodes
+        state.logVerboseIndices     = self.logVerboseIndices    and self.logEluMeshNodes
+        state.logVerboseWeights     = self.logVerboseWeights    and self.logEluMeshNodes
+        state.logCleanup            = self.logCleanup
 
     rspath = self.filepath
     state.directory = os.path.dirname(rspath)
@@ -174,7 +178,19 @@ def importRS2(self, context):
 
         if not colpath:
             state.doCollision = False
-            self.report({ 'INFO' }, "GZRS2: Collision mesh requested but .col file not found, no collision mesh to generate.")
+            self.report({ 'INFO' }, "GZRS2: Collision mesh requested but .col/.cl2 file not found, no collision mesh to generate.")
+
+    if state.doNavigation:
+        for ext in NAV_EXTENSIONS:
+            navpath = pathExists(f"{ rspath }.{ ext }")
+
+            if navpath:
+                readNav(self, navpath, state)
+                break
+
+        if not navpath:
+            state.doNavigation = False
+            self.report({ 'INFO' }, "GZRS2: Navigation mesh requested but .nav file not found, no collision mesh to generate.")
 
     if state.doLightmap:
         lmpath = pathExists(f"{ rspath }.lm")
@@ -208,7 +224,7 @@ def importRS2(self, context):
     state.doLightDrivers =   state.doLightDrivers and state.doLights
     state.doFogDriver =      state.doFogDriver and state.doFog
     doDrivers =             self.panelDrivers and (state.doLightDrivers or state.doFogDriver)
-    doExtras =              state.doCollision or state.doOcclusion or state.doFog or state.doBspBounds or doDrivers
+    doExtras =              state.doCollision or state.doNavigation or state.doOcclusion or state.doFog or state.doBspBounds or doDrivers
 
     bpy.ops.ed.undo_push()
     collections = bpy.data.collections
@@ -544,13 +560,6 @@ def importRS2(self, context):
                 rootItems.objects.link(blItemObj)
 
     if doExtras:
-        #####
-        # The goal here was to create a material that would be semi-transparent when viewed in solid and
-        # material preview modes, but would only show up as wireframe during render. This works fine on
-        # a default cube, but a complex mesh will still render a bunch of opaque black. Idk why ._.
-        # For now, we just have to disable the collision and occlusion meshes during render.
-        #####
-
         if state.doCollision:
             colName = f"{ state.filename }_Collision"
             blColObj = setupColMesh(colName, state)
@@ -558,6 +567,14 @@ def importRS2(self, context):
 
             for viewLayer in context.scene.view_layers:
                 blColObj.hide_set(True, view_layer = viewLayer)
+
+        if state.doNavigation:
+            navName = f"{ state.filename }_Navigation"
+            blNavObj = setupNavMesh(navName, state)
+            rootExtras.objects.link(blNavObj)
+
+            for viewLayer in context.scene.view_layers:
+                blNavObj.hide_set(True, view_layer = viewLayer)
 
         if state.doOcclusion:
             occName = f"{ state.filename }_Occlusion"
@@ -581,6 +598,7 @@ def importRS2(self, context):
             blOccObj = bpy.data.objects.new(occName, blOccGeo)
 
             blOccGeo.from_pydata(occVerts, [], occFaces)
+            blOccGeo.validate()
             blOccGeo.update()
 
             setObjFlagsDebug(blOccObj)

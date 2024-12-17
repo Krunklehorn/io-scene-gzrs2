@@ -64,9 +64,9 @@ def importRS3(self, context):
     else:
         ensureRS3DataDirectory(self, state)
 
-    state.convertUnits = self.convertUnits
-    state.texSearchMode = self.texSearchMode
-    state.doCleanup = self.doCleanup
+    state.convertUnits      = self.convertUnits
+    state.texSearchMode     = self.texSearchMode
+    state.doCleanup         = self.doCleanup
 
     if self.panelLogging:
         print()
@@ -77,13 +77,13 @@ def importRS3(self, context):
         print("=======================================================================")
         print()
 
-        state.logSceneNodes = self.logSceneNodes
-        state.logEluHeaders = self.logEluHeaders
-        state.logEluMats = self.logEluMats
-        state.logEluMeshNodes = self.logEluMeshNodes
-        state.logVerboseIndices = self.logVerboseIndices and self.logEluMeshNodes
-        state.logVerboseWeights = self.logVerboseWeights and self.logEluMeshNodes
-        state.logCleanup = self.logCleanup
+        state.logSceneNodes         = self.logSceneNodes
+        state.logEluHeaders         = self.logEluHeaders
+        state.logEluMats            = self.logEluMats
+        state.logEluMeshNodes       = self.logEluMeshNodes
+        state.logVerboseIndices     = self.logVerboseIndices    and self.logEluMeshNodes
+        state.logVerboseWeights     = self.logVerboseWeights    and self.logEluMeshNodes
+        state.logCleanup            = self.logCleanup
 
     xmlpath = self.filepath
     state.directory = os.path.dirname(xmlpath)
