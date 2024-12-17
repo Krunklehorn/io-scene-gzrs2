@@ -1,6 +1,6 @@
 import os
 
-from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rslm, import_rsani
+from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rsnav, import_rslm, import_rsani
 from . import export_rselu, export_rslm
 
 from .constants_gzrs2 import *
@@ -26,6 +26,7 @@ if "bpy" in locals():
     if "import_gzrs3" in locals(): importlib.reload(import_gzrs3)
     if "import_rselu" in locals(): importlib.reload(import_rselu)
     if "import_rscol" in locals(): importlib.reload(import_rscol)
+    if "import_rsnav" in locals(): importlib.reload(import_rsnav)
     if "import_rslm" in locals(): importlib.reload(import_rslm)
     if "import_rsani" in locals(): importlib.reload(import_rsani)
     if "export_rselu" in locals(): importlib.reload(export_rselu)
@@ -1176,6 +1177,97 @@ class RSCOL_PT_Import_Logging(Panel):
         layout.prop(operator, "logColTris")
         layout.prop(operator, "logCleanup")
 
+class ImportRSNAV(Operator, ImportHelper):
+    bl_idname = "import_scene.rsnav"
+    bl_label = "Import NAV"
+    bl_options = { 'UNDO', 'PRESET' }
+    bl_description = "Load a NAV file"
+
+    filter_glob: StringProperty(
+        default = "*.nav",
+        options = { 'HIDDEN' }
+    )
+
+    panelMain: BoolProperty(
+        name = "Main",
+        description = "Main panel of options",
+        default = True
+    )
+
+    panelLogging: BoolProperty(
+        name = "Logging",
+        description = "Log details to the console",
+        default = False
+    )
+
+    convertUnits: BoolProperty(
+        name = "Convert Units",
+        description = "Convert measurements from centimeters to meters",
+        default = True
+    )
+
+    logNavHeaders: BoolProperty(
+        name = "Nav Headers",
+        description = "Log Nav header data",
+        default = True
+    )
+
+    logNavData: BoolProperty(
+        name = "Nav Data",
+        description = "Log Nav data",
+        default = False
+    )
+
+    def draw(self, context):
+        pass
+
+    def execute(self, context):
+        return import_rsnav.importNav(self, context)
+
+class RSNAV_PT_Import_Main(Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Main"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rsnav"
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelMain
+
+        layout.prop(operator, "convertUnits")
+
+class RSNAV_PT_Import_Logging(Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Logging"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rsnav"
+
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelLogging
+
+        layout.prop(operator, "logNavHeaders")
+        layout.prop(operator, "logNavData")
+
 class ImportRSLM(Operator, ImportHelper):
     bl_idname = "import_scene.rslm"
     bl_label = "Import LM"
@@ -1680,6 +1772,9 @@ classes = (
     ImportRSCOL,
     RSCOL_PT_Import_Main,
     RSCOL_PT_Import_Logging,
+    ImportRSNAV,
+    RSNAV_PT_Import_Main,
+    RSNAV_PT_Import_Logging,
     ImportRSLM,
     RSLM_PT_Import_Logging,
     ExportRSELU,
@@ -1698,6 +1793,7 @@ def menu_func_import(self, context):
     self.layout.operator(ImportRSELU.bl_idname, text = "GunZ ELU (.elu)")
     self.layout.operator(ImportRSANI.bl_idname, text = "GunZ ANI (.ani)")
     self.layout.operator(ImportRSCOL.bl_idname, text = "GunZ COL (.col/.cl2)")
+    self.layout.operator(ImportRSNAV.bl_idname, text = "GunZ NAV (.nav)")
     self.layout.operator(ImportRSLM.bl_idname, text = "GunZ LM (.lm)")
 
 def menu_func_export(self, context):

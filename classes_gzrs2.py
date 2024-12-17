@@ -40,6 +40,8 @@ class GZRS2State:
     logColHeaders:      bool = False
     logColNodes:        bool = False
     logColTris:         bool = False
+    logNavHeaders:      bool = False
+    logNavData:         bool = False
     logLmHeaders:       bool = False
     logLmImages:        bool = False
     logEluHeaders:      bool = False
@@ -84,6 +86,9 @@ class GZRS2State:
     smrPortals:         list = field(default_factory = list)
     smrCells:           list = field(default_factory = list)
     colVerts:           list = field(default_factory = list)
+    navVerts:           list = field(default_factory = list)
+    navFaces:           list = field(default_factory = list)
+    navLinks:           list = field(default_factory = list)
     eluMats:            list = field(default_factory = list)
     eluMeshes:          list = field(default_factory = list)
     aniMaxTick:         int = 0
@@ -108,6 +113,10 @@ class GZRS2State:
     blColMat:           Material    = None
     blColGeo:           Mesh        = None
     blColObj:           Object      = None
+
+    blNavMat:           Material    = None
+    blNavGeo:           Mesh        = None
+    blNavObj:           Object      = None
 
     blLmImage:          list = field(default_factory = list)
 

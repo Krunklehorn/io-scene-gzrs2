@@ -62,7 +62,7 @@ def readLm(self, path, state):
         print()
 
     if id != R_LM_ID or (version != R_LM_VERSION and version != R_LM_VERSION_EXT):
-        self.report({ 'ERROR' }, f"GZRS2: Lm header invalid! { hex(id) }, { hex(version) }")
+        self.report({ 'ERROR' }, f"GZRS2: LM header invalid! { hex(id) }, { hex(version) }")
         file.close()
 
         return { 'CANCELLED' }

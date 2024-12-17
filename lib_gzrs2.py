@@ -807,6 +807,25 @@ def setupColMesh(name, state):
 
     return blColObj
 
+def setupNavMesh(name, state):
+    blNavMat = setupDebugMat(name, (0.0, 1.0, 0.0, 0.25))
+
+    blNavGeo = bpy.data.meshes.new(name)
+    blNavObj = bpy.data.objects.new(name, blNavGeo)
+
+    blNavGeo.from_pydata(state.navVerts, [], state.navFaces)
+    blNavGeo.update()
+
+    setObjFlagsDebug(blNavObj)
+
+    state.blNavMat = blNavMat
+    state.blNavGeo = blNavGeo
+    state.blNavObj = blNavObj
+
+    blNavObj.data.materials.append(blNavMat)
+
+    return blNavObj
+
 def setupEluMat(self, m, eluMat, state):
     elupath = eluMat.elupath
     matID = eluMat.matID

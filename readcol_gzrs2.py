@@ -55,12 +55,13 @@ def readCol(self, path, state):
         print(f"Path:               { path }")
         print(f"ID:                 { hex(id) }")
         print(f"Version:            { hex(version) }")
+        print()
 
     if (id != R_COL1_ID and id != R_COL2_ID) or (version != R_COL1_VERSION and version != R_COL2_VERSION):
         self.report({ 'ERROR' }, f"GZRS2: Col header invalid! { hex(id) }, { hex(version) }")
         file.close()
 
-        return False
+        return { 'CANCELLED' }
 
     trisRead = 0
 

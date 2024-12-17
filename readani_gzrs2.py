@@ -60,7 +60,7 @@ def readAni(self, path, state):
     fileSize = file.tell()
     file.seek(0, os.SEEK_SET)
 
-    if state.logAniHeaders:
+    if state.logAniHeaders or state.logAniNodes:
         print("===================  Read Ani  ===================")
         print()
 
@@ -330,7 +330,7 @@ def readAni(self, path, state):
                             warnRotOutOfOrder = False
                             break
 
-    if state.logAniHeaders:
+    if state.logAniHeaders or state.logAniNodes:
         bytesRemaining = fileSize - file.tell()
 
         if bytesRemaining > 0:
