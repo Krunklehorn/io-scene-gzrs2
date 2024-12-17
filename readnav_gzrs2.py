@@ -33,7 +33,7 @@ def readNav(self, path, state):
         print(f"Version:            { hex(version) }")
         print()
 
-    if id != R_NAV_ID or version != R_NAV_VERSION:
+    if id != NAV_ID or version != NAV_VERSION:
         self.report({ 'ERROR' }, f"GZRS2: NAV header invalid! { hex(id) }, { hex(version) }")
         file.close()
         return { 'CANCELLED' }
@@ -72,6 +72,7 @@ def readNav(self, path, state):
         output = "Links:              {:<3d}".format(faceCount)
         output += "      Min & Max: ({:>3d}, {:>3d})".format(min(linkIndices), max(linkIndices)) if faceCount > 0 else ''
         print(output)
+        print()
 
     invalidCount = sum(1 for index in linkIndices if index >= faceCount)
 

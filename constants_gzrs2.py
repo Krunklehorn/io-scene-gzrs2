@@ -32,20 +32,20 @@ RS_SUPPORTED_VERSIONS =         [ RS2_VERSION, RS3_VERSION1, RS3_VERSION2, RS3_V
 RBSP_ID =                       0x35849298
 RBSP_VERSION =                  2
 
-R_PAT_ID =                      0x09784348
-R_PAT_VERSION =                 0
+PAT_ID =                        0x09784348
+PAT_VERSION =                   0
 
-R_LM_ID =                       0x30671804
-R_LM_VERSION =                  3
-R_LM_VERSION_EXT =              4
+LM_ID =                         0x30671804
+LM_VERSION =                    3
+LM_VERSION_EXT =                4
 
-R_COL1_ID =                     0x05050178f
-R_COL1_VERSION =                0
-R_COL2_ID =                     0x59249834
-R_COL2_VERSION =                1
+COL1_ID =                       0x05050178f
+COL1_VERSION =                  0
+COL2_ID =                       0x59249834
+COL2_VERSION =                  1
 
-R_NAV_ID =                      0x08888888f
-R_NAV_VERSION =                 2
+NAV_ID =                        0x08888888f
+NAV_VERSION =                   2
 
 RM_FLAG_ADDITIVE =              0x00000001
 RM_FLAG_USEOPACITY =            0x00000002

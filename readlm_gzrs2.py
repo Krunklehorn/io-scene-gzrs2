@@ -61,7 +61,7 @@ def readLm(self, path, state):
         print(f"Image Count:        { imageCount }")
         print()
 
-    if id != R_LM_ID or (version != R_LM_VERSION and version != R_LM_VERSION_EXT):
+    if id != LM_ID or (version != LM_VERSION and version != LM_VERSION_EXT):
         self.report({ 'ERROR' }, f"GZRS2: LM header invalid! { hex(id) }, { hex(version) }")
         file.close()
         return { 'CANCELLED' }

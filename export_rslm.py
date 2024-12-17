@@ -267,7 +267,7 @@ def exportLm(self, context):
         lmData = file.read(fileSize - file.tell())
 
     file.seek(4, os.SEEK_SET)
-    writeUInt(file, R_LM_VERSION_EXT if state.lmVersion4 else R_LM_VERSION)
+    writeUInt(file, LM_VERSION_EXT if state.lmVersion4 else LM_VERSION)
 
     skipBytes(file, 4 + 4) # skip invalid (auxiliary?) polygon count and unused node count
 
