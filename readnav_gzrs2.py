@@ -39,20 +39,22 @@ def readNav(self, path, state):
         return { 'CANCELLED' }
 
     vertexCount = readInt(file)
-    state.navVerts = readCoordinateArray(file, vertexCount, state.convertUnits, True)
+    vertices = readCoordinateArray(file, vertexCount, state.convertUnits, True)
     if state.logNavData:
         output = "Vertices:           {:<6d}".format(vertexCount)
-        output += "      Min: ({:>5.02f}, {:>5.02f}, {:>5.02f})     Max: ({:>5.02f}, {:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(state.navVerts, 3)) if vertexCount > 0 else ''
+        output += "      Min: ({:>5.02f}, {:>5.02f}, {:>5.02f})     Max: ({:>5.02f}, {:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(vertices, 3)) if vertexCount > 0 else ''
         print(output)
+
+    state.navVerts = vertices
 
     faceCount = readInt(file)
-    faceIndices = readUShortArray(file, faceCount * 3)
+    indices = readUShortArray(file, faceCount * 3)
     if state.logNavData:
         output = "Faces:              {:<3d}".format(faceCount)
-        output += "      Min & Max: ({:>3d}, {:>3d})".format(min(faceIndices), max(faceIndices)) if faceCount > 0 else ''
+        output += "      Min & Max: ({:>3d}, {:>3d})".format(min(indices), max(indices)) if faceCount > 0 else ''
         print(output)
 
-    state.navFaces = tuple(tuple(faceIndices[f * 3 + i] for i in range(3)) for f in range(faceCount))
+    state.navFaces = tuple(tuple(indices[f * 3 + i] for i in range(3)) for f in range(faceCount))
 
     invalidCount = 0
 

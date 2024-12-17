@@ -426,6 +426,17 @@ class EluWeightExport:
     degree:             int = 0
     offsets:            tuple = field(default_factory = tuple)
 
+##########################
+####    NAV EXPORT    ####
+##########################
+
+@dataclass
+class RSNAVExportState:
+    convertUnits:           bool = False
+
+    logNavHeaders:          bool = False
+    logNavData:             bool = False
+
 #########################
 ####    LM EXPORT    ####
 #########################

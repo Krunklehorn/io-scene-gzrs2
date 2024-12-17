@@ -1,7 +1,7 @@
 import os
 
 from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rsnav, import_rslm, import_rsani
-from . import export_rselu, export_rslm
+from . import export_rselu, export_rsnav, export_rslm
 
 from .constants_gzrs2 import *
 from .lib_gzrs2 import getEluExportConstants, getMatTreeLinksNodes, getRelevantShaderNodes, checkShaderNodeValidity
@@ -30,6 +30,7 @@ if "bpy" in locals():
     if "import_rslm" in locals(): importlib.reload(import_rslm)
     if "import_rsani" in locals(): importlib.reload(import_rsani)
     if "export_rselu" in locals(): importlib.reload(export_rselu)
+    if "export_rsnav" in locals(): importlib.reload(export_rsnav)
     if "export_rslm" in locals(): importlib.reload(export_rslm)
 else:
     import bpy
@@ -1486,6 +1487,98 @@ class RSELU_PT_Export_Logging(Panel):
         column.prop(operator, "logVerboseWeights")
         column.enabled = operator.logEluMeshNodes
 
+class ExportRSNAV(Operator, ExportHelper):
+    bl_idname = "export_scene.rsnav"
+    bl_label = "Export NAV"
+    bl_options = { 'UNDO', 'PRESET' }
+    bl_description = "Save an NAV file"
+
+    filename_ext = ".nav"
+    filter_glob: StringProperty(
+        default = "*.nav",
+        options = { 'HIDDEN' }
+    )
+
+    panelMain: BoolProperty(
+        name = "Main",
+        description = "Main panel of options",
+        default = True
+    )
+
+    panelLogging: BoolProperty(
+        name = "Logging",
+        description = "Log details to the console",
+        default = False
+    )
+
+    convertUnits: BoolProperty(
+        name = "Convert Units",
+        description = "Convert measurements from meters to centimeters",
+        default = True
+    )
+
+    logNavHeaders: BoolProperty(
+        name = "Nav Headers",
+        description = "Log NAV header data",
+        default = True
+    )
+
+    logNavData: BoolProperty(
+        name = "Nav Data",
+        description = "Log NAV mesh data",
+        default = True
+    )
+
+    def draw(self, context):
+        pass
+
+    def execute(self, context):
+        return export_rsnav.exportNav(self, context)
+
+class RSNAV_PT_Export_Main(Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Main"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_rsnav"
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelMain
+
+        layout.prop(operator, "convertUnits")
+
+class RSNAV_PT_Export_Logging(Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Logging"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_rsnav"
+
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelLogging
+
+        layout.prop(operator, "logNavHeaders")
+        layout.prop(operator, "logNavData")
+
 class ExportRSLM(Operator, ExportHelper):
     bl_idname = "export_scene.rslm"
     bl_label = "Export LM"
@@ -1801,6 +1894,9 @@ classes = (
     ExportRSELU,
     RSELU_PT_Export_Main,
     RSELU_PT_Export_Logging,
+    ExportRSNAV,
+    RSNAV_PT_Export_Main,
+    RSNAV_PT_Export_Logging,
     ExportRSLM,
     RSLM_PT_Export_Main,
     RSLM_PT_Export_Logging,
@@ -1819,6 +1915,7 @@ def menu_func_import(self, context):
 
 def menu_func_export(self, context):
     self.layout.operator(ExportRSELU.bl_idname, text = "GunZ ELU (.elu)")
+    self.layout.operator(ExportRSNAV.bl_idname, text = "GunZ NAV (.nav)")
     self.layout.operator(ExportRSLM.bl_idname, text = "GunZ LM (.lm)")
 
 def register():
