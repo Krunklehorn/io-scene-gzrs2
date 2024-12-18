@@ -24,7 +24,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
   * Vertex type: Adds absolute mode shape keys, animates by keying Evaluation Time, may fail for meshes with duplicate or overlapping vertices
 * NEW: .nav import & export support
   * When exporting, automatically triangulates quads and ngons however, users should do so manually for best results
-  * When exporting, selected mesh must be non-manifold
+  * When exporting, selected mesh must be manifold
 * NEW: Material guidelines for .elu export have been simplified, see below!
 * NEW: Reconfigured shader nodes and implemented material presets
 * NEW: Added material info to the Realspace panel
@@ -129,7 +129,7 @@ Advanced users can still use the Maiet Character Viewer (MCV) to modify material
 
 * Automatically triangulates quads and ngons
   * For best results, user should do so manually
-* Selected mesh must be non-manifold
+* Selected mesh must be manifold
 
 
 ## Lightmap Export (.lm)
