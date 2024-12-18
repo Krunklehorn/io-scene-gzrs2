@@ -14,7 +14,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 # Latest Update
 
-[***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.5.1***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.5)
+[***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.5.2***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.5)
 
 * NEW: .ani import support for GunZ 1 versions: 0x0012, 0x1001, 0x1002 and 0x1003
   * Animations become Actions, manage them with the Timeline or Dopesheet areas, combine them using NLA tracks
@@ -22,36 +22,42 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
   * Bone type: Animates the selected armature's bones, disconnects bones to allow translation, controls bone position and rotation, but not scale
   * TM type: Controls object world space matrices, supports scaling but does not support parenting
   * Vertex type: Adds absolute mode shape keys, animates by keying Evaluation Time, may fail for meshes with duplicate or overlapping vertices
+* NEW: .nav import & export support
+  * When exporting, automatically triangulates quads and ngons however, users should do so manually for best results
+  * When exporting, selected mesh must be non-manifold
 * NEW: Material guidelines for .elu export have been simplified, see below!
 * NEW: Reconfigured shader nodes and implemented material presets
 * NEW: Added material info to the Realspace panel
+* Simplified texture searching, renamed 'Smart' texture mode to 'Brute'
 * Implicit effects now control additive rendering ('\_ef' and 'ef\_' prefixes)
 * Sky objects no longer catch rays ('obj\_sky\_' and 'obj\_ef\_sky' prefixes)
 * Mesh nodes beginning with "Dummy" are now treated as bones
 * Other minor fixes
 
+
 # Current Import Features
 
-* Fully supported filetypes: .elu, .ani, .col, .cl2
+* Fully supported filetypes: .elu, .ani, .col, .cl2, .nav
 * Mostly supported filetypes: .rs, .lm
 * Partially supported filetypes: .scene.xml, .prop.xml
 
 <!-- -->
 
-* Displays world geometry, occlusion planes and collision data using mesh objects
+* Displays world geometry, occlusion, collision and navigation data using mesh objects
 * Displays BSP bounding boxes, sounds, spawns, powerups and other dummies using empties
 * Approximates fog using a volume scatter or volume absorption shader
 * Groups lights with similar properties, re-interprets the data to be useful in Blender
 * Displays lightmaps using a linked node group for quick toggling
 * Creates a driver object for quickly tuning lights and fog
 
+
 # Current Export Features
 
-### Model Export (.elu)
+## Model Export (.elu)
 
 * GunZ 1 version 0x5007
 * Supports both static and skinned meshes
-* Automatically triangulates quads
+* Automatically triangulates quads and ngons
 
 <!-- -->
 
@@ -118,6 +124,14 @@ Advanced users can still use the Maiet Character Viewer (MCV) to modify material
 - "shoes.tga" -> just omit the label entirely
 - "Documents\My Custom Gunz Content\fireball.bmp.dds" -> rearrange your folders, include a data subdirectory
 
+
+## Navmesh Export (.nav)
+
+* Automatically triangulates quads and ngons
+  * For best results, user should do so manually
+* Selected mesh must be non-manifold
+
+
 ## Lightmap Export (.lm)
 
 * overwrite only
@@ -128,6 +142,7 @@ Advanced users can still use the Maiet Character Viewer (MCV) to modify material
   * version 4 lightmaps take less space and load faster, resolutions up to 8k are now viable
   * for private servers only, v4 lightmaps do not work with vanilla GunZ
   * contact Krunk#6051 for information on how to implement this
+
 
 # Planned Features
 
@@ -146,12 +161,12 @@ Advanced users can still use the Maiet Character Viewer (MCV) to modify material
 
 # Known Issues
 
-* GunZ 1: most community maps load fine but quest maps have not been tested at all yet
 * GunZ 1: handful of .elus with improper bone weights (woman-parts_eola)
 * GunZ 1: all polygons in UV channel 2 come out garbled (import the lightmap and use channel 3 for now)
 * GunZ 1: some polygons in UV channel 3 come out garbled on maps with multiple lightmaps (Citadel)
 * GunZ 1: some elus with reversed winding-order/flipped normals (woman-parts27, woman-parts_sum08, woman-parts_santa, etc.)
 * GunZ 1: some .elu map materials with incorrect flags that should be overridden by their .rs.xml counterparts
+* GunZ 1: some maps with a ton of skipped dummies (Halloween Town)
 
 <!-- -->
 
