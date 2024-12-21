@@ -76,6 +76,25 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 ![Basic Material](meta/basicmaterial_241215.jpg)
 
+### Material Parameters & Presets
+
+Materials have changed! No more node wrangling, it's all handled by presets! =)
+
+The plugin adds a custom "Realspace" panel in the Material Properties view. (see above) The panel provides a live report on what data will be written if exported. To modify the overall look of a material, use the "Change Preset" button.
+
+Some parameters can be configured for special behavior:
+
+| Parameter | Controlled By | Details |
+| :---: | :---: | :---: |
+| Texture / Alpha Path | Image Texture Label: Right Click -> Rename | If labeled, represents a path relative to GunZ.exe (see below) |
+| Twosided | Material Properties -> Viewport Display -> Backface Culling ||
+| Additive | Change Preset -> Additive ||
+| Alphatest | Change Preset -> Tested | Configure the Threshold value of the Math: Greater Than node |
+| Use Opacity | Change Preset -> Blended | Must have a valid texture in the Image Texture node |
+| Is Effect | '\_ef' or 'ef\_' prefix in the object or exported file name | For advanced users |
+| Is Animated | File name of the connected texture ||
+| Frame Count / Frame Speed / Frame Gap | File name of the connected texture ||
+
 ### Material ID/Sub-ID Guidelines
 
 Realspace materials are not well defined. Certain effects are implicit, some cancel each other out, some behave differently based on context. Frankly, it's a mess.
