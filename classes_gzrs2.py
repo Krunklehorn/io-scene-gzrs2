@@ -112,7 +112,7 @@ class GZRS2State:
     blActorRoots:       dict = field(default_factory = dict)
 
     blColMat:           Material    = None
-    blColGeo:           Mesh        = None
+    blColMesh:          Mesh        = None
     blColObj:           Object      = None
 
     blNavMat:           Material    = None
@@ -124,8 +124,8 @@ class GZRS2State:
     blLmImage:          list = field(default_factory = list)
 
     blOccMat:           Material    = None
-    blOccMGeo:          Mesh        = None
-    blOccMObj:          Object      = None
+    blOccMesh:          Mesh        = None
+    blOccObj:           Object      = None
 
     blLights:           list = field(default_factory = list)
     blMeshObjs:         list = field(default_factory = list)

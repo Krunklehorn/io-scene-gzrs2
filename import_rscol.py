@@ -83,8 +83,6 @@ def importCol(self, context):
         viewLayer.objects.active = blColObj
 
     if state.doCleanup:
-        if state.logCleanup: print(colName)
-
         reportCount = 0
 
         bpy.ops.object.select_all(action = 'DESELECT')
@@ -150,6 +148,7 @@ def importCol(self, context):
             bpy.ops.object.mode_set(mode = 'OBJECT')
 
         if state.logCleanup:
+            print(colName)
             cleanupFunc()
             print()
         else:

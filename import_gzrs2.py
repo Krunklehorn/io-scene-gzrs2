@@ -232,20 +232,20 @@ def importRS2(self, context):
     rootMap =                   collections.new(state.filename)
     rootMeshes =                collections.new(f"{ state.filename }_Meshes")
 
-    rootLightsMain =            collections.new(f"{ state.filename }_Lights_Main")            if state.doLights else False
-    rootLightsSoft =            collections.new(f"{ state.filename }_Lights_Soft")            if state.doLights else False
-    rootLightsHard =            collections.new(f"{ state.filename }_Lights_Hard")            if state.doLights else False
-    rootLightsSoftAmbient =     collections.new(f"{ state.filename }_Lights_SoftAmbient")     if state.doLights else False
-    rootLightsSoftCasters =     collections.new(f"{ state.filename }_Lights_SoftCasters")     if state.doLights else False
-    rootLightsHardAmbient =     collections.new(f"{ state.filename }_Lights_HardAmbient")     if state.doLights else False
-    rootLightsHardCasters =     collections.new(f"{ state.filename }_Lights_HardCasters")     if state.doLights else False
+    rootLightsMain =            collections.new(f"{ state.filename }_Lights_Main")              if state.doLights else False
+    rootLightsSoft =            collections.new(f"{ state.filename }_Lights_Soft")              if state.doLights else False
+    rootLightsHard =            collections.new(f"{ state.filename }_Lights_Hard")              if state.doLights else False
+    rootLightsSoftAmbient =     collections.new(f"{ state.filename }_Lights_SoftAmbient")       if state.doLights else False
+    rootLightsSoftCasters =     collections.new(f"{ state.filename }_Lights_SoftCasters")       if state.doLights else False
+    rootLightsHardAmbient =     collections.new(f"{ state.filename }_Lights_HardAmbient")       if state.doLights else False
+    rootLightsHardCasters =     collections.new(f"{ state.filename }_Lights_HardCasters")       if state.doLights else False
 
-    rootProps =                 collections.new(f"{ state.filename }_Props")                  if state.doProps else False
-    rootDummies =               collections.new(f"{ state.filename }_Dummies")                if state.doDummies else False
-    rootSounds =                collections.new(f"{ state.filename }_Sounds")                 if state.doSounds else False
-    rootItems =                 collections.new(f"{ state.filename }_Items")                  if state.doItems else False
-    rootExtras =                collections.new(f"{ state.filename }_Extras")                 if doExtras else False
-    rootBspBounds =             collections.new(f"{ state.filename }_BspBounds")              if state.doBspBounds else False
+    rootProps =                 collections.new(f"{ state.filename }_Props")                    if state.doProps else False
+    rootDummies =               collections.new(f"{ state.filename }_Dummies")                  if state.doDummies else False
+    rootSounds =                collections.new(f"{ state.filename }_Sounds")                   if state.doSounds else False
+    rootItems =                 collections.new(f"{ state.filename }_Items")                    if state.doItems else False
+    rootExtras =                collections.new(f"{ state.filename }_Extras")                   if doExtras else False
+    rootBspBounds =             collections.new(f"{ state.filename }_BspBounds")                if state.doBspBounds else False
 
     context.collection.children.link(rootMap)
     rootMap.children.link(rootMeshes)
@@ -595,17 +595,17 @@ def importRS2(self, context):
                 occFaces.append(tuple(range(index, index + occVertexCount)))
                 index += occVertexCount
 
-            blOccGeo = bpy.data.meshes.new(occName)
-            blOccObj = bpy.data.objects.new(occName, blOccGeo)
+            blOccMesh = bpy.data.meshes.new(occName)
+            blOccObj = bpy.data.objects.new(occName, blOccMesh)
 
-            blOccGeo.from_pydata(occVerts, (), occFaces)
-            blOccGeo.validate()
-            blOccGeo.update()
+            blOccMesh.from_pydata(occVerts, (), occFaces)
+            blOccMesh.validate()
+            blOccMesh.update()
 
             setObjFlagsDebug(blOccObj)
 
             state.blOccMat = blOccMat
-            state.blOccGeo = blOccGeo
+            state.blOccMesh = blOccMesh
             state.blOccObj = blOccObj
 
             blOccObj.data.materials.append(blOccMat)

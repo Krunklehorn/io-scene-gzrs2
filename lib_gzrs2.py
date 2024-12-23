@@ -791,19 +791,19 @@ def getErrorMat(state):
 def setupColMesh(name, state):
     blColMat = setupDebugMat(name, (1.0, 0.0, 1.0, 0.25))
 
-    blColGeo = bpy.data.meshes.new(name)
-    blColObj = bpy.data.objects.new(name, blColGeo)
+    blColMesh = bpy.data.meshes.new(name)
+    blColObj = bpy.data.objects.new(name, blColMesh)
 
     colFaces = tuple(tuple(range(i, i + 3)) for i in range(0, len(state.colVerts), 3))
 
-    blColGeo.from_pydata(state.colVerts, (), colFaces)
-    blColGeo.validate()
-    blColGeo.update()
+    blColMesh.from_pydata(state.colVerts, (), colFaces)
+    blColMesh.validate()
+    blColMesh.update()
 
     setObjFlagsDebug(blColObj)
 
     state.blColMat = blColMat
-    state.blColGeo = blColGeo
+    state.blColMesh = blColMesh
     state.blColObj = blColObj
 
     blColObj.data.materials.append(blColMat)
@@ -873,8 +873,8 @@ def setupEluMat(self, m, eluMat, state):
         if not compareColors(diffuse,    eluMat2.diffuse):   continue
         if not compareColors(specular,   eluMat2.specular):  continue
 
-        if not math.isclose(power,       eluMat2.power,      rel_tol = 0.01): continue
-        if not math.isclose(alphatest,   eluMat2.alphatest,  rel_tol = 0.01): continue
+        if not math.isclose(power,       eluMat2.power,      rel_tol = ELU_VALUE_THRESHOLD): continue
+        if not math.isclose(alphatest,   eluMat2.alphatest,  rel_tol = ELU_VALUE_THRESHOLD): continue
 
         if useopacity   != eluMat2.useopacity:  continue
         if additive     != eluMat2.additive:    continue
@@ -941,10 +941,10 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     twosided = xmlEluMat['TWOSIDED']
 
     for xmlEluMat2, blMat2 in state.blXmlEluMatPairs:
-        if not math.isclose(specular,       xmlEluMat2['SPECULAR_LEVEL'],       rel_tol = 0.01): continue
-        if not math.isclose(glossiness,     xmlEluMat2['GLOSSINESS'],           rel_tol = 0.01): continue
-        if not math.isclose(emission,       xmlEluMat2['SELFILLUSIONSCALE'],    rel_tol = 0.01): continue
-        if not math.isclose(alphatest,      xmlEluMat2['ALPHATESTVALUE'],       rel_tol = 0.01): continue
+        if not math.isclose(specular,       xmlEluMat2['SPECULAR_LEVEL'],       rel_tol = ELU_VALUE_THRESHOLD): continue
+        if not math.isclose(glossiness,     xmlEluMat2['GLOSSINESS'],           rel_tol = ELU_VALUE_THRESHOLD): continue
+        if not math.isclose(emission,       xmlEluMat2['SELFILLUSIONSCALE'],    rel_tol = ELU_VALUE_THRESHOLD): continue
+        if not math.isclose(alphatest,      xmlEluMat2['ALPHATESTVALUE'],       rel_tol = ELU_VALUE_THRESHOLD): continue
 
         if additive != xmlEluMat2['ADDITIVE']: continue
         if twosided != xmlEluMat2['TWOSIDED']: continue
@@ -1149,7 +1149,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     if doColors:
         color1 = blMesh.color_attributes.new('Color', 'FLOAT_COLOR', 'POINT')
         for c, color in enumerate(meshColors):
-            color1.data[c].color = (color[0], color[1], color[2], 0.0)
+            color1.data[c].color = (color[0], color[1], color[2], 0.0) # TODO: Shader support for vertex alpha data
 
     blMesh.validate()
     blMesh.update()
@@ -1267,11 +1267,9 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
         viewLayer.objects.active = blMeshObj
 
     if state.doCleanup:
-        if state.logCleanup: print(meshName)
-
-        def cleanupFunc():
+        def cleanupFunc(blObj):
             bpy.ops.object.select_all(action = 'DESELECT')
-            blMeshObj.select_set(True)
+            blObj.select_set(True)
             bpy.ops.object.shade_smooth()
             bpy.ops.object.select_all(action = 'DESELECT')
 
@@ -1287,11 +1285,12 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
             bpy.ops.object.mode_set(mode = 'OBJECT')
 
         if state.logCleanup:
-            cleanupFunc()
+            print(meshName)
+            cleanupFunc(blMeshObj)
             print()
         else:
             with redirect_stdout(state.silentIO):
-                cleanupFunc()
+                cleanupFunc(blMeshObj)
 
         deleteInfoReports(9, context)
 
@@ -1709,16 +1708,16 @@ def setupLmMixGroup(state):
         state.lmMixGroup = group
 
 def compareColors(color1, color2):
-    return all((math.isclose(color1[0], color2[0], rel_tol = 0.0001),
-                math.isclose(color1[1], color2[1], rel_tol = 0.0001),
-                math.isclose(color1[2], color2[2], rel_tol = 0.0001)))
+    return all((math.isclose(color1[0], color2[0], rel_tol = RS_COLOR_THRESHOLD),
+                math.isclose(color1[1], color2[1], rel_tol = RS_COLOR_THRESHOLD),
+                math.isclose(color1[2], color2[2], rel_tol = RS_COLOR_THRESHOLD)))
 
 def compareLights(light1, light2):
-    return all((math.isclose(light1.color[0],            light2.color[0],            rel_tol = 0.0001),
-                math.isclose(light1.color[1],            light2.color[1],            rel_tol = 0.0001),
-                math.isclose(light1.color[2],            light2.color[2],            rel_tol = 0.0001),
-                math.isclose(light1.energy,              light2.energy,              rel_tol = 0.0001),
-                math.isclose(light1.shadow_soft_size,    light2.shadow_soft_size,    rel_tol = 0.0001)))
+    return all((math.isclose(light1.color[0],            light2.color[0],            rel_tol = RS_LIGHT_THRESHOLD),
+                math.isclose(light1.color[1],            light2.color[1],            rel_tol = RS_LIGHT_THRESHOLD),
+                math.isclose(light1.color[2],            light2.color[2],            rel_tol = RS_LIGHT_THRESHOLD),
+                math.isclose(light1.energy,              light2.energy,              rel_tol = RS_LIGHT_THRESHOLD),
+                math.isclose(light1.shadow_soft_size,    light2.shadow_soft_size,    rel_tol = RS_LIGHT_THRESHOLD)))
 
 def groupLights(lights):
     groups = []
