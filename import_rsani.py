@@ -159,7 +159,7 @@ def importAni(self, context):
                 shapePoints = currShape.points
 
                 for v, i in vertexRange:
-                    shapePoints[i].co = worldPositions[k * vertexCount + v].copy()
+                    shapePoints[i].co = worldPositions[k * vertexCount + v]
 
                 blKeys.eval_time = frame * 10
                 blKeys.keyframe_insert(data_path = 'eval_time', frame = frame, group = meshName)

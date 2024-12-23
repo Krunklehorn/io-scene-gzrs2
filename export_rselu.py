@@ -162,7 +162,7 @@ def exportElu(self, context):
 
         eluMeshObjs.append(blObj)
 
-        matrixWorld = blObj.matrix_world.copy()
+        matrixWorld = blObj.matrix_world
         eluMatrices.append(matrixWorld)
         eluInvMatrices.append(matrixWorld.inverted())
 
@@ -179,7 +179,7 @@ def exportElu(self, context):
 
         eluMeshObjs.append(blObj)
 
-        matrixWorld = blObj.matrix_world.copy()
+        matrixWorld = blObj.matrix_world
         eluMatrices.append(matrixWorld)
         eluInvMatrices.append(matrixWorld.inverted())
 
@@ -452,7 +452,7 @@ def exportElu(self, context):
                 return { 'CANCELLED' }
 
             vertexCount = len(blMesh.vertices)
-            vertices = tuple(vertex.co.copy() for vertex in blMesh.vertices)
+            vertices = tuple(vertex.co for vertex in blMesh.vertices)
             faceCount = len(blMesh.loop_triangles)
             faces = []
             slotIDs = set()
@@ -461,7 +461,7 @@ def exportElu(self, context):
 
             for triangle in blMesh.loop_triangles:
                 indices = tuple(reversed(triangle.vertices))
-                uv1s = tuple(reversed(tuple(uvLayer1.uv[triangle.loops[i]].vector.copy() for i in range(3)))) if hasUV1s else (Vector((0, 0)), Vector((0, 0)), Vector((0, 0)))
+                uv1s = tuple(reversed(tuple(uvLayer1.uv[triangle.loops[i]].vector for i in range(3)))) if hasUV1s else (Vector((0, 0)), Vector((0, 0)), Vector((0, 0)))
                 slotID = triangle.material_index
                 slotIDs.add(slotID)
 
@@ -469,8 +469,8 @@ def exportElu(self, context):
                     totalSlotIDs.add(slotID)
 
                 if version >= ELU_5005:
-                    normal = triangle.normal.copy()
-                    normals = tuple(reversed(tuple(blMesh.loops[triangle.loops[i]].normal.copy() for i in range(3)))) if useCustomNormals else (normal.copy(), normal.copy(), normal.copy())
+                    normal = triangle.normal
+                    normals = tuple(reversed(tuple(blMesh.loops[triangle.loops[i]].normal for i in range(3)))) if useCustomNormals else (normal, normal, normal)
                 else:
                     normal = None
                     normals = None
@@ -521,7 +521,7 @@ def exportElu(self, context):
                 matIDs.add(matID)
 
             if hasVGroups:
-                vgroupLookup = tuple(v.groups for v in blMesh.vertices)
+                vgroupLookup = tuple(vertex.groups for vertex in blMesh.vertices)
                 weightCount = len(vgroupLookup)
                 weights = []
 
@@ -617,10 +617,10 @@ def exportElu(self, context):
             print(f"===== Mesh { m } =====")
             print(f"Mesh Name:          { eluMesh.meshName }")
             print(f"Parent Name:        { eluMesh.parentName }")
-            print("World Matrix:       ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*eluMatrices[m][0]))
-            print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*eluMatrices[m][1]))
-            print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*eluMatrices[m][2]))
-            print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*eluMatrices[m][3]))
+            print("World Matrix:       ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*eluMesh.transform[0]))
+            print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*eluMesh.transform[1]))
+            print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*eluMesh.transform[2]))
+            print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*eluMesh.transform[3]))
             print()
 
             output = "Vertices:           {:<6d}".format(eluMesh.vertexCount)

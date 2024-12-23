@@ -1008,6 +1008,7 @@ def setupRsConvexMesh(self, _, blMesh, state):
         if meshUV3 is not None and numCells > 1:
             # TODO: Atlased indices are garbled (Citadel)
             # p != lmPolygonIDs[p]
+            # I don't think we can translate from octree polygon to convex polygon because the atlas ID might differ across a split line
             c = state.lmIndices[state.lmPolygonIDs[p]]
             cx = c % cellSpan
             cy = c // cellSpan
@@ -1019,7 +1020,7 @@ def setupRsConvexMesh(self, _, blMesh, state):
             meshUV2.append(state.rsConvexVerts[v].uv2)
 
             if meshUV3 is not None:
-                uv3 = state.lmUVs[state.rsConvexVerts[v].oid].copy() # OMG DID WE JUST FIX CITADEL??
+                uv3 = state.lmUVs[state.rsConvexVerts[v].oid].copy()
 
                 if numCells > 1:
                     uv3.x += cx
@@ -1089,7 +1090,7 @@ def setupRsOctreeMesh(self, m, blMesh, state):
             meshUV2.append(state.rsOctreeVerts[v].uv2)
 
             if meshUV3 is not None:
-                uv3 = state.lmUVs[v].copy() # OMG DID WE JUST FIX CITADEL??
+                uv3 = state.lmUVs[v].copy()
 
                 if numCells > 1:
                     uv3.x += cx

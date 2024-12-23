@@ -215,7 +215,7 @@ def readRs(self, path, state):
             self.report({ 'ERROR' }, f"GZRS2: RS octree vertex count did not match vertices written! { state.rsOVertexCount }, { len(state.rsOctreeVerts) }")
 
         # The octree polygons hold the UV data, so we need to infer them
-        # This will fail if any polygons are degenerate
+        # This will fail if any polygons are degenerate or just too small
         warnDistanceThreshold = False
         warnNormalThreshold = False
 

@@ -50,7 +50,7 @@ def exportNav(self, context):
     blMesh = blObj.data
 
     vertexCount = len(blMesh.vertices)
-    vertices = tuple(vertex.co.copy() for vertex in blMesh.vertices)
+    vertices = tuple(vertex.co for vertex in blMesh.vertices)
 
     if state.logNavData:
         output = "Vertices:           {:<6d}".format(vertexCount)

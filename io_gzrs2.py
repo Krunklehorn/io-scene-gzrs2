@@ -214,44 +214,58 @@ def writeVec4Array(file, data):             file.write(pack(f'<{ 4 * len(data) }
 def writeString(file, data, length):        file.write(pack(f'<{ length }s', bytes(data, 'utf-8')))
 
 def writeUV2(file, uv):
+    uv = uv.copy()
     uv.y = -uv.y
 
     writeVec2(file, uv[:2])
 
 def writeUV3(file, uv):
+    uv = uv.copy()
     uv.y = -uv.y
 
     writeVec3(file, (uv[0], uv[1], 0.0))
 
 def writeCoordinate(file, coord, convertUnits, flipY):
+    coord = coord.copy()
+
     if convertUnits: coord *= 100
     if flipY: coord.y = -coord.y
 
     writeVec3(file, coord[:3])
 
 def writeDirection(file, dir, flipY):
+    dir = dir.copy()
+
     if flipY: dir.y = -dir.y
 
     writeVec3(file, dir.normalized()[:3])
 
 def writePlane(file, plane, flipY):
+    plane = plane.copy()
+
     if flipY: plane.y = -plane.y
 
     writeVec4(file, plane.normalized()[:4])
 
 def writeUV2Array(file, uvs):
+    uvs = tuple(uv.copy() for uv in uvs)
+
     for uv in uvs:
         uv.y = -uv.y
 
     writeVec2Array(file, tuple(uv[:2] for uv in uvs))
 
 def writeUV3Array(file, uvs):
+    uvs = tuple(uv.copy() for uv in uvs)
+
     for uv in uvs:
         uv.y = -uv.y
 
     writeVec3Array(file, tuple((uv[0], uv[1], 0.0) for uv in uvs))
 
 def writeCoordinateArray(file, coords, convertUnits, flipY):
+    coords = tuple(coord.copy() for coord in coords)
+
     for coord in coords:
         if convertUnits: coord *= 100
         if flipY: coord.y = -coord.y
@@ -259,12 +273,16 @@ def writeCoordinateArray(file, coords, convertUnits, flipY):
     writeVec3Array(file, tuple(coord[:3] for coord in coords))
 
 def writeDirectionArray(file, dirs, flipY):
+    dirs = tuple(dir.copy() for dir in dirs)
+
     for dir in dirs:
         if flipY: dir.y = -dir.y
 
     writeVec3Array(file, tuple(dir[:3] for dir in dirs))
 
 def writePlaneArray(file, planes, flipY):
+    planes = tuple(plane.copy() for plane in planes)
+
     for plane in planes:
         if flipY: plane.y = -plane.y
 
@@ -273,6 +291,8 @@ def writePlaneArray(file, planes, flipY):
     writeVec4Array(file, tuple(plane[:4] for plane in planes))
 
 def writeTransform(file, transform, convertUnits, flipY):
+    transform = transform.copy()
+
     loc, rot, sca = transform.decompose()
 
     if convertUnits: loc *= 100
@@ -285,5 +305,7 @@ def writeTransform(file, transform, convertUnits, flipY):
     writeVec4Array(file, tuple(Matrix.LocRotScale(loc, rot, sca).transposed()))
 
 def writeBounds(file, bounds, convertUnits, flipY):
+    bounds = (bounds[0].copy(), bounds[1].copy())
+
     writeCoordinate(file, bounds[0], convertUnits, flipY)
     writeCoordinate(file, bounds[1], convertUnits, flipY)
