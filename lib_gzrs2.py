@@ -988,7 +988,71 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     state.blXmlEluMats.setdefault(elupath, []).append(blMat)
     state.blXmlEluMatPairs.append((xmlEluMat, blMat))
 
-def setupRsMesh(self, m, blMesh, state):
+def setupRsConvexMesh(self, _, blMesh, state):
+    meshVerts = []
+    meshNorms = []
+    meshFaces = []
+    meshMatIDs = []
+    meshUV1 = []
+    meshUV2 = []
+    meshUV3 = None
+
+    if state.doLightmap:
+        meshUV3 = []
+        numCells = len(state.lmImages)
+        cellSpan = int(math.sqrt(nextSquare(numCells)))
+
+    offset = 0
+
+    for p, polygon in enumerate(state.rsConvexPolygons):
+        if meshUV3 is not None and numCells > 1:
+            # TODO: Atlased indices are garbled (Citadel)
+            # p != lmPolygonIDs[p]
+            c = state.lmIndices[state.lmPolygonIDs[p]]
+            cx = c % cellSpan
+            cy = c // cellSpan
+
+        for v in range(polygon.vertexOffset, polygon.vertexOffset + polygon.vertexCount):
+            meshVerts.append(state.rsConvexVerts[v].pos)
+            meshNorms.append(state.rsConvexVerts[v].nor)
+            meshUV1.append(state.rsConvexVerts[v].uv1)
+            meshUV2.append(state.rsConvexVerts[v].uv2)
+
+            if meshUV3 is not None:
+                uv3 = state.lmUVs[state.rsConvexVerts[v].oid].copy() # OMG DID WE JUST FIX CITADEL??
+
+                if numCells > 1:
+                    uv3.x += cx
+                    uv3.y -= cy
+                    uv3 /= cellSpan
+
+                uv3.y += 1.0
+                meshUV3.append(uv3)
+
+        meshFaces.append(tuple(range(offset, offset + polygon.vertexCount)))
+        offset += polygon.vertexCount
+
+        meshMatIDs.append(polygon.matID)
+
+    blMesh.from_pydata(meshVerts, (), meshFaces)
+    blMesh.normals_split_custom_set_from_vertices(meshNorms)
+
+    uvLayer1 = blMesh.uv_layers.new()
+    for c, uv in enumerate(meshUV1): uvLayer1.data[c].uv = uv
+
+    uvLayer2 = blMesh.uv_layers.new()
+    for c, uv in enumerate(meshUV2): uvLayer2.data[c].uv = uv
+
+    if meshUV3 is not None:
+        uvLayer3 = blMesh.uv_layers.new()
+        for c, uv in enumerate(meshUV3): uvLayer3.data[c].uv = uv
+
+    blMesh.validate()
+    blMesh.update()
+
+    return meshMatIDs
+
+def setupRsOctreeMesh(self, m, blMesh, state):
     meshVerts = []
     meshNorms = []
     meshFaces = []
@@ -1003,48 +1067,49 @@ def setupRsMesh(self, m, blMesh, state):
         cellSpan = int(math.sqrt(nextSquare(numCells)))
 
     found = False
-    index = 0
+    offset = 0
 
-    for l, leaf in enumerate(state.rsLeaves):
-        if leaf.matID == m or state.meshMode == 'BAKE':
-            found = True
+    for p, polygon in enumerate(state.rsOctreePolygons):
+        if state.meshMode != 'BAKE' and polygon.matID != m:
+            continue
 
-            if meshUV3 is not None and numCells > 1:
-                # TODO: Atlased indices are garbled (Citadel)
-                # l != lmPolygonIDs[l]
-                c = state.lmIndices[state.lmPolygonIDs[l]]
-                cx = c % cellSpan
-                cy = c // cellSpan
+        found = True
 
-            for v in range(leaf.vertexOffset, leaf.vertexOffset + leaf.vertexCount):
-                meshVerts.append(state.rsVerts[v].pos)
-                meshNorms.append(state.rsVerts[v].nor)
-                meshUV1.append(state.rsVerts[v].uv1)
-                meshUV2.append(state.rsVerts[v].uv2)
+        if meshUV3 is not None and numCells > 1:
+            # TODO: Atlased indices are garbled (Citadel)
+            # p != lmPolygonIDs[p]
+            c = state.lmIndices[state.lmPolygonIDs[p]]
+            cx = c % cellSpan
+            cy = c // cellSpan
 
-                if meshUV3 is not None:
-                    uv3 = state.lmUVs[v]
+        for v in range(polygon.vertexOffset, polygon.vertexOffset + polygon.vertexCount):
+            meshVerts.append(state.rsOctreeVerts[v].pos)
+            meshNorms.append(state.rsOctreeVerts[v].nor)
+            meshUV1.append(state.rsOctreeVerts[v].uv1)
+            meshUV2.append(state.rsOctreeVerts[v].uv2)
 
-                    if numCells > 1:
-                        uv3.x += cx
-                        uv3.y -= cy
-                        uv3 /= cellSpan
+            if meshUV3 is not None:
+                uv3 = state.lmUVs[v].copy() # OMG DID WE JUST FIX CITADEL??
 
-                    uv3.y += 1.0
-                    meshUV3.append(uv3)
+                if numCells > 1:
+                    uv3.x += cx
+                    uv3.y -= cy
+                    uv3 /= cellSpan
 
-            meshFaces.append(tuple(range(index, index + leaf.vertexCount)))
-            index += leaf.vertexCount
+                uv3.y += 1.0
+                meshUV3.append(uv3)
 
-            if state.meshMode == 'BAKE':
-                meshMatIDs.append(leaf.matID)
+        meshFaces.append(tuple(range(offset, offset + polygon.vertexCount)))
+        offset += polygon.vertexCount
+
+        if state.meshMode == 'BAKE':
+            meshMatIDs.append(polygon.matID)
 
     if state.meshMode == 'STANDARD' and not found:
         self.report({ 'INFO' }, f"GZRS2: Unused rs material slot: { m }, { state.xmlRsMats[m]['name'] }")
         return False
 
     blMesh.from_pydata(meshVerts, (), meshFaces)
-
     blMesh.normals_split_custom_set_from_vertices(meshNorms)
 
     uvLayer1 = blMesh.uv_layers.new()

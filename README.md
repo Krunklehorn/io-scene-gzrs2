@@ -44,7 +44,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 <!-- -->
 
 * Displays world geometry, occlusion, collision and navigation data using mesh objects
-* Displays BSP bounding boxes, sounds, spawns, powerups and other dummies using empties
+* Displays octree bounding boxes, sounds, spawns, powerups and other dummies using empties
 * Approximates fog using a volume scatter or volume absorption shader
 * Groups lights with similar properties, re-interprets the data to be useful in Blender
 * Displays lightmaps using a linked node group for quick toggling

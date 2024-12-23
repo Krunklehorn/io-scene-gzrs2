@@ -205,12 +205,13 @@ def importRS3(self, context):
             for viewLayer in context.scene.view_layers:
                 lcRoot = lcFindRoot(viewLayer.layer_collection, rootActors)
 
-                if lcRoot is not None:
-                    for lcChild in lcRoot.children:
-                        if lcChild.collection is blActorRoot:
-                            lcChild.hide_viewport = True
-                else:
+                if lcRoot is None:
                     self.report({ 'WARNING' }, f"GZRS2: Unable to find root collection in view layer: { viewLayer }")
+                    continue
+
+                for lcChild in lcRoot.children:
+                    if lcChild.collection is blActorRoot:
+                        lcChild.hide_viewport = True
         else:
             blActorRoot = state.blActorRoots[eluMesh.elupath]
 

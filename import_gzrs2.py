@@ -76,7 +76,7 @@ def importRS2(self, context):
     state.doFog             = self.doFog
     state.doSounds          = self.doSounds         and self.meshMode != 'BAKE'
     state.doItems           = self.doItems          and self.meshMode != 'BAKE'
-    state.doBspBounds       = self.doBspBounds      and self.meshMode != 'BAKE'
+    state.doBounds          = self.doBounds         and self.meshMode != 'BAKE'
     state.doLightDrivers    = self.doLightDrivers
     state.doFogDriver       = self.doFogDriver
     state.doCleanup         = self.doCleanup
@@ -94,7 +94,7 @@ def importRS2(self, context):
         state.logRsCells            = self.logRsCells
         state.logRsGeometry         = self.logRsGeometry
         state.logRsTrees            = self.logRsTrees
-        state.logRsLeaves           = self.logRsLeaves
+        state.logRsPolygons         = self.logRsPolygons
         state.logRsVerts            = self.logRsVerts
         state.logColHeaders         = self.logColHeaders
         state.logColNodes           = self.logColNodes
@@ -224,7 +224,7 @@ def importRS2(self, context):
     state.doLightDrivers =   state.doLightDrivers and state.doLights
     state.doFogDriver =      state.doFogDriver and state.doFog
     doDrivers =             self.panelDrivers and (state.doLightDrivers or state.doFogDriver)
-    doExtras =              state.doCollision or state.doNavigation or state.doOcclusion or state.doFog or state.doBspBounds or doDrivers
+    doExtras =              state.doCollision or state.doNavigation or state.doOcclusion or state.doFog or state.doBounds or doDrivers
 
     bpy.ops.ed.undo_push()
     collections = bpy.data.collections
@@ -245,7 +245,7 @@ def importRS2(self, context):
     rootSounds =                collections.new(f"{ state.filename }_Sounds")                   if state.doSounds else False
     rootItems =                 collections.new(f"{ state.filename }_Items")                    if state.doItems else False
     rootExtras =                collections.new(f"{ state.filename }_Extras")                   if doExtras else False
-    rootBspBounds =             collections.new(f"{ state.filename }_BspBounds")                if state.doBspBounds else False
+    rootBounds =                collections.new(f"{ state.filename }_Bounds")                   if state.doBounds else False
 
     context.collection.children.link(rootMap)
     rootMap.children.link(rootMeshes)
@@ -264,29 +264,21 @@ def importRS2(self, context):
     if state.doSounds:      rootMap.children.link(rootSounds)
     if state.doItems:       rootMap.children.link(rootItems)
     if doExtras:            rootMap.children.link(rootExtras)
-    if state.doBspBounds:
-        rootExtras.children.link(rootBspBounds)
+    if state.doBounds:
+        rootExtras.children.link(rootBounds)
 
         for viewLayer in context.scene.view_layers:
             lcRoot = lcFindRoot(viewLayer.layer_collection, rootMap)
 
-            if lcRoot is not None:
-                for lcExtras in lcRoot.children:
-                    if lcExtras.collection is rootExtras:
-                        for lcBspBounds in lcExtras.children:
-                            if lcBspBounds.collection is rootBspBounds:
-                                lcBspBounds.hide_viewport = True
-            else:
+            if lcRoot is None:
                 self.report({ 'WARNING' }, f"GZRS2: Unable to find root collection in view layer: { viewLayer }")
+                continue
 
-    if state.meshMode == 'BAKE':
-        name = f"{ state.filename }_Bake"
-
-        blMesh = bpy.data.meshes.new(name)
-        blMeshObj = bpy.data.objects.new(name, blMesh)
-
-        state.blMeshes.append(blMesh)
-        state.blMeshObjs.append(blMeshObj)
+            for lcExtras in lcRoot.children:
+                if lcExtras.collection is rootExtras:
+                    for lcBounds in lcExtras.children:
+                        if lcBounds.collection is rootBounds:
+                            lcBounds.hide_viewport = True
 
     for m, xmlRsMat in enumerate(state.xmlRsMats):
         xmlRsMatName = xmlRsMat.get('name', f"Material_{ m }")
@@ -307,56 +299,40 @@ def importRS2(self, context):
             state.blMeshes.append(blMesh)
             state.blMeshObjs.append(blMeshObj)
 
-    if state.meshMode == 'STANDARD':
-        if state.doCleanup and state.logCleanup:
-            print()
-            print("=== RS Mesh Cleanup ===")
-            print()
+    if state.doCleanup and state.logCleanup:
+        print()
+        print("=== RS Mesh Cleanup ===")
+        print()
 
-        for m, blMesh in enumerate(state.blMeshes):
-            if not setupRsMesh(self, m, blMesh, state):
-                continue
+    def cleanupFunc(blObj):
+        nonlocal self, context
 
-            blMesh.materials.append(state.blXmlRsMats[m])
+        bpy.ops.object.select_all(action = 'DESELECT')
+        blObj.select_set(True)
+        bpy.ops.object.shade_smooth()
+        bpy.ops.object.material_slot_remove_unused()
+        bpy.ops.object.select_all(action = 'DESELECT')
 
-            rootMeshes.objects.link(state.blMeshObjs[m])
+        bpy.ops.object.mode_set(mode = 'EDIT')
 
-            for viewLayer in context.scene.view_layers:
-                viewLayer.objects.active = state.blMeshObjs[m]
+        bpy.ops.mesh.select_mode(type = 'VERT')
+        bpy.ops.mesh.select_all(action = 'SELECT')
+        bpy.ops.mesh.delete_loose()
+        bpy.ops.mesh.select_all(action = 'SELECT')
+        bpy.ops.mesh.remove_doubles(use_sharp_edge_from_normals = True)
+        bpy.ops.mesh.select_all(action = 'DESELECT')
 
-            if state.doCleanup:
-                if state.logCleanup: print(blMesh.name)
+        bpy.ops.object.mode_set(mode = 'OBJECT')
 
-                def cleanupFunc():
-                    bpy.ops.object.select_all(action = 'DESELECT')
-                    state.blMeshObjs[m].select_set(True)
-                    bpy.ops.object.shade_smooth()
-                    bpy.ops.object.select_all(action = 'DESELECT')
+        deleteInfoReports(11, context) # TODO: 5? 9? Not working?
 
-                    bpy.ops.object.mode_set(mode = 'EDIT')
+    def setupUnifiedMesh(name, setupFunc, isBakeMesh = False):
+        nonlocal context, rootMeshes, state
 
-                    bpy.ops.mesh.select_mode(type = 'VERT')
-                    bpy.ops.mesh.select_all(action = 'SELECT')
-                    bpy.ops.mesh.delete_loose()
-                    bpy.ops.mesh.select_all(action = 'SELECT')
-                    bpy.ops.mesh.remove_doubles(use_sharp_edge_from_normals = True)
-                    bpy.ops.mesh.select_all(action = 'DESELECT')
+        blMesh = bpy.data.meshes.new(name)
+        blObj = bpy.data.objects.new(name, blMesh)
 
-                    bpy.ops.object.mode_set(mode = 'OBJECT')
-
-                if state.logCleanup:
-                    cleanupFunc()
-                    print()
-                else:
-                    with redirect_stdout(state.silentIO):
-                        cleanupFunc()
-
-                deleteInfoReports(9, context)
-    elif state.meshMode == 'BAKE':
-        blMesh = state.blMeshes[0]
-        blMeshObj = state.blMeshObjs[0]
-
-        meshMatIDs = setupRsMesh(self, 0, blMesh, state)
+        meshMatIDs = setupFunc(self, -1, blMesh, state)
 
         for blXmlRsMat in state.blXmlRsMats:
             blMesh.materials.append(blXmlRsMat)
@@ -364,25 +340,48 @@ def importRS2(self, context):
         for p, polygon in blMesh.polygons.items():
             polygon.material_index = meshMatIDs[p]
 
-        rootMeshes.objects.link(blMeshObj)
+        rootMeshes.objects.link(blObj)
 
         for viewLayer in context.scene.view_layers:
-            viewLayer.objects.active = blMeshObj
+            viewLayer.objects.active = blObj
 
-        with redirect_stdout(state.silentIO):
-            bpy.ops.object.select_all(action = 'DESELECT')
-            blMeshObj.select_set(True)
-            bpy.ops.object.material_slot_remove_unused()
-            bpy.ops.object.select_all(action = 'DESELECT')
+        if state.doCleanup and not isBakeMesh:
+            if state.logCleanup:
+                print(blMesh.name)
+                cleanupFunc(blObj)
+                print()
+            else:
+                with redirect_stdout(state.silentIO):
+                    cleanupFunc(blObj)
 
-            bpy.ops.object.mode_set(mode = 'EDIT')
+        return blMesh, blObj
 
-            bpy.ops.mesh.select_mode(type = 'VERT')
-            bpy.ops.mesh.select_all(action = 'DESELECT')
+    blConvexMesh, blConvexObj = setupUnifiedMesh(f"{ state.filename }_Convex", setupRsConvexMesh)
 
-            bpy.ops.object.mode_set(mode = 'OBJECT')
+    if state.meshMode == 'STANDARD':
+        for m, blMesh in enumerate(state.blMeshes):
+            if not setupRsOctreeMesh(self, m, blMesh, state):
+                continue
 
-        deleteInfoReports(5, context)
+            blMeshObj = state.blMeshObjs[m]
+
+            blMesh.materials.append(state.blXmlRsMats[m])
+
+            rootMeshes.objects.link(blMeshObj)
+
+            for viewLayer in context.scene.view_layers:
+                viewLayer.objects.active = blMeshObj
+
+            if state.doCleanup:
+                if state.logCleanup:
+                    print(blMesh.name)
+                    cleanupFunc(blMeshObj)
+                    print()
+                else:
+                    with redirect_stdout(state.silentIO):
+                        cleanupFunc(blMeshObj)
+    elif state.meshMode == 'BAKE':
+        blBakeMesh, blBakeObj = setupUnifiedMesh(f"{ state.filename }_Bake", setupRsOctreeMesh, isBakeMesh = True)
 
     if state.doLights:
         for light in state.xmlLits:
@@ -614,19 +613,19 @@ def importRS2(self, context):
             for viewLayer in context.scene.view_layers:
                 blOccObj.hide_set(True, view_layer = viewLayer)
 
-        if state.doBspBounds:
-            for b, bounds in enumerate(state.bspBounds):
+        if state.doBounds:
+            for b, bounds in enumerate(state.rsBounds):
                 p1, p2 = bounds
                 hdims = (p2 - p1) / 2
                 center = p1 + hdims
 
-                blBBoxObj = bpy.data.objects.new(f"{ state.filename }_BspBBox{ b }", None)
+                blBBoxObj = bpy.data.objects.new(f"{ state.filename }_OctBBox{ b }", None)
                 blBBoxObj.empty_display_type = 'CUBE'
                 blBBoxObj.location = center
                 blBBoxObj.scale = hdims
 
                 state.blBBoxObjs.append(blBBoxObj)
-                rootBspBounds.objects.link(blBBoxObj)
+                rootBounds.objects.link(blBBoxObj)
 
         if state.doFog:
             fog = state.xmlFogs[0]

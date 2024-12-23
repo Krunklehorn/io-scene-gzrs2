@@ -24,7 +24,7 @@ class GZRS2State:
     doFog:              bool = False
     doSounds:           bool = False
     doItems:            bool = False
-    doBspBounds:        bool = False
+    doBounds:           bool = False
     doLightDrivers:     bool = False
     doFogDriver:        bool = False
     doBoneRolls:        bool = False
@@ -35,7 +35,7 @@ class GZRS2State:
     logRsCells:         bool = False
     logRsGeometry:      bool = False
     logRsTrees:         bool = False
-    logRsLeaves:        bool = False
+    logRsPolygons:      bool = False
     logRsVerts:         bool = False
     logSceneNodes:      bool = False
     logColHeaders:      bool = False
@@ -79,11 +79,15 @@ class GZRS2State:
     xmlAmbs:            list = field(default_factory = list)
     xmlItms:            list = field(default_factory = list)
 
-    rsPolygonCount:     int = 0
-    rsVertexCount:      int = 0
-    bspBounds:          list = field(default_factory = list)
-    rsVerts:            list = field(default_factory = list)
-    rsLeaves:           list = field(default_factory = list)
+    rsCPolygonCount:    int = 0
+    rsCVertexCount:     int = 0
+    rsOPolygonCount:    int = 0
+    rsOVertexCount:     int = 0
+    rsConvexVerts:      list = field(default_factory = list)
+    rsOctreeVerts:      list = field(default_factory = list)
+    rsConvexPolygons:   list = field(default_factory = list)
+    rsOctreePolygons:   list = field(default_factory = list)
+    rsBounds:           list = field(default_factory = list)
     smrPortals:         list = field(default_factory = list)
     smrCells:           list = field(default_factory = list)
     colVerts:           list = field(default_factory = list)
@@ -110,6 +114,12 @@ class GZRS2State:
 
     blActors:           list = field(default_factory = list)
     blActorRoots:       dict = field(default_factory = dict)
+
+    blConvexMesh:       Mesh        = None
+    blConvexObj:        Object      = None
+
+    blBakeMesh:         Mesh        = None
+    blBakeObj:          Object      = None
 
     blColMat:           Material    = None
     blColMesh:          Mesh        = None
@@ -160,16 +170,45 @@ class GZRS2State:
 #########################
 
 @dataclass
-class RsVertex:
+class Rs2ConvexVertex:
     pos:                Vector = (0, 0, 0)
     nor:                Vector = (0, 0, 0)
-    col:                Vector = (0, 0, 0, 0)
-    alpha:              float = 1
+    uv1:                Vector = (0, 0)
+    uv2:                Vector = (0, 0)
+    oid:                int = 0
+
+@dataclass
+class Rs2OctreeVertex:
+    pos:                Vector = (0, 0, 0)
+    nor:                Vector = (0, 0, 0)
     uv1:                Vector = (0, 0)
     uv2:                Vector = (0, 0)
 
 @dataclass
-class RsLeaf:
+class Rs3OctreeVertex:
+    pos:                Vector = (0, 0, 0)
+    nor:                Vector = (0, 0, 0)
+    col:                Vector = (0, 0, 0, 0) # TODO: Shader support for rs3 color data and vertex alpha data
+    uv1:                Vector = (0, 0)
+    uv2:                Vector = (0, 0)
+
+@dataclass
+class RsConvexPolygon:
+    matID:              int = 0
+    drawFlags:          int = 0
+    vertexCount:        int = 0
+    vertexOffset:       int = 0
+
+@dataclass
+class Rs2OctreePolygon:
+    matID:              int = 0
+    convexID:           int = 0
+    drawFlags:          int = 0
+    vertexCount:        int = 0
+    vertexOffset:       int = 0
+
+@dataclass
+class Rs3OctreePolygon:
     matID:              int = 0
     drawFlags:          int = 0
     vertexCount:        int = 0

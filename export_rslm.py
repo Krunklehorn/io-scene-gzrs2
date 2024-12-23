@@ -147,8 +147,8 @@ def exportLm(self, context):
 
             skipBytes(file, 4 * 4) # skip unused, unknown counts
             skipBytes(file, 4) # skip node count
-            rsPolygonCount = readUInt(file)
-            rsVertexCount = readInt(file)
+            rsOPolygonCount = readUInt(file)
+            rsOVertexCount = readInt(file)
         else:
             self.report({ 'ERROR' }, f"GZRS2: RS file must be for GunZ 1! { hex(id) }, { hex(version) }")
             file.close()
@@ -213,20 +213,20 @@ def exportLm(self, context):
         return { 'CANCELLED' }
 
     if state.doUVs:
-        # newPolyIDs = bytearray(rsPolygonCount * 4)
-        newIndices = bytearray(rsPolygonCount * 4)
-        newUVs = bytearray(rsVertexCount * 2 * 4)
+        # newPolyIDs = bytearray(rsOPolygonCount * 4)
+        newIndices = bytearray(rsOPolygonCount * 4)
+        newUVs = bytearray(rsOVertexCount * 2 * 4)
 
         # newPolyIDInts = memoryview(newPolyIDs).cast('I')
         newIndexInts = memoryview(newIndices).cast('I')
         newUVFloats = memoryview(newUVs).cast('f')
 
         # TODO: the polgyon IDs aren't as they seem...
-        for p in range(rsPolygonCount):
+        for p in range(rsOPolygonCount):
             # newPolyIDInts[p] = 0
             newIndexInts[p] = 0 # Never atlas
 
-        for v in range(rsVertexCount):
+        for v in range(rsOVertexCount):
             uv3 = uvLayer3.data[v].uv
 
             newUVFloats[v * 2 + 0] = uv3.x
@@ -262,7 +262,7 @@ def exportLm(self, context):
         skipBytes(file, readUInt(file)) # skip image data
 
     if state.doUVs:
-        lmData = file.read(4 * rsPolygonCount)
+        lmData = file.read(4 * rsOPolygonCount)
     else:
         lmData = file.read(fileSize - file.tell())
 

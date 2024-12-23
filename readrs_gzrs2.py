@@ -32,7 +32,7 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import os, io
+import os, io, math
 
 # import struct
 # from struct import unpack
@@ -47,14 +47,14 @@ def readRs(self, path, state):
     fileSize = file.tell()
     file.seek(0, os.SEEK_SET)
 
-    if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsLeaves or state.logRsVerts:
+    if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsPolygons or state.logRsVerts:
         print("===================  Read RS  ===================")
         print()
 
     id = readUInt(file)
     version = readUInt(file)
 
-    if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsLeaves or state.logRsVerts:
+    if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsPolygons or state.logRsVerts:
         print(f"Path:               { path }")
         print(f"ID:                 { hex(id) }")
         print(f"Version:            { hex(version) }")
@@ -78,41 +78,86 @@ def readRs(self, path, state):
                 if file.read(1) == b'\x00':
                     break
 
-        auxPolyCount = readInt(file)
-        skipBytes(file, 4) # skip auxiliary vertex count
+        state.rsCPolygonCount = readInt(file)
+        state.rsCVertexCount = readInt(file)
 
-        # I think these are pre-cut, either during the bsp process or to separate convex n-gons, or both
-        # The uvs mays be inferred through the leaf aux ids
-        for _ in range(auxPolyCount):
-            skipBytes(file, 4 + 4 + 4 * 4 + 4) # skip material id, draw flags, plane and area data
-            skipBytes(file, 2 * readUInt(file) * 4 * 3) # skip vertex data and normal data
-
-        skipBytes(file, 4 * 4) # skip unused, unknown counts
-        skipBytes(file, 4) # skip node count
-        state.rsPolygonCount = readUInt(file)
-        state.rsVertexCount = readInt(file)
-        skipBytes(file, 4) # skip indices count
+        if state.logRsVerts:
+            print(f"Convex Polygons:    { state.rsCPolygonCount }")
+            print(f"Convex Vertices:    { state.rsCVertexCount }")
+            print()
 
         vertexOffset = 0
-        l = 0
 
-        def openRS2BspNode():
-            nonlocal state, vertexOffset, l
+        for p in range(state.rsCPolygonCount):
+            matID = readInt(file)
+            drawFlags = readUInt(file)
+            skipBytes(file, 4 * 4 + 4) # skip plane and area data
+            vertexCount = readUInt(file)
 
-            state.bspBounds.append(readBounds(file, state.convertUnits, state.convertUnits))
+            positions = readCoordinateArray(file, vertexCount, state.convertUnits, True)
+            normals = readDirectionArray(file, vertexCount, True)
+
+            for v in range(vertexCount):
+                pos = positions[v]
+                nor = normals[v]
+
+                state.rsConvexVerts.append(Rs2ConvexVertex(pos, nor, (0, 0), (0, 0), -1))
+
+                if state.logRsVerts:
+                    print(f"===== Vertex { v }   ===========================")
+                    print("Position:           ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*pos))
+                    print("Normal:             ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*nor))
+                    print()
+
+            state.rsConvexPolygons.append(RsConvexPolygon(matID, drawFlags, vertexCount, vertexOffset))
+            vertexOffset += vertexCount
+
+            if state.logRsPolygons:
+                print(f"===== Polygon { p }  =============================")
+                print(f"Material ID:        { matID }")
+                print(f"Draw Flags:         { drawFlags }")
+                print(f"Vertex Count:       { vertexCount }")
+                print(f"Vertex Offset:      { vertexOffset }")
+                print()
+
+        if state.rsCPolygonCount != len(state.rsConvexPolygons):
+            self.report({ 'ERROR' }, f"GZRS2: RS convex polygon count did not match polygons written! { state.rsCPolygonCount }, { len(state.rsConvexPolygons) }")
+
+        if state.rsCVertexCount != len(state.rsConvexVerts):
+            self.report({ 'ERROR' }, f"GZRS2: RS convex vertex count did not match vertices written! { state.rsCVertexCount }, { len(state.rsConvexVerts) }")
+
+        skipBytes(file, 4 * 4) # skip counts for bsp nodes, polygons, vertices and indices
+
+        skipBytes(file, 4) # skip octree node count
+        state.rsOPolygonCount = readUInt(file)
+        state.rsOVertexCount = readInt(file)
+        skipBytes(file, 4) # skip octree indices count
+
+        if state.logRsVerts:
+            print(f"Octree Polygons:    { state.rsOPolygonCount }")
+            print(f"Octree Vertices:    { state.rsOVertexCount }")
+            print()
+
+        vertexOffset = 0
+        p = 0
+
+        def openRS2OctreeNode():
+            nonlocal state, vertexOffset, p
+
+            state.rsBounds.append(readBounds(file, state.convertUnits, True))
 
             skipBytes(file, 4 * 4) # skip plane
 
-            if readBool(file): openRS2BspNode() # positive
-            if readBool(file): openRS2BspNode() # negative
+            if readBool(file): openRS2OctreeNode() # positive
+            if readBool(file): openRS2OctreeNode() # negative
 
             for _ in range(readUInt(file)):
-                leafMatID = readInt(file)
-                skipBytes(file, 4) # skip auxiliary polygon id
+                matID = readInt(file)
+                convexID = readUInt(file)
                 drawFlags = readUInt(file)
-                leafVertexCount = readUInt(file)
+                vertexCount = readUInt(file)
 
-                for v in range(leafVertexCount):
+                for v in range(vertexCount):
                     pos = readCoordinate(file, state.convertUnits, True)
                     nor = readDirection(file, True)
                     uv1 = readUV2(file)
@@ -124,7 +169,7 @@ def readRs(self, path, state):
                     # uv1y = file.read(4)
                     # print(v, format(int.from_bytes(uv1x, 'little'), '0>32b'), format(int.from_bytes(uv1y, 'little'), '0>32b'), struct.unpack('<f', uv1x)[0], struct.unpack('<f', uv1y)[0])
 
-                    state.rsVerts.append(RsVertex(pos, nor, (0, 0, 0), 1, uv1, uv2))
+                    state.rsOctreeVerts.append(Rs2OctreeVertex(pos, nor, uv1, uv2))
 
                     if state.logRsVerts:
                         print(f"===== Vertex { v }   ===========================")
@@ -134,29 +179,85 @@ def readRs(self, path, state):
                         print("UV2:                ({:>6.03f}, {:>6.03f})".format(*uv2))
                         print()
 
-                skipBytes(file, 4 * 3) # skip plane normal
+                skipBytes(file, 4 * 3) # skip face normal
 
-                if not (0 <= leafMatID < len(state.xmlRsMats)): # Perhaps we should wait and assign the error material instead...
-                    self.report({ 'WARNING' }, f"GZRS2: Material ID out of bounds, setting to 0 and continuing. { leafMatID }, { len(state.xmlRsMats) }")
-                    leafMatID = 0
+                if convexID < 0 or convexID >= state.rsCPolygonCount:
+                    self.report({ 'ERROR' }, f"GZRS2: Convex ID out of bounds! Please submit to Krunk#6051 for testing!")
+                    file.close()
+                    return { 'CANCELLED' }
+                elif state.rsConvexPolygons[convexID].matID != matID:
+                    self.report({ 'WARNING' }, f"GZRS2: Octree material ID did not match convex material ID! Please submit to Krunk#6051 for testing!")
 
-                state.rsLeaves.append(RsLeaf(leafMatID, drawFlags, leafVertexCount, vertexOffset))
-                vertexOffset += leafVertexCount
+                if not (0 <= matID < len(state.xmlRsMats)): # Perhaps we should wait and assign the error material instead...
+                    self.report({ 'WARNING' }, f"GZRS2: Material ID out of bounds, setting to 0 and continuing. { matID }, { len(state.xmlRsMats) }")
+                    matID = 0
 
-                if state.logRsLeaves:
-                    print(f"===== Leaf { l }     =============================")
-                    print(f"Material ID:        { leafMatID }")
+                state.rsOctreePolygons.append(Rs2OctreePolygon(matID, convexID, drawFlags, vertexCount, vertexOffset))
+                vertexOffset += vertexCount
+
+                if state.logRsPolygons:
+                    print(f"===== Polygon { p }  =============================")
+                    print(f"Material ID:        { matID }")
+                    print(f"Convex ID:          { convexID }")
                     print(f"Draw Flags:         { drawFlags }")
-                    print(f"Vertex Count:       { leafVertexCount }")
+                    print(f"Vertex Count:       { vertexCount }")
                     print(f"Vertex Offset:      { vertexOffset }")
                     print()
 
-                l += 1
+                p += 1
 
-        openRS2BspNode()
+        openRS2OctreeNode()
 
-        if state.rsVertexCount != len(state.rsVerts):
-            self.report({ 'ERROR' }, f"GZRS2: Bsp vertex count did not match vertices written! { state.rsVertexCount }, { len(state.rsVerts) }")
+        if state.rsOPolygonCount != len(state.rsOctreePolygons):
+            self.report({ 'ERROR' }, f"GZRS2: RS octree polygon count did not match polygons written! { state.rsOPolygonCount }, { len(state.rsOctreePolygons) }")
+
+        if state.rsOVertexCount != len(state.rsOctreeVerts):
+            self.report({ 'ERROR' }, f"GZRS2: RS octree vertex count did not match vertices written! { state.rsOVertexCount }, { len(state.rsOctreeVerts) }")
+
+        # The octree polygons hold the UV data, so we need to infer them
+        # This will fail if any polygons are degenerate
+        warnDistanceThreshold = False
+        warnNormalThreshold = False
+
+        for p1, convexPolygon in enumerate(state.rsConvexPolygons):
+            for v1 in range(convexPolygon.vertexOffset, convexPolygon.vertexOffset + convexPolygon.vertexCount):
+                convexVertex = state.rsConvexVerts[v1]
+                convexNormal = state.rsConvexVerts[v1].nor
+                octreeMatches = []
+
+                for octreePolygon in state.rsOctreePolygons:
+                    if octreePolygon.convexID != p1:
+                        continue
+
+                    for v2 in range(octreePolygon.vertexOffset, octreePolygon.vertexOffset + octreePolygon.vertexCount):
+                        octreeMatches.append((v2, (convexVertex.pos - state.rsOctreeVerts[v2].pos).length_squared))
+
+                if len(octreeMatches) == 0:
+                    self.report({ 'ERROR' }, f"GZRS2: RS vertex match failed! Please submit to Krunk#6051 for testing!")
+                    file.close()
+                    return { 'CANCELLED' }
+
+                octreeMatch = sorted(octreeMatches, key = lambda x : x[1])[0]
+                octreeVertex = state.rsOctreeVerts[octreeMatch[0]]
+                octreeNormal = octreeVertex.nor
+
+                if octreeMatch[1] > RS_VERTEX_THRESHOLD_SQUARED:
+                    warnDistanceThreshold = True
+
+                if not all((math.isclose(convexNormal.x, octreeNormal.x, rel_tol = RS_VERTEX_THRESHOLD),
+                            math.isclose(convexNormal.y, octreeNormal.y, rel_tol = RS_VERTEX_THRESHOLD),
+                            math.isclose(convexNormal.z, octreeNormal.z, rel_tol = RS_VERTEX_THRESHOLD))):
+                    warnNormalThreshold = True
+
+                convexVertex.uv1 = octreeVertex.uv1
+                convexVertex.uv2 = octreeVertex.uv2
+                convexVertex.oid = octreeMatch[0] # Used later for uv3, the lightmap
+
+        if warnDistanceThreshold:
+            self.report({ 'WARNING' }, f"GZRS2: RS vertex match indexed a convex vertex beyond the threshold! Please submit to Krunk#6051 for testing!")
+
+        if warnNormalThreshold:
+            self.report({ 'WARNING' }, f"GZRS2: RS vertex match indexed a convex vertex with a normal outside the acceptable tolerance! Please submit to Krunk#6051 for testing!")
     elif id == RS3_ID and version >= RS3_VERSION1:
         if version not in RS_SUPPORTED_VERSIONS:
             self.report({ 'ERROR' }, f"GZRS2: RS3 version is not supported yet! Model will not load properly! Please submit to Krunk#6051 for testing! { path }, { hex(version) }")
@@ -202,23 +303,22 @@ def readRs(self, path, state):
                     pos = readCoordinate(file, state.convertUnits, False)
                     nor = readDirection(file, False)
 
-                    col = (1, 1, 1)
-                    alpha = 1
-
                     if version >= RS3_VERSION2:
                         col = readVec3(file)
-                        alpha = min(col[0] + col[1] + col[2] / 3, 1)
+                        col = Vector((col.x, col.y, col.z, min(col.x + col.y + col.z / 3, 1)))
+                    else:
+                        col = (1, 1, 1, 1)
 
                     uv1 = readUV2(file)
                     uv2 = readUV2(file)
 
-                    state.rsVerts.append(RsVertex(pos, nor, col, alpha, uv1, uv2))
+                    state.rsOctreeVerts.append(Rs3OctreeVertex(pos, nor, col, uv1, uv2))
 
                     if state.logRsVerts:
                         print(f"===== Vertex { v }   ===========================")
                         print("Position:           ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*pos))
                         print("Normal:             ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*nor))
-                        print("Color:              ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*col, alpha))
+                        print("Color:              ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*col))
                         print("UV1:                ({:>6.03f}, {:>6.03f})".format(*uv1))
                         print("UV2:                ({:>6.03f}, {:>6.03f})".format(*uv2))
                         print()
@@ -230,41 +330,41 @@ def readRs(self, path, state):
                     matCount = readInt(file)
                     lightmapID = readInt(file)
                     treeVertexCount = readInt(file)
-                    l = 0
+                    p = 0
 
-                    def openRS3BspNode():
-                        nonlocal state, vertexOffset, l
+                    def openRS3OctreeNode():
+                        nonlocal state, vertexOffset, p
 
-                        state.bspBounds.append(readBounds(file, state.convertUnits, state.convertUnits))
+                        state.rsBounds.append(readBounds(file, state.convertUnits, False))
 
                         if not readBool(file):
-                            openRS3BspNode() # positive
-                            openRS3BspNode() # negative
+                            openRS3OctreeNode() # positive
+                            openRS3OctreeNode() # negative
 
                         for _ in range(readUInt(file)):
-                            leafMatID = readInt(file)
+                            matID = readInt(file)
                             drawFlags = readUInt(file)
 
                             if version >= RS3_VERSION2:
                                 drawFlags = RM_FLAG_COLLISION_MESH
 
-                            leafVertexCount = readInt(file)
-                            skipBytes(file, 4) # skip vertex offset, we determine our own
+                            vertexCount = readInt(file)
+                            skipBytes(file, 4) # skip vertex offset, we determine our own TODO: verify?
 
-                            state.rsLeaves.append(RsLeaf(leafMatID, drawFlags, leafVertexCount, vertexOffset))
-                            vertexOffset += leafVertexCount
+                            state.rsOctreePolygons.append(Rs3OctreePolygon(matID, drawFlags, vertexCount, vertexOffset))
+                            vertexOffset += vertexCount
 
-                            if state.logRsLeaves:
-                                print(f"===== Leaf { l }     =============================")
-                                print(f"Material ID:        { leafMatID }")
+                            if state.logRsPolygons:
+                                print(f"===== Polygon { p }  =============================")
+                                print(f"Material ID:        { matID }")
                                 print(f"Draw Flags:         { drawFlags }")
-                                print(f"Vertex Count:       { leafVertexCount }")
+                                print(f"Vertex Count:       { vertexCount }")
                                 print(f"Vertex Offset:      { vertexOffset }")
                                 print()
 
-                            l += 1
+                            p += 1
 
-                    openRS3BspNode()
+                    openRS3OctreeNode()
 
                     trees.append(RsTree(matCount, lightmapID, treeVertexCount))
 
@@ -295,7 +395,7 @@ def readRs(self, path, state):
                 print(f"Geometry:           { len(geometry) }")
                 print()
 
-    if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsLeaves or state.logRsVerts:
+    if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsPolygons or state.logRsVerts:
         bytesRemaining = fileSize - file.tell()
 
         if bytesRemaining > 0:

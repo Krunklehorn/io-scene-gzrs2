@@ -397,9 +397,9 @@ class ImportGZRS2(Operator, ImportHelper):
         default = True
     )
 
-    doBspBounds: BoolProperty(
-        name = "BSP Bounds",
-        description = "Create empties from BSP bounds data",
+    doBounds: BoolProperty(
+        name = "Bounds",
+        description = "Create empties for octree bounding boxes",
         default = True
     )
 
@@ -445,9 +445,9 @@ class ImportGZRS2(Operator, ImportHelper):
         default = True
     )
 
-    logRsLeaves: BoolProperty(
-        name = "RS Leaves",
-        description = "Log RS leaf data",
+    logRsPolygons: BoolProperty(
+        name = "RS Polygons",
+        description = "Log RS polygon data",
         default = False
     )
 
@@ -587,7 +587,7 @@ class GZRS2_PT_Import_Main(Panel):
         column = layout.column()
         column.prop(operator, "doSounds")
         column.prop(operator, "doItems")
-        column.prop(operator, "doBspBounds")
+        column.prop(operator, "doBounds")
         column.enabled = operator.meshMode != 'BAKE'
 
         layout.prop(operator, "doCleanup")
@@ -641,7 +641,7 @@ class GZRS2_PT_Import_Logging(Panel):
         layout.prop(operator, "logRsCells")
         layout.prop(operator, "logRsGeometry")
         layout.prop(operator, "logRsTrees")
-        layout.prop(operator, "logRsLeaves")
+        layout.prop(operator, "logRsPolygons")
         layout.prop(operator, "logRsVerts")
         layout.prop(operator, "logColHeaders")
         layout.prop(operator, "logColNodes")

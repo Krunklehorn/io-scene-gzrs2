@@ -202,12 +202,12 @@ def readLm(self, path, state):
             file.close()
             return { 'CANCELLED' }
 
-    state.lmPolygonIDs = readUIntArray(file, state.rsPolygonCount)
-    state.lmIndices = readUIntArray(file, state.rsPolygonCount)
-    state.lmUVs = readUV2Array(file, state.rsVertexCount)
+    state.lmPolygonIDs = readUIntArray(file, state.rsOPolygonCount)
+    state.lmIndices = readUIntArray(file, state.rsOPolygonCount)
+    state.lmUVs = readUV2Array(file, state.rsOVertexCount)
 
     if state.logLmHeaders or state.logLmImages:
-        bytesRemaining = fileSize - file.tell() if state.rsVertexCount > 0 else 0
+        bytesRemaining = fileSize - file.tell() if state.rsOVertexCount > 0 else 0
 
         if bytesRemaining > 0:
             self.report({ 'ERROR' }, f"GZRS2: LM import finished with bytes remaining! { path }, { hex(id) }, { hex(version) }")
