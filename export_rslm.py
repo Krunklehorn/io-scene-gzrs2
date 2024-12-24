@@ -225,8 +225,8 @@ def exportLm(self, context):
 
     id = readUInt(file)
     version = readUInt(file)
-    lmOPolygonCount = readUInt(file)
-    lmONodeCount = readUInt(file)
+    lmCPolygonCount = readUInt(file) # CONVEX polygon count!
+    lmONodeCount = readUInt(file) # OCTREE node count!
     imageCount = readUInt(file)
 
     if id != LM_ID or version not in (LM_VERSION, LM_VERSION_EXT):
@@ -234,8 +234,8 @@ def exportLm(self, context):
         file.close()
         return { 'CANCELLED' }
 
-    if lmOPolygonCount != state.rsOPolygonCount or lmONodeCount != state.rsONodeCount:
-        self.report({ 'ERROR' }, f"GZRS2: LM topology does not match! { lmOPolygonCount }, { state.rsOPolygonCount }, { lmONodeCount }, { state.rsONodeCount }")
+    if lmCPolygonCount != state.rsCPolygonCount or lmONodeCount != state.rsONodeCount:
+        self.report({ 'ERROR' }, f"GZRS2: LM topology does not match! { lmCPolygonCount }, { state.rsCPolygonCount }, { lmONodeCount }, { state.rsONodeCount }")
         file.close()
         return { 'CANCELLED' }
 

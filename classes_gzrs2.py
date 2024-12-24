@@ -86,7 +86,7 @@ class GZRS2State:
     rsOVertexCount:     int = 0
     rsConvexVerts:      list = field(default_factory = list)
     rsOctreeVerts:      list = field(default_factory = list)
-    rsConvexPolygons:   list = field(default_factory = list)
+    rsConvexPolygons:   list = field(default_factory = list) # TODO: Improve performance of convex id matching
     rsOctreePolygons:   list = field(default_factory = list)
     rsBounds:           list = field(default_factory = list)
     smrPortals:         list = field(default_factory = list)

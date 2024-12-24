@@ -28,7 +28,7 @@ def readLm(self, path, state):
     id = readUInt(file)
     version = readUInt(file)
     lmCPolygonCount = readUInt(file)
-    lmCNodeCount = readUInt(file)
+    lmONodeCount = readUInt(file)
     imageCount = readUInt(file)
 
     if state.logLmHeaders:
@@ -43,8 +43,8 @@ def readLm(self, path, state):
         file.close()
         return { 'CANCELLED' }
 
-    if lmCPolygonCount != state.rsCPolygonCount or lmCNodeCount != state.rsCNodeCount:
-        self.report({ 'ERROR' }, f"GZRS2: LM topology does not match! { lmCPolygonCount }, { state.rsCPolygonCount }, { lmCNodeCount }, { state.rsCNodeCount }")
+    if lmCPolygonCount != state.rsCPolygonCount or lmONodeCount != state.rsONodeCount:
+        self.report({ 'ERROR' }, f"GZRS2: LM topology does not match! { lmCPolygonCount }, { state.rsCPolygonCount }, { lmONodeCount }, { state.rsONodeCount }")
         file.close()
         return { 'CANCELLED' }
 

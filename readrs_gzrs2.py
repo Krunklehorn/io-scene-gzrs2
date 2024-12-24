@@ -88,7 +88,7 @@ def readRs(self, path, state):
 
         for p in range(state.rsCPolygonCount):
             skipBytes(file, 4 + 4 + 4 * 4 + 4) # skip material id, draw flags, plane and area data
-            skipBytes(2 * readUInt(file) * 3 * 4) # skip vertex positions and normals
+            skipBytes(file, 2 * readUInt(file) * 3 * 4) # skip vertex positions and normals
 
         # TODO: Improve performance of convex id matching
         '''
@@ -188,8 +188,11 @@ def readRs(self, path, state):
                     self.report({ 'ERROR' }, f"GZRS2: Convex ID out of bounds! Please submit to Krunk#6051 for testing!")
                     file.close()
                     return { 'CANCELLED' }
+                # TODO: Improve performance of convex id matching
+                '''
                 elif state.rsConvexPolygons[convexID].matID != matID:
                     self.report({ 'WARNING' }, f"GZRS2: Octree material ID did not match convex material ID! Please submit to Krunk#6051 for testing!")
+                '''
 
                 if not (0 <= matID < len(state.xmlRsMats)): # Perhaps we should wait and assign the error material instead...
                     self.report({ 'WARNING' }, f"GZRS2: Material ID out of bounds, setting to 0 and continuing. { matID }, { len(state.xmlRsMats) }")

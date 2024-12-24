@@ -190,13 +190,14 @@ def importRS2(self, context):
 
         if not navpath:
             state.doNavigation = False
-            self.report({ 'INFO' }, "GZRS2: Navigation mesh requested but .nav file not found, no collision mesh to generate.")
+            self.report({ 'INFO' }, "GZRS2: Navigation mesh requested but .nav file not found, no navigation mesh to generate.")
 
     if state.doLightmap:
         lmpath = pathExists(f"{ rspath }.lm")
 
         if lmpath:
-            readLm(self, lmpath, state)
+            if readLm(self, lmpath, state):
+                return { 'CANCELLED' }
             unpackLmImages(state)
             setupLmMixGroup(state)
         else:
