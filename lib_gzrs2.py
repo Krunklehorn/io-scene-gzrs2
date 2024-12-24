@@ -988,6 +988,8 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     state.blXmlEluMats.setdefault(elupath, []).append(blMat)
     state.blXmlEluMatPairs.append((xmlEluMat, blMat))
 
+# TODO: Improve performance of convex id matching
+'''
 def setupRsConvexMesh(self, _, blMesh, state):
     meshVerts = []
     meshNorms = []
@@ -995,24 +997,14 @@ def setupRsConvexMesh(self, _, blMesh, state):
     meshMatIDs = []
     meshUV1 = []
     meshUV2 = []
-    meshUV3 = None
 
-    if state.doLightmap:
-        meshUV3 = []
-        numCells = len(state.lmImages)
-        cellSpan = int(math.sqrt(nextSquare(numCells)))
+    # The convex polygons will never support atlased lightmaps because the lightmap ID can differ across an octree split
+    # It's another reason why atlasing should be phased out, we can just increase lightmap resolution
+    meshUV3 = [] if state.doLightmap else None
 
     offset = 0
 
     for p, polygon in enumerate(state.rsConvexPolygons):
-        if meshUV3 is not None and numCells > 1:
-            # TODO: Atlased indices are garbled (Citadel)
-            # p != lmPolygonIDs[p]
-            # I don't think we can translate from octree polygon to convex polygon because the atlas ID might differ across a split line
-            c = state.lmIndices[state.lmPolygonIDs[p]]
-            cx = c % cellSpan
-            cy = c // cellSpan
-
         for v in range(polygon.vertexOffset, polygon.vertexOffset + polygon.vertexCount):
             meshVerts.append(state.rsConvexVerts[v].pos)
             meshNorms.append(state.rsConvexVerts[v].nor)
@@ -1021,12 +1013,6 @@ def setupRsConvexMesh(self, _, blMesh, state):
 
             if meshUV3 is not None:
                 uv3 = state.lmUVs[state.rsConvexVerts[v].oid].copy()
-
-                if numCells > 1:
-                    uv3.x += cx
-                    uv3.y -= cy
-                    uv3 /= cellSpan
-
                 uv3.y += 1.0
                 meshUV3.append(uv3)
 
@@ -1052,6 +1038,7 @@ def setupRsConvexMesh(self, _, blMesh, state):
     blMesh.update()
 
     return meshMatIDs
+'''
 
 def setupRsOctreeMesh(self, m, blMesh, state):
     meshVerts = []
@@ -1077,9 +1064,7 @@ def setupRsOctreeMesh(self, m, blMesh, state):
         found = True
 
         if meshUV3 is not None and numCells > 1:
-            # TODO: Atlased indices are garbled (Citadel)
-            # p != lmPolygonIDs[p]
-            c = state.lmIndices[state.lmPolygonIDs[p]]
+            c = state.lmLightmapIDs[p]
             cx = c % cellSpan
             cy = c // cellSpan
 

@@ -78,14 +78,20 @@ def readRs(self, path, state):
                 if file.read(1) == b'\x00':
                     break
 
-        state.rsCPolygonCount = readInt(file)
-        state.rsCVertexCount = readInt(file)
+        state.rsCPolygonCount = readUInt(file)
+        state.rsCVertexCount = readUInt(file)
 
         if state.logRsVerts:
             print(f"Convex Polygons:    { state.rsCPolygonCount }")
             print(f"Convex Vertices:    { state.rsCVertexCount }")
             print()
 
+        for p in range(state.rsCPolygonCount):
+            skipBytes(file, 4 + 4 + 4 * 4 + 4) # skip material id, draw flags, plane and area data
+            skipBytes(2 * readUInt(file) * 3 * 4) # skip vertex positions and normals
+
+        # TODO: Improve performance of convex id matching
+        '''
         vertexOffset = 0
 
         for p in range(state.rsCPolygonCount):
@@ -125,24 +131,27 @@ def readRs(self, path, state):
 
         if state.rsCVertexCount != len(state.rsConvexVerts):
             self.report({ 'ERROR' }, f"GZRS2: RS convex vertex count did not match vertices written! { state.rsCVertexCount }, { len(state.rsConvexVerts) }")
+        '''
 
         skipBytes(file, 4 * 4) # skip counts for bsp nodes, polygons, vertices and indices
 
-        skipBytes(file, 4) # skip octree node count
+        state.rsONodeCount = readUInt(file)
         state.rsOPolygonCount = readUInt(file)
         state.rsOVertexCount = readInt(file)
         skipBytes(file, 4) # skip octree indices count
 
         if state.logRsVerts:
+            print(f"Octree Nodes:       { state.rsONodeCount }")
             print(f"Octree Polygons:    { state.rsOPolygonCount }")
             print(f"Octree Vertices:    { state.rsOVertexCount }")
             print()
 
+        nodeCount = 0
         vertexOffset = 0
         p = 0
 
         def openRS2OctreeNode():
-            nonlocal state, vertexOffset, p
+            nonlocal state, nodeCount, vertexOffset, p
 
             state.rsBounds.append(readBounds(file, state.convertUnits, True))
 
@@ -161,13 +170,7 @@ def readRs(self, path, state):
                     pos = readCoordinate(file, state.convertUnits, True)
                     nor = readDirection(file, True)
                     uv1 = readUV2(file)
-                    uv2 = readUV2(file)
-
-                    # Why does the second UV layer end up garbled? I don't understand...
-                    # file.seek(-8, os.SEEK_CUR)
-                    # uv1x = file.read(4)
-                    # uv1y = file.read(4)
-                    # print(v, format(int.from_bytes(uv1x, 'little'), '0>32b'), format(int.from_bytes(uv1y, 'little'), '0>32b'), struct.unpack('<f', uv1x)[0], struct.unpack('<f', uv1y)[0])
+                    uv2 = readUV2(file) # lightmap uvs are always garbled for vanilla maps, so we get them from the .lm file instead
 
                     state.rsOctreeVerts.append(Rs2OctreeVertex(pos, nor, uv1, uv2))
 
@@ -205,8 +208,12 @@ def readRs(self, path, state):
                     print()
 
                 p += 1
+            nodeCount += 1
 
         openRS2OctreeNode()
+
+        if state.rsONodeCount != nodeCount:
+            self.report({ 'ERROR' }, f"GZRS2: RS octree node count did not match nodes traversed! { state.rsONodeCount }, { nodeCount }")
 
         if state.rsOPolygonCount != len(state.rsOctreePolygons):
             self.report({ 'ERROR' }, f"GZRS2: RS octree polygon count did not match polygons written! { state.rsOPolygonCount }, { len(state.rsOctreePolygons) }")
@@ -214,6 +221,8 @@ def readRs(self, path, state):
         if state.rsOVertexCount != len(state.rsOctreeVerts):
             self.report({ 'ERROR' }, f"GZRS2: RS octree vertex count did not match vertices written! { state.rsOVertexCount }, { len(state.rsOctreeVerts) }")
 
+        # TODO: Improve performance of convex id matching
+        '''
         # The octree polygons hold the UV data, so we need to infer them
         # This will fail if any polygons are degenerate or just too small
         warnDistanceThreshold = False
@@ -251,13 +260,14 @@ def readRs(self, path, state):
 
                 convexVertex.uv1 = octreeVertex.uv1
                 convexVertex.uv2 = octreeVertex.uv2
-                convexVertex.oid = octreeMatch[0] # Used later for uv3, the lightmap
+                convexVertex.oid = octreeMatch[0]
 
         if warnDistanceThreshold:
             self.report({ 'WARNING' }, f"GZRS2: RS vertex match indexed a convex vertex beyond the threshold! Please submit to Krunk#6051 for testing!")
 
         if warnNormalThreshold:
             self.report({ 'WARNING' }, f"GZRS2: RS vertex match indexed a convex vertex with a normal outside the acceptable tolerance! Please submit to Krunk#6051 for testing!")
+        '''
     elif id == RS3_ID and version >= RS3_VERSION1:
         if version not in RS_SUPPORTED_VERSIONS:
             self.report({ 'ERROR' }, f"GZRS2: RS3 version is not supported yet! Model will not load properly! Please submit to Krunk#6051 for testing! { path }, { hex(version) }")

@@ -81,6 +81,7 @@ class GZRS2State:
 
     rsCPolygonCount:    int = 0
     rsCVertexCount:     int = 0
+    rsONodeCount:       int = 0
     rsOPolygonCount:    int = 0
     rsOVertexCount:     int = 0
     rsConvexVerts:      list = field(default_factory = list)
@@ -100,8 +101,8 @@ class GZRS2State:
     aniMaxVisTick:      int = 0
     aniNodes:           list = field(default_factory = list)
     lmImages:           list = field(default_factory = list)
-    lmPolygonIDs:       tuple = field(default_factory = tuple)
-    lmIndices:          tuple = field(default_factory = tuple)
+    lmPolygonOrder:     tuple = field(default_factory = tuple)
+    lmLightmapIDs:      tuple = field(default_factory = tuple)
     lmUVs:              tuple = field(default_factory = tuple)
     lmMixGroup:         Object      = None
 

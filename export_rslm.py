@@ -2,32 +2,8 @@
 # Most of the code is based on logic found in...
 #
 ### GunZ 1
-# - RTypes.h
-# - RToken.h
-# - RealSpace2.h/.cpp
 # - RBspObject.h/.cpp
-# - RMaterialList.h/.cpp
-# - RMesh_Load.cpp
-# - RMeshUtil.h
-# - MZFile.cpp
-# - R_Mtrl.cpp
-# - EluLoader.h/cpp
-# - LightmapGenerator.h/.cpp
-# - MCPlug2_Mesh.cpp
-#
-### GunZ 2
-# - RVersions.h
-# - RTypes.h
-# - RD3DVertexUtil.h
-# - RStaticMeshResource.h
-# - RStaticMeshResourceFileLoadImpl.cpp
-# - MTypes.h
-# - MVector3.h
-# - MSVector.h
-# - RMesh.cpp
-# - RMeshNodeData.h
-# - RMeshNodeLoadImpl.h/.cpp
-# - RSkeleton.h/.cpp
+# - RBspObject_bsp.cpp
 #
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
@@ -122,6 +98,7 @@ def exportLm(self, context):
             self.report({ 'ERROR' }, "GZRS2: Lightmap UV export requires a GunZ 1 .rs file for the same map in the same directory!")
             return { 'CANCELLED' }
 
+        # Read RS
         file = io.open(rspath, 'rb')
 
         id = readUInt(file)
@@ -138,17 +115,19 @@ def exportLm(self, context):
                     if file.read(1) == b'\x00':
                         break
 
-            rsPolyCount = readInt(file)
-            skipBytes(file, 4) # skip total vertex count
+            state.rsCPolygonCount = readInt(file)
+            skipBytes(file, 4) # skip convex vertex count
 
-            for _ in range(rsPolyCount):
+            for _ in range(state.rsCPolygonCount):
                 skipBytes(file, 4 + 4 + (4 * 4) + 4) # skip material id, draw flags, plane and area data
                 skipBytes(file, 2 * readInt(file) * 4 * 3) # skip vertex data and normal data
 
-            skipBytes(file, 4 * 4) # skip unused, unknown counts
-            skipBytes(file, 4) # skip node count
-            rsOPolygonCount = readUInt(file)
-            rsOVertexCount = readInt(file)
+            skipBytes(file, 4 * 4) # skip counts for bsp nodes, polygons, vertices and indices
+
+            state.rsONodeCount = readUInt(file)
+            state.rsOPolygonCount = readUInt(file)
+            state.rsOVertexCount = readInt(file)
+            skipBytes(file, 4) # skip octree indices count
         else:
             self.report({ 'ERROR' }, f"GZRS2: RS file must be for GunZ 1! { hex(id) }, { hex(version) }")
             file.close()
@@ -213,20 +192,20 @@ def exportLm(self, context):
         return { 'CANCELLED' }
 
     if state.doUVs:
-        # newPolyIDs = bytearray(rsOPolygonCount * 4)
-        newIndices = bytearray(rsOPolygonCount * 4)
-        newUVs = bytearray(rsOVertexCount * 2 * 4)
+        # TODO: During .rs export we can determine our own polygon order, otherwise we have to infer it
+        # newPolyIDs = bytearray(state.rsOPolygonCount * 4)
+        newIndices = bytearray(state.rsOPolygonCount * 4)
+        newUVs = bytearray(state.rsOVertexCount * 2 * 4)
 
         # newPolyIDInts = memoryview(newPolyIDs).cast('I')
         newIndexInts = memoryview(newIndices).cast('I')
         newUVFloats = memoryview(newUVs).cast('f')
 
-        # TODO: the polgyon IDs aren't as they seem...
-        for p in range(rsOPolygonCount):
-            # newPolyIDInts[p] = 0
-            newIndexInts[p] = 0 # Never atlas
+        for p in range(state.rsOPolygonCount):
+            # newPolyIDInts[p] = p
+            newIndexInts[p] = 0 # Never atlas, we increase the lightmap resolution instead
 
-        for v in range(rsOVertexCount):
+        for v in range(state.rsOVertexCount):
             uv3 = uvLayer3.data[v].uv
 
             newUVFloats[v * 2 + 0] = uv3.x
@@ -238,6 +217,7 @@ def exportLm(self, context):
 
     shutil.copy2(lmpath, os.path.join(directory, filename + "_backup") + '.' + splitname[1] + '.' + splitname[2])
 
+    # Read LM
     file = io.open(lmpath, 'r+b')
     file.seek(0, os.SEEK_END)
     fileSize = file.tell()
@@ -245,33 +225,45 @@ def exportLm(self, context):
 
     id = readUInt(file)
     version = readUInt(file)
+    lmOPolygonCount = readUInt(file)
+    lmONodeCount = readUInt(file)
+    imageCount = readUInt(file)
+
+    if id != LM_ID or version not in (LM_VERSION, LM_VERSION_EXT):
+        self.report({ 'ERROR' }, f"GZRS2: LM header invalid! { hex(id) }, { hex(version) }")
+        file.close()
+        return { 'CANCELLED' }
+
+    if lmOPolygonCount != state.rsOPolygonCount or lmONodeCount != state.rsONodeCount:
+        self.report({ 'ERROR' }, f"GZRS2: LM topology does not match! { lmOPolygonCount }, { state.rsOPolygonCount }, { lmONodeCount }, { state.rsONodeCount }")
+        file.close()
+        return { 'CANCELLED' }
+
+    for _ in range(imageCount):
+        skipBytes(file, readUInt(file)) # skip image data
+
+    if state.doUVs:
+        lmDataBackup = file.read(4 * state.rsOPolygonCount) # backup polygon order
+    else:
+        lmDataBackup = file.read(fileSize - file.tell()) # backup polygon order, lightmap ids and uvs
+
+    # Write LM
+    file.seek(4, os.SEEK_SET)
 
     if state.logLmHeaders or state.logLmImages:
         print("===================  Write Lm  ===================")
         print()
 
+    writeUInt(file, LM_VERSION_EXT if state.lmVersion4 else LM_VERSION)
+    skipBytes(file, 4 + 4) # skip octree polygon count and node count
+    writeUInt(file, len(imageDatas))
+
     if state.logLmHeaders:
         print(f"Path:               { lmpath }")
         print(f"ID:                 { hex(id) }")
         print(f"Version:            { hex(version) }")
+        print(f"Image Count:        { len(imageDatas) }")
         print()
-
-    skipBytes(file, 4 + 4) # skip invalid (auxiliary?) polygon count and unused node count
-
-    for _ in range(readUInt(file)):
-        skipBytes(file, readUInt(file)) # skip image data
-
-    if state.doUVs:
-        lmData = file.read(4 * rsOPolygonCount)
-    else:
-        lmData = file.read(fileSize - file.tell())
-
-    file.seek(4, os.SEEK_SET)
-    writeUInt(file, LM_VERSION_EXT if state.lmVersion4 else LM_VERSION)
-
-    skipBytes(file, 4 + 4) # skip invalid (auxiliary?) polygon count and unused node count
-
-    writeUInt(file, len(imageDatas))
 
     pixelCount = imageSize ** 2
 
@@ -287,15 +279,16 @@ def exportLm(self, context):
         file.write(imageData)
 
     if state.doUVs:
-        file.write(lmData) # file.write(newPolyIDs)
+        file.write(lmDataBackup) # file.write(newPolyIDs)
         file.write(newIndices)
         file.write(newUVs)
     else:
-        file.write(lmData)
+        file.write(lmDataBackup)
 
     file.truncate()
     file.close()
 
+    # Dump Images
     imgpath = os.path.join(directory, filename) + "_LmImage" + ('.dds' if state.lmVersion4 else '.bmp')
     file = io.open(imgpath, 'wb')
 

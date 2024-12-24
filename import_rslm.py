@@ -2,32 +2,8 @@
 # Most of the code is based on logic found in...
 #
 ### GunZ 1
-# - RTypes.h
-# - RToken.h
-# - RealSpace2.h/.cpp
 # - RBspObject.h/.cpp
-# - RMaterialList.h/.cpp
-# - RMesh_Load.cpp
-# - RMeshUtil.h
-# - MZFile.cpp
-# - R_Mtrl.cpp
-# - EluLoader.h/cpp
-# - LightmapGenerator.h/.cpp
-# - MCPlug2_Mesh.cpp
-#
-### GunZ 2
-# - RVersions.h
-# - RTypes.h
-# - RD3DVertexUtil.h
-# - RStaticMeshResource.h
-# - RStaticMeshResourceFileLoadImpl.cpp
-# - MTypes.h
-# - MVector3.h
-# - MSVector.h
-# - RMesh.cpp
-# - RMeshNodeData.h
-# - RMeshNodeLoadImpl.h/.cpp
-# - RSkeleton.h/.cpp
+# - RBspObject_bsp.cpp
 #
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####

@@ -2,32 +2,8 @@
 # Most of the code is based on logic found in...
 #
 ### GunZ 1
-# - RTypes.h
-# - RToken.h
-# - RealSpace2.h/.cpp
 # - RBspObject.h/.cpp
-# - RMaterialList.h/.cpp
-# - RMesh_Load.cpp
-# - RMeshUtil.h
-# - MZFile.cpp
-# - R_Mtrl.cpp
-# - EluLoader.h/cpp
-# - LightmapGenerator.h/.cpp
-# - MCPlug2_Mesh.cpp
-#
-### GunZ 2
-# - RVersions.h
-# - RTypes.h
-# - RD3DVertexUtil.h
-# - RStaticMeshResource.h
-# - RStaticMeshResourceFileLoadImpl.cpp
-# - MTypes.h
-# - MVector3.h
-# - MSVector.h
-# - RMesh.cpp
-# - RMeshNodeData.h
-# - RMeshNodeLoadImpl.h/.cpp
-# - RSkeleton.h/.cpp
+# - RBspObject_bsp.cpp
 #
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
@@ -51,7 +27,8 @@ def readLm(self, path, state):
 
     id = readUInt(file)
     version = readUInt(file)
-    skipBytes(file, 4 + 4) # skip invalid polygon count and unused node count
+    lmCPolygonCount = readUInt(file)
+    lmCNodeCount = readUInt(file)
     imageCount = readUInt(file)
 
     if state.logLmHeaders:
@@ -61,8 +38,13 @@ def readLm(self, path, state):
         print(f"Image Count:        { imageCount }")
         print()
 
-    if id != LM_ID or (version != LM_VERSION and version != LM_VERSION_EXT):
+    if id != LM_ID or version not in (LM_VERSION, LM_VERSION_EXT):
         self.report({ 'ERROR' }, f"GZRS2: LM header invalid! { hex(id) }, { hex(version) }")
+        file.close()
+        return { 'CANCELLED' }
+
+    if lmCPolygonCount != state.rsCPolygonCount or lmCNodeCount != state.rsCNodeCount:
+        self.report({ 'ERROR' }, f"GZRS2: LM topology does not match! { lmCPolygonCount }, { state.rsCPolygonCount }, { lmCNodeCount }, { state.rsCNodeCount }")
         file.close()
         return { 'CANCELLED' }
 
@@ -202,8 +184,14 @@ def readLm(self, path, state):
             file.close()
             return { 'CANCELLED' }
 
-    state.lmPolygonIDs = readUIntArray(file, state.rsOPolygonCount)
-    state.lmIndices = readUIntArray(file, state.rsOPolygonCount)
+    state.lmPolygonOrder = readUIntArray(file, state.rsOPolygonCount)
+    lightmapIDs = readUIntArray(file, state.rsOPolygonCount)
+    sortedIDs = [0 for p in range(state.rsOPolygonCount)]
+
+    for p in range(state.rsOPolygonCount):
+        sortedIDs[state.lmPolygonOrder[p]] = lightmapIDs[p]
+
+    state.lmLightmapIDs = tuple(sortedIDs)
     state.lmUVs = readUV2Array(file, state.rsOVertexCount)
 
     if state.logLmHeaders or state.logLmImages:

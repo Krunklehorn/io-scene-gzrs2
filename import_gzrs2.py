@@ -356,7 +356,8 @@ def importRS2(self, context):
 
         return blMesh, blObj
 
-    blConvexMesh, blConvexObj = setupUnifiedMesh(f"{ state.filename }_Convex", setupRsConvexMesh)
+    # TODO: Improve performance of convex id matching
+    # blConvexMesh, blConvexObj = setupUnifiedMesh(f"{ state.filename }_Convex", setupRsConvexMesh)
 
     if state.meshMode == 'STANDARD':
         for m, blMesh in enumerate(state.blMeshes):
