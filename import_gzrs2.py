@@ -174,7 +174,8 @@ def importRS2(self, context):
             colpath = pathExists(f"{ rspath }.{ ext }")
 
             if colpath:
-                readCol(self, colpath, state)
+                if readCol(self, colpath, state):
+                    return { 'CANCELLED' }
                 break
 
         if not colpath:
@@ -186,7 +187,8 @@ def importRS2(self, context):
             navpath = pathExists(f"{ rspath }.{ ext }")
 
             if navpath:
-                readNav(self, navpath, state)
+                if readNav(self, navpath, state):
+                    return { 'CANCELLED' }
                 break
 
         if not navpath:
@@ -194,16 +196,20 @@ def importRS2(self, context):
             self.report({ 'INFO' }, "GZRS2: Navigation mesh requested but .nav file not found, no navigation mesh to generate.")
 
     if state.doLightmap:
-        lmpath = pathExists(f"{ rspath }.lm")
+        for ext in LM_EXTENSIONS:
+            lmpath = pathExists(f"{ rspath }.{ ext }")
 
-        if lmpath:
-            if readLm(self, lmpath, state):
-                return { 'CANCELLED' }
-            unpackLmImages(state)
-            setupLmMixGroup(state)
-        else:
+            if lmpath:
+                if readLm(self, lmpath, state):
+                    return { 'CANCELLED' }
+                break
+
+        if not lmpath:
             state.doLightmap = False
             self.report({ 'INFO' }, "GZRS2: Lightmaps requested but .lm file not found, no lightmaps to generate.")
+        else:
+            unpackLmImages(state)
+            setupLmMixGroup(state)
 
     if state.doProps:
         for p, prop in enumerate(state.xmlObjs):

@@ -8,10 +8,12 @@ if os.name == 'nt':
     XML_EXTENSIONS =            ['xml']
     COL_EXTENSIONS =            ['col', 'cl2']
     NAV_EXTENSIONS =            ['nav']
+    LM_EXTENSIONS =             ['lm']
 else:
     XML_EXTENSIONS =            ['xml', 'XML']
     COL_EXTENSIONS =            ['col', 'COL', 'cl2', 'CL2']
     NAV_EXTENSIONS =            ['nav', 'NAV']
+    LM_EXTENSIONS =             ['lm', 'LM']
 
 RS2_VALID_DATA_SUBDIRS =        ['Interface', 'Maps', 'Model', 'Quest', 'Sfx', 'Shader', 'Sound', 'System']
 RS3_VALID_DATA_SUBDIRS =        ['Data', 'EngineRes']

@@ -187,7 +187,7 @@ def readRs(self, path, state):
                     self.report({ 'WARNING' }, f"GZRS2: Octree material ID did not match convex material ID! Please submit to Krunk#6051 for testing!")
                 '''
 
-                if not (0 <= matID < len(state.xmlRsMats)): # Perhaps we should wait and assign the error material instead...
+                if not (0 <= matID < len(state.xmlRsMats)): # TODO: Perhaps we should wait and assign the error material instead...
                     self.report({ 'WARNING' }, f"GZRS2: Material ID out of bounds, setting to 0 and continuing. { matID }, { len(state.xmlRsMats) }")
                     matID = 0
 
