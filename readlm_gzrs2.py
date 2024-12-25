@@ -196,7 +196,7 @@ def readLm(self, path, state):
     state.lmUVs = readUV2Array(file, state.rsOVertexCount)
 
     if state.logLmHeaders or state.logLmImages:
-        bytesRemaining = fileSize - file.tell() if state.rsOVertexCount > 0 else 0
+        bytesRemaining = fileSize - file.tell()
 
         if bytesRemaining > 0:
             self.report({ 'ERROR' }, f"GZRS2: LM import finished with bytes remaining! { path }, { hex(id) }, { hex(version) }")
