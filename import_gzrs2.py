@@ -42,6 +42,7 @@ from .constants_gzrs2 import *
 from .classes_gzrs2 import *
 from .parse_gzrs2 import *
 from .readrs_gzrs2 import *
+from .readbsp_gzrs2 import *
 from .readcol_gzrs2 import *
 from .readnav_gzrs2 import *
 from .readlm_gzrs2 import *
@@ -65,6 +66,7 @@ def importRS2(self, context):
     state.convertUnits      = self.convertUnits
     state.meshMode          = self.meshMode
     state.texSearchMode     = self.texSearchMode
+    state.doBsptree         = self.doBsptree        and self.meshMode != 'BAKE'
     state.doCollision       = self.doCollision      and self.meshMode != 'BAKE'
     state.doNavigation      = self.doNavigation     and self.meshMode != 'BAKE'
     state.doLightmap        = self.doLightmap
@@ -97,6 +99,9 @@ def importRS2(self, context):
         state.logRsTrees            = self.logRsTrees
         state.logRsPolygons         = self.logRsPolygons
         state.logRsVerts            = self.logRsVerts
+        state.logBspHeaders         = self.logBspHeaders
+        state.logBspPolygons        = self.logBspPolygons
+        state.logBspVerts           = self.logBspVerts
         state.logColHeaders         = self.logColHeaders
         state.logColNodes           = self.logColNodes
         state.logColTris            = self.logColTris
@@ -169,6 +174,19 @@ def importRS2(self, context):
 
     readRs(self, rspath, state)
 
+    if state.doBsptree:
+        for ext in BSP_EXTENSIONS:
+            bsppath = pathExists(f"{ rspath }.{ ext }")
+
+            if bsppath:
+                if readBsp(self, bsppath, state):
+                    return { 'CANCELLED' }
+                break
+
+        if not bsppath:
+            state.doBsptree = False
+            self.report({ 'INFO' }, "GZRS2: Bsp mesh requested but .bsp file not found, no bsp mesh to generate.")
+
     if state.doCollision:
         for ext in COL_EXTENSIONS:
             colpath = pathExists(f"{ rspath }.{ ext }")
@@ -238,7 +256,9 @@ def importRS2(self, context):
     collections = bpy.data.collections
 
     rootMap =                   collections.new(state.filename)
-    rootMeshes =                collections.new(f"{ state.filename }_Meshes")
+    rootMeshesBsp =             collections.new(f"{ state.filename }_Meshes_Bsptree")           if state.doBsptree else False
+    rootMeshesOct =             collections.new(f"{ state.filename }_Meshes_Octree")
+    rootMeshesUni =             collections.new(f"{ state.filename }_Meshes_Unified")           if self.meshMode == 'BAKE' else False
 
     rootLightsMain =            collections.new(f"{ state.filename }_Lights_Main")              if state.doLights else False
     rootLightsSoft =            collections.new(f"{ state.filename }_Lights_Soft")              if state.doLights else False
@@ -253,10 +273,18 @@ def importRS2(self, context):
     rootSounds =                collections.new(f"{ state.filename }_Sounds")                   if state.doSounds else False
     rootItems =                 collections.new(f"{ state.filename }_Items")                    if state.doItems else False
     rootExtras =                collections.new(f"{ state.filename }_Extras")                   if doExtras else False
-    rootBounds =                collections.new(f"{ state.filename }_Bounds")                   if state.doBounds else False
+    rootBoundsBsp =             collections.new(f"{ state.filename }_Bounds_Bsptree")           if state.doBounds and state.doBsptree else False
+    rootBoundsOct =             collections.new(f"{ state.filename }_Bounds_Octree")            if state.doBounds else False
 
     context.collection.children.link(rootMap)
-    rootMap.children.link(rootMeshes)
+
+    if state.doBsptree:
+        rootMap.children.link(rootMeshesBsp)
+
+    rootMap.children.link(rootMeshesOct)
+
+    if self.meshMode == 'BAKE':
+        rootMap.children.link(rootMeshesUni)
 
     if state.doLights:
         rootMap.children.link(rootLightsMain)
@@ -273,7 +301,9 @@ def importRS2(self, context):
     if state.doItems:       rootMap.children.link(rootItems)
     if doExtras:            rootMap.children.link(rootExtras)
     if state.doBounds:
-        rootExtras.children.link(rootBounds)
+        if state.doBsptree:
+            rootExtras.children.link(rootBoundsBsp)
+        rootExtras.children.link(rootBoundsOct)
 
         for viewLayer in context.scene.view_layers:
             lcRoot = lcFindRoot(viewLayer.layer_collection, rootMap)
@@ -285,7 +315,8 @@ def importRS2(self, context):
             for lcExtras in lcRoot.children:
                 if lcExtras.collection is rootExtras:
                     for lcBounds in lcExtras.children:
-                        if lcBounds.collection is rootBounds:
+                        if any((lcBounds.collection is rootBoundsBsp and state.doBsptree,
+                                lcBounds.collection is rootBoundsOct)):
                             lcBounds.hide_viewport = True
 
     for m, xmlRsMat in enumerate(state.xmlRsMats):
@@ -301,11 +332,22 @@ def importRS2(self, context):
         state.blXmlRsMats.append(blMat)
 
         if state.meshMode == 'STANDARD':
-            blMesh = bpy.data.meshes.new(xmlRsMatName)
-            blMeshObj = bpy.data.objects.new(xmlRsMatName, blMesh)
+            if state.doBsptree:
+                bspMeshName = f"Bsp_{ xmlRsMatName }"
 
-            state.blMeshes.append(blMesh)
-            state.blMeshObjs.append(blMeshObj)
+                blBspMesh = bpy.data.meshes.new(bspMeshName)
+                blBspMeshObj = bpy.data.objects.new(bspMeshName, blBspMesh)
+
+                state.blBspMeshes.append(blBspMesh)
+                state.blBspMeshObjs.append(blBspMeshObj)
+
+            octMeshName = f"Oct_{ xmlRsMatName }"
+
+            blOctMesh = bpy.data.meshes.new(octMeshName)
+            blOctMeshObj = bpy.data.objects.new(octMeshName, blOctMesh)
+
+            state.blOctMeshes.append(blOctMesh)
+            state.blOctMeshObjs.append(blOctMeshObj)
 
     if state.doCleanup and state.logCleanup:
         print()
@@ -313,12 +355,9 @@ def importRS2(self, context):
         print()
 
     def cleanupFunc(blObj):
-        nonlocal self, context
-
         bpy.ops.object.select_all(action = 'DESELECT')
         blObj.select_set(True)
         bpy.ops.object.shade_smooth()
-        bpy.ops.object.material_slot_remove_unused()
         bpy.ops.object.select_all(action = 'DESELECT')
 
         bpy.ops.object.mode_set(mode = 'EDIT')
@@ -335,8 +374,6 @@ def importRS2(self, context):
         deleteInfoReports(11, context) # TODO: 5? 9? Not working?
 
     def setupUnifiedMesh(name, setupFunc, isBakeMesh = False):
-        nonlocal context, rootMeshes, state
-
         blMesh = bpy.data.meshes.new(name)
         blObj = bpy.data.objects.new(name, blMesh)
 
@@ -348,7 +385,7 @@ def importRS2(self, context):
         for p, polygon in blMesh.polygons.items():
             polygon.material_index = meshMatIDs[p]
 
-        rootMeshes.objects.link(blObj)
+        rootMeshesUni.objects.link(blObj)
 
         for viewLayer in context.scene.view_layers:
             viewLayer.objects.active = blObj
@@ -368,29 +405,33 @@ def importRS2(self, context):
     # blConvexMesh, blConvexObj = setupUnifiedMesh(f"{ state.filename }_Convex", setupRsConvexMesh)
 
     if state.meshMode == 'STANDARD':
-        for m, blMesh in enumerate(state.blMeshes):
-            if not setupRsOctreeMesh(self, m, blMesh, state):
-                continue
+        def setupStandardMeshes(blMeshes, blMeshObjs, treePolygons, treeVerts, rootMeshes, *, allowLightmapUVs = True):
+            for m, blMesh in enumerate(blMeshes):
+                if not setupRsTreeMesh(self, m, blMesh, treePolygons, treeVerts, state, allowLightmapUVs = allowLightmapUVs):
+                    continue
 
-            blMeshObj = state.blMeshObjs[m]
+                blMeshObj = blMeshObjs[m]
 
-            blMesh.materials.append(state.blXmlRsMats[m])
+                blMesh.materials.append(state.blXmlRsMats[m])
 
-            rootMeshes.objects.link(blMeshObj)
+                rootMeshes.objects.link(blMeshObj)
 
-            for viewLayer in context.scene.view_layers:
-                viewLayer.objects.active = blMeshObj
+                for viewLayer in context.scene.view_layers:
+                    viewLayer.objects.active = blMeshObj
 
-            if state.doCleanup:
-                if state.logCleanup:
-                    print(blMesh.name)
-                    cleanupFunc(blMeshObj)
-                    print()
-                else:
-                    with redirect_stdout(state.silentIO):
+                if state.doCleanup:
+                    if state.logCleanup:
+                        print(blMesh.name)
                         cleanupFunc(blMeshObj)
+                        print()
+                    else:
+                        with redirect_stdout(state.silentIO):
+                            cleanupFunc(blMeshObj)
+
+        setupStandardMeshes(state.blBspMeshes, state.blBspMeshObjs, state.bspTreePolygons, state.bspTreeVerts, rootMeshesBsp, allowLightmapUVs = False) # TODO: Improve performance of convex id matching
+        setupStandardMeshes(state.blOctMeshes, state.blOctMeshObjs, state.rsOctreePolygons, state.rsOctreeVerts, rootMeshesOct)
     elif state.meshMode == 'BAKE':
-        blBakeMesh, blBakeObj = setupUnifiedMesh(f"{ state.filename }_Bake", setupRsOctreeMesh, isBakeMesh = True)
+        blBakeMesh, blBakeObj = setupUnifiedMesh(f"{ state.filename }_Bake", setupRsTreeMesh, state.rsOctreePolygons, state.rsOctreeVerts, isBakeMesh = True)
 
     if state.doLights:
         for light in state.xmlLits:
@@ -508,7 +549,7 @@ def importRS2(self, context):
 
     if state.doSounds:
         for s, sound in enumerate(state.xmlAmbs):
-            if not all(key in sound for key in ['ObjName', 'type', 'filename']):
+            if not all(tuple(key in sound for key in ['ObjName', 'type', 'filename'])):
                 skippedSounds.append(s)
                 continue
 
@@ -623,18 +664,27 @@ def importRS2(self, context):
                 blOccObj.hide_set(True, view_layer = viewLayer)
 
         if state.doBounds:
-            for b, bounds in enumerate(state.rsBounds):
+            def createBBoxEmpty(name, blBBoxObjs, rootBounds):
                 p1, p2 = bounds
                 hdims = (p2 - p1) / 2
                 center = p1 + hdims
 
-                blBBoxObj = bpy.data.objects.new(f"{ state.filename }_OctBBox{ b }", None)
+                blBBoxObj = bpy.data.objects.new(name, None)
                 blBBoxObj.empty_display_type = 'CUBE'
                 blBBoxObj.location = center
                 blBBoxObj.scale = hdims
 
-                state.blBBoxObjs.append(blBBoxObj)
+                blBBoxObjs.append(blBBoxObj)
                 rootBounds.objects.link(blBBoxObj)
+
+                return blBBoxObj
+
+            if state.doBsptree:
+                for b, bounds in enumerate(state.bspTreeBounds):
+                    createBBoxEmpty(f"{ state.filename }_BspBBox{ b }", state.blBspBBoxObjs, rootBoundsBsp)
+
+            for b, bounds in enumerate(state.rsOctreeBounds):
+                createBBoxEmpty(f"{ state.filename }_OctBBox{ b }", state.blOctBBoxObjs, rootBoundsOct)
 
         if state.doFog:
             fog = state.xmlFogs[0]

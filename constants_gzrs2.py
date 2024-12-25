@@ -6,11 +6,13 @@ XMLELU_TEXTYPES =               ['DIFFUSEMAP', 'SPECULARMAP', 'SELFILLUMINATIONM
 
 if os.name == 'nt':
     XML_EXTENSIONS =            ['xml']
+    BSP_EXTENSIONS =            ['bsp']
     COL_EXTENSIONS =            ['col', 'cl2']
     NAV_EXTENSIONS =            ['nav']
     LM_EXTENSIONS =             ['lm']
 else:
     XML_EXTENSIONS =            ['xml', 'XML']
+    BSP_EXTENSIONS =            ['bsp', 'BSP']
     COL_EXTENSIONS =            ['col', 'COL', 'cl2', 'CL2']
     NAV_EXTENSIONS =            ['nav', 'NAV']
     LM_EXTENSIONS =             ['lm', 'LM']
@@ -31,8 +33,8 @@ RS3_VERSION4 =                  8
 
 RS_SUPPORTED_VERSIONS =         [ RS2_VERSION, RS3_VERSION1, RS3_VERSION2, RS3_VERSION3, RS3_VERSION4 ]
 
-RBSP_ID =                       0x35849298
-RBSP_VERSION =                  2
+BSP_ID =                        0x35849298
+BSP_VERSION =                   2
 
 PAT_ID =                        0x09784348
 PAT_VERSION =                   0

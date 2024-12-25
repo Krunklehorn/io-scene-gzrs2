@@ -282,7 +282,7 @@ def importRS3(self, context):
             if node['type'] in ['DIRLIGHT', 'SPOTLIGHT', 'POINTLIGHT']:
                 state.blLights.append(blLight)
             # elif node['type'] in ['OCCLUDER']:
-                # state.blMeshes.append(blMesh)
+                # state.blSceneMeshes.append(blSceneMesh)
 
             state.blNodeObjs.append(blNodeObj)
 

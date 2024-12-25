@@ -39,6 +39,9 @@ class GZRS2State:
     logRsPolygons:      bool = False
     logRsVerts:         bool = False
     logSceneNodes:      bool = False
+    logBspHeaders:      bool = False
+    logBspPolygons:     bool = False
+    logBspVerts:        bool = False
     logColHeaders:      bool = False
     logColNodes:        bool = False
     logColTris:         bool = False
@@ -82,6 +85,9 @@ class GZRS2State:
 
     rsCPolygonCount:    int | None = None
     rsCVertexCount:     int | None = None
+    rsBNodeCount:       int | None = None
+    rsBPolygonCount:    int | None = None
+    rsBVertexCount:     int | None = None
     rsONodeCount:       int | None = None
     rsOPolygonCount:    int | None = None
     rsOVertexCount:     int | None = None
@@ -89,9 +95,15 @@ class GZRS2State:
     rsOctreeVerts:      list = field(default_factory = list)
     rsConvexPolygons:   list = field(default_factory = list) # TODO: Improve performance of convex id matching
     rsOctreePolygons:   list = field(default_factory = list)
-    rsBounds:           list = field(default_factory = list)
+    rsOctreeBounds:     list = field(default_factory = list)
     smrPortals:         list = field(default_factory = list)
     smrCells:           list = field(default_factory = list)
+    bspNodeCount:       int | None = None
+    bspPolygonCount:    int | None = None
+    bspVertexCount:     int | None = None
+    bspTreeVerts:       list = field(default_factory = list)
+    bspTreePolygons:    list = field(default_factory = list)
+    bspTreeBounds:      list = field(default_factory = list)
     colVerts:           list = field(default_factory = list)
     navVerts:           list = field(default_factory = list)
     navFaces:           list = field(default_factory = list)
@@ -111,7 +123,10 @@ class GZRS2State:
     blXmlRsMats:        list = field(default_factory = list)
     blEluMats:          dict = field(default_factory = dict)
     blXmlEluMats:       dict = field(default_factory = dict)
-    blMeshes:           list = field(default_factory = list)
+    blBspMeshes:        list = field(default_factory = list)
+    blOctMeshes:        list = field(default_factory = list)
+    blSceneMeshes:      list = field(default_factory = list)
+    blEluMeshes:        list = field(default_factory = list)
     blProps:            list = field(default_factory = list)
 
     blActors:           list = field(default_factory = list)
@@ -140,13 +155,17 @@ class GZRS2State:
     blOccObj:           Object      = None
 
     blLights:           list = field(default_factory = list)
-    blMeshObjs:         list = field(default_factory = list)
+    blBspMeshObjs:      list = field(default_factory = list)
+    blOctMeshObjs:      list = field(default_factory = list)
+    blSceneMeshObjs:    list = field(default_factory = list)
+    blEluMeshObjs:      list = field(default_factory = list)
     blLightObjs:        list = field(default_factory = list)
     blPropObjs:         list = field(default_factory = list)
     blDummyObjs:        list = field(default_factory = list)
     blSoundObjs:        list = field(default_factory = list)
     blItemObjs:         list = field(default_factory = list)
-    blBBoxObjs:         list = field(default_factory = list)
+    blBspBBoxObjs:      list = field(default_factory = list)
+    blOctBBoxObjs:      list = field(default_factory = list)
 
     blActorObjs:        list = field(default_factory = list)
     blNodeObjs:         list = field(default_factory = list)
@@ -180,6 +199,13 @@ class Rs2ConvexVertex:
     oid:                int = 0
 
 @dataclass
+class Rs2BspVertex:
+    pos:                Vector = (0, 0, 0)
+    nor:                Vector = (0, 0, 0)
+    uv1:                Vector = (0, 0)
+    uv2:                Vector = (0, 0)
+
+@dataclass
 class Rs2OctreeVertex:
     pos:                Vector = (0, 0, 0)
     nor:                Vector = (0, 0, 0)
@@ -197,6 +223,14 @@ class Rs3OctreeVertex:
 @dataclass
 class RsConvexPolygon:
     matID:              int = 0
+    drawFlags:          int = 0
+    vertexCount:        int = 0
+    vertexOffset:       int = 0
+
+@dataclass
+class Rs2BspPolygon:
+    matID:              int = 0
+    convexID:           int = 0
     drawFlags:          int = 0
     vertexCount:        int = 0
     vertexOffset:       int = 0

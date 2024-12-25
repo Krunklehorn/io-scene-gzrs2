@@ -1040,7 +1040,7 @@ def setupRsConvexMesh(self, _, blMesh, state):
     return meshMatIDs
 '''
 
-def setupRsOctreeMesh(self, m, blMesh, state):
+def setupRsTreeMesh(self, m, blMesh, treePolygons, treeVerts, state, *, allowLightmapUVs = True):
     meshVerts = []
     meshNorms = []
     meshFaces = []
@@ -1049,7 +1049,7 @@ def setupRsOctreeMesh(self, m, blMesh, state):
     meshUV2 = []
     meshUV3 = None
 
-    if state.doLightmap:
+    if state.doLightmap and allowLightmapUVs:
         meshUV3 = []
         numCells = len(state.lmImages)
         cellSpan = int(math.sqrt(nextSquare(numCells)))
@@ -1057,7 +1057,7 @@ def setupRsOctreeMesh(self, m, blMesh, state):
     found = False
     offset = 0
 
-    for p, polygon in enumerate(state.rsOctreePolygons):
+    for p, polygon in enumerate(treePolygons):
         if state.meshMode != 'BAKE' and polygon.matID != m:
             continue
 
@@ -1069,10 +1069,10 @@ def setupRsOctreeMesh(self, m, blMesh, state):
             cy = c // cellSpan
 
         for v in range(polygon.vertexOffset, polygon.vertexOffset + polygon.vertexCount):
-            meshVerts.append(state.rsOctreeVerts[v].pos)
-            meshNorms.append(state.rsOctreeVerts[v].nor)
-            meshUV1.append(state.rsOctreeVerts[v].uv1)
-            meshUV2.append(state.rsOctreeVerts[v].uv2)
+            meshVerts.append(treeVerts[v].pos)
+            meshNorms.append(treeVerts[v].nor)
+            meshUV1.append(treeVerts[v].uv1)
+            meshUV2.append(treeVerts[v].uv2)
 
             if meshUV3 is not None:
                 uv3 = state.lmUVs[v].copy()
@@ -1345,8 +1345,8 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
 
         deleteInfoReports(9, context)
 
-    state.blMeshes.append(blMesh)
-    state.blMeshObjs.append(blMeshObj)
+    state.blEluMeshes.append(blMesh)
+    state.blEluMeshObjs.append(blMeshObj)
 
     if eluMesh.drawFlags & RM_FLAG_HIDE:
         blMeshObj.hide_viewport = True

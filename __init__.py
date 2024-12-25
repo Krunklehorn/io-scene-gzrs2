@@ -339,6 +339,12 @@ class ImportGZRS2(Operator, ImportHelper):
                  ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
     )
 
+    doBsptree: BoolProperty(
+        name = "Bsptree (slow)",
+        description = "Import Bsptree data",
+        default = False
+    )
+
     doCollision: BoolProperty(
         name = "Collision",
         description = "Import collision data",
@@ -406,9 +412,9 @@ class ImportGZRS2(Operator, ImportHelper):
     )
 
     doBounds: BoolProperty(
-        name = "Bounds",
-        description = "Create empties for octree bounding boxes",
-        default = True
+        name = "Bounds (slow)",
+        description = "Create empties for bsptree and octree bounding boxes",
+        default = False
     )
 
     doLightDrivers: BoolProperty(
@@ -468,6 +474,24 @@ class ImportGZRS2(Operator, ImportHelper):
     logRsVerts: BoolProperty(
         name = "RS Vertices",
         description = "Log RS vertex data",
+        default = False
+    )
+
+    logBspHeaders: BoolProperty(
+        name = "BSP Headers",
+        description = "Log BSP header data",
+        default = True
+    )
+
+    logBspPolygons: BoolProperty(
+        name = "BSP Polygons",
+        description = "Log BSP polygon data",
+        default = False
+    )
+
+    logBspVerts: BoolProperty(
+        name = "BSP Vertices",
+        description = "Log BSP vertex data",
         default = False
     )
 
@@ -578,6 +602,7 @@ class GZRS2_PT_Import_Main(Panel):
         layout.prop(operator, "texSearchMode")
 
         column = layout.column()
+        column.prop(operator, "doBsptree")
         column.prop(operator, "doCollision")
         column.prop(operator, "doNavigation")
         column.enabled = operator.meshMode != 'BAKE'
@@ -658,6 +683,9 @@ class GZRS2_PT_Import_Logging(Panel):
         layout.prop(operator, "logRsTrees")
         layout.prop(operator, "logRsPolygons")
         layout.prop(operator, "logRsVerts")
+        layout.prop(operator, "logBspHeaders")
+        layout.prop(operator, "logBspPolygons")
+        layout.prop(operator, "logBspVerts")
         layout.prop(operator, "logColHeaders")
         layout.prop(operator, "logColNodes")
         layout.prop(operator, "logColTris")

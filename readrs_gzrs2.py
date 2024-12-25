@@ -125,8 +125,10 @@ def readRs(self, path, state):
         if state.rsCVertexCount != len(state.rsConvexVerts):
             self.report({ 'ERROR' }, f"GZRS2: RS convex vertex count did not match vertices written! { state.rsCVertexCount }, { len(state.rsConvexVerts) }")
         '''
-
-        skipBytes(file, 4 * 4) # skip counts for bsp nodes, polygons, vertices and indices
+        state.rsBNodeCount = readUInt(file)
+        state.rsBPolygonCount = readUInt(file)
+        state.rsBVertexCount = readUInt(file)
+        skipBytes(file, 4) # skip bsp indices count
 
         state.rsONodeCount = readUInt(file)
         state.rsOPolygonCount = readUInt(file)
@@ -146,7 +148,7 @@ def readRs(self, path, state):
         def openRS2OctreeNode():
             nonlocal state, nodeCount, vertexOffset, p
 
-            state.rsBounds.append(readBounds(file, state.convertUnits, True))
+            state.rsOctreeBounds.append(readBounds(file, state.convertUnits, True))
 
             skipBytes(file, 4 * 4) # skip plane
 
@@ -341,7 +343,7 @@ def readRs(self, path, state):
                     def openRS3OctreeNode():
                         nonlocal state, vertexOffset, p
 
-                        state.rsBounds.append(readBounds(file, state.convertUnits, False))
+                        state.rsOctreeBounds.append(readBounds(file, state.convertUnits, False))
 
                         if not readBool(file):
                             openRS3OctreeNode() # positive
