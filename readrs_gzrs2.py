@@ -6,14 +6,7 @@
 # - RToken.h
 # - RealSpace2.h/.cpp
 # - RBspObject.h/.cpp
-# - RMaterialList.h/.cpp
-# - RMesh_Load.cpp
-# - RMeshUtil.h
-# - MZFile.cpp
-# - R_Mtrl.cpp
-# - EluLoader.h/cpp
-# - LightmapGenerator.h/.cpp
-# - MCPlug2_Mesh.cpp
+# - RBspObject_bsp.h/.cpp
 #
 ### GunZ 2
 # - RVersions.h
@@ -47,14 +40,14 @@ def readRs(self, path, state):
     fileSize = file.tell()
     file.seek(0, os.SEEK_SET)
 
-    if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsPolygons or state.logRsVerts:
+    if state.logRsHeaders or state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsPolygons or state.logRsVerts:
         print("===================  Read RS  ===================")
         print()
 
     id = readUInt(file)
     version = readUInt(file)
 
-    if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsPolygons or state.logRsVerts:
+    if state.logRsHeaders:
         print(f"Path:               { path }")
         print(f"ID:                 { hex(id) }")
         print(f"Version:            { hex(version) }")
@@ -81,7 +74,7 @@ def readRs(self, path, state):
         state.rsCPolygonCount = readUInt(file)
         state.rsCVertexCount = readUInt(file)
 
-        if state.logRsVerts:
+        if state.logRsHeaders:
             print(f"Convex Polygons:    { state.rsCPolygonCount }")
             print(f"Convex Vertices:    { state.rsCVertexCount }")
             print()
@@ -140,7 +133,7 @@ def readRs(self, path, state):
         state.rsOVertexCount = readInt(file)
         skipBytes(file, 4) # skip octree indices count
 
-        if state.logRsVerts:
+        if state.logRsHeaders:
             print(f"Octree Nodes:       { state.rsONodeCount }")
             print(f"Octree Polygons:    { state.rsOPolygonCount }")
             print(f"Octree Vertices:    { state.rsOVertexCount }")
@@ -408,7 +401,7 @@ def readRs(self, path, state):
                 print(f"Geometry:           { len(geometry) }")
                 print()
 
-    if state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsPolygons or state.logRsVerts:
+    if state.logRsHeaders or state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsPolygons or state.logRsVerts:
         bytesRemaining = fileSize - file.tell()
 
         if bytesRemaining > 0:

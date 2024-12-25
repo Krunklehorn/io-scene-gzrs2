@@ -31,6 +31,7 @@ class GZRS2State:
     doTwistConstraints: bool = False
     doCleanup:          bool = False
 
+    logRsHeaders:       bool = False
     logRsPortals:       bool = False
     logRsCells:         bool = False
     logRsGeometry:      bool = False

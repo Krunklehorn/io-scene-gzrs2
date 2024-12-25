@@ -90,6 +90,7 @@ def importRS2(self, context):
         print("=======================================================================")
         print()
 
+        state.logRsHeaders          = self.logRsHeaders
         state.logRsPortals          = self.logRsPortals
         state.logRsCells            = self.logRsCells
         state.logRsGeometry         = self.logRsGeometry

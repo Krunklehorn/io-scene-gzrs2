@@ -429,6 +429,12 @@ class ImportGZRS2(Operator, ImportHelper):
         default = True
     )
 
+    logRsHeaders: BoolProperty(
+        name = "RS Headers",
+        description = "Log RS header data",
+        default = True
+    )
+
     logRsPortals: BoolProperty(
         name = "RS Portals",
         description = "Log RS portal data",
@@ -645,6 +651,7 @@ class GZRS2_PT_Import_Logging(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelLogging
 
+        layout.prop(operator, "logRsHeaders")
         layout.prop(operator, "logRsPortals")
         layout.prop(operator, "logRsCells")
         layout.prop(operator, "logRsGeometry")
