@@ -1635,12 +1635,6 @@ class ExportRSLM(Operator, ExportHelper):
         default = True
     )
 
-    logLmImages: BoolProperty(
-        name = "Lm Images",
-        description = "Log Lm image data",
-        default = True
-    )
-
     def draw(self, context):
         pass
 
@@ -1694,7 +1688,6 @@ class RSLM_PT_Export_Logging(Panel):
         layout.enabled = operator.panelLogging
 
         layout.prop(operator, "logLmHeaders")
-        layout.prop(operator, "logLmImages")
 
 class GZRS2Properties(PropertyGroup):
     def ensureAll(self):

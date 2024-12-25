@@ -69,7 +69,6 @@ def exportLm(self, context):
         print()
 
         state.logLmHeaders = self.logLmHeaders
-        state.logLmImages = self.logLmImages
 
     lmpath = self.filepath
     directory = os.path.dirname(lmpath)
@@ -101,8 +100,18 @@ def exportLm(self, context):
         # Read RS
         file = io.open(rspath, 'rb')
 
+        if state.logLmHeaders:
+            print("===================  Read RS  ===================")
+            print()
+
         id = readUInt(file)
         version = readUInt(file)
+
+        if state.logLmHeaders:
+            print(f"Path:               { rspath }")
+            print(f"ID:                 { hex(id) }")
+            print(f"Version:            { hex(version) }")
+            print()
 
         if not (id == RS2_ID or id == RS3_ID) or version < RS3_VERSION1:
             self.report({ 'ERROR' }, f"GZRS2: RS header invalid! { hex(id) }, { hex(version) }")
@@ -154,7 +163,9 @@ def exportLm(self, context):
 
         mipCount = int(mipCount)
 
-        if imageName == imageTarget:
+        # Never atlas, we increase the lightmap resolution instead
+        # if imageName == imageTarget:
+        if True:
             imageSize = image.size[0]
             floats = image.pixels[:]
 
@@ -162,6 +173,7 @@ def exportLm(self, context):
 
             found = True
             break
+        '''
         elif imageName.startswith(atlasTarget):
             numCells = imageName[-1]
 
@@ -186,34 +198,11 @@ def exportLm(self, context):
 
             found = True
             break
+        '''
 
     if not found:
         self.report({ 'ERROR' }, "GZRS2: No valid lightmap found! Image must be a square, power of two texture and the name must match \'<mapname>_LmImage\' or \'<mapname>_LmAtlas<# of cells>\'")
         return { 'CANCELLED' }
-
-    if state.doUVs:
-        # TODO: During .rs export we can determine our own polygon order, otherwise we have to infer it
-        # newPolyIDs = bytearray(state.rsOPolygonCount * 4)
-        newIndices = bytearray(state.rsOPolygonCount * 4)
-        newUVs = bytearray(state.rsOVertexCount * 2 * 4)
-
-        # newPolyIDInts = memoryview(newPolyIDs).cast('I')
-        newIndexInts = memoryview(newIndices).cast('I')
-        newUVFloats = memoryview(newUVs).cast('f')
-
-        for p in range(state.rsOPolygonCount):
-            # newPolyIDInts[p] = p
-            newIndexInts[p] = 0 # Never atlas, we increase the lightmap resolution instead
-
-        for v in range(state.rsOVertexCount):
-            uv3 = uvLayer3.data[v].uv
-
-            newUVFloats[v * 2 + 0] = uv3.x
-            newUVFloats[v * 2 + 1] = 1 - uv3.y
-
-        # newPolyIDInts.release()
-        newIndexInts.release()
-        newUVFloats.release()
 
     shutil.copy2(lmpath, os.path.join(directory, filename + "_backup") + '.' + splitname[1] + '.' + splitname[2])
 
@@ -234,10 +223,11 @@ def exportLm(self, context):
         file.close()
         return { 'CANCELLED' }
 
-    if lmCPolygonCount != state.rsCPolygonCount or lmONodeCount != state.rsONodeCount:
-        self.report({ 'ERROR' }, f"GZRS2: LM topology does not match! { lmCPolygonCount }, { state.rsCPolygonCount }, { lmONodeCount }, { state.rsONodeCount }")
-        file.close()
-        return { 'CANCELLED' }
+    if state.rsCPolygonCount is not None or state.rsONodeCount is not None:
+        if lmCPolygonCount != state.rsCPolygonCount or lmONodeCount != state.rsONodeCount:
+            self.report({ 'ERROR' }, f"GZRS2: LM topology does not match! { lmCPolygonCount }, { state.rsCPolygonCount }, { lmONodeCount }, { state.rsONodeCount }")
+            file.close()
+            return { 'CANCELLED' }
 
     for _ in range(imageCount):
         skipBytes(file, readUInt(file)) # skip image data
@@ -250,7 +240,7 @@ def exportLm(self, context):
     # Write LM
     file.seek(4, os.SEEK_SET)
 
-    if state.logLmHeaders or state.logLmImages:
+    if state.logLmHeaders:
         print("===================  Write Lm  ===================")
         print()
 
@@ -279,6 +269,29 @@ def exportLm(self, context):
         file.write(imageData)
 
     if state.doUVs:
+        # TODO: During .rs export we can determine our own polygon order, otherwise we have to infer it
+        # newPolyIDs = bytearray(state.rsOPolygonCount * 4)
+        newIndices = bytearray(state.rsOPolygonCount * 4)
+        newUVs = bytearray(state.rsOVertexCount * 2 * 4)
+
+        # newPolyIDInts = memoryview(newPolyIDs).cast('I')
+        newIndexInts = memoryview(newIndices).cast('I')
+        newUVFloats = memoryview(newUVs).cast('f')
+
+        for p in range(state.rsOPolygonCount):
+            # newPolyIDInts[p] = p
+            newIndexInts[p] = 0 # Never atlas, we increase the lightmap resolution instead
+
+        for v in range(state.rsOVertexCount):
+            uv3 = uvLayer3.data[v].uv
+
+            newUVFloats[v * 2 + 0] = uv3.x
+            newUVFloats[v * 2 + 1] = 1 - uv3.y
+
+        # newPolyIDInts.release()
+        newIndexInts.release()
+        newUVFloats.release()
+
         file.write(lmDataBackup) # file.write(newPolyIDs)
         file.write(newIndices)
         file.write(newUVs)
@@ -289,15 +302,14 @@ def exportLm(self, context):
     file.close()
 
     # Dump Images
-    imgpath = os.path.join(directory, filename) + "_LmImage" + ('.dds' if state.lmVersion4 else '.bmp')
-    file = io.open(imgpath, 'wb')
-
     for d, imageData in enumerate(imageDatas):
+        imgpath = os.path.join(directory, filename) + f"_LmImage{ d }" + ('.dds' if state.lmVersion4 else '.bmp')
+        file = io.open(imgpath, 'wb')
+
         if state.lmVersion4:    writeDDSHeader(file, imageSize, pixelCount, ddsSize)
         else:                   writeBMPHeader(file, imageSize, bmpSize)
 
         file.write(imageData)
-
-    file.close()
+        file.close()
 
     return { 'FINISHED' }

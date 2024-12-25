@@ -79,11 +79,11 @@ class GZRS2State:
     xmlAmbs:            list = field(default_factory = list)
     xmlItms:            list = field(default_factory = list)
 
-    rsCPolygonCount:    int = 0
-    rsCVertexCount:     int = 0
-    rsONodeCount:       int = 0
-    rsOPolygonCount:    int = 0
-    rsOVertexCount:     int = 0
+    rsCPolygonCount:    int | None = None
+    rsCVertexCount:     int | None = None
+    rsONodeCount:       int | None = None
+    rsOPolygonCount:    int | None = None
+    rsOVertexCount:     int | None = None
     rsConvexVerts:      list = field(default_factory = list)
     rsOctreeVerts:      list = field(default_factory = list)
     rsConvexPolygons:   list = field(default_factory = list) # TODO: Improve performance of convex id matching

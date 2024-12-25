@@ -43,10 +43,11 @@ def readLm(self, path, state):
         file.close()
         return { 'CANCELLED' }
 
-    if lmCPolygonCount != state.rsCPolygonCount or lmONodeCount != state.rsONodeCount:
-        self.report({ 'ERROR' }, f"GZRS2: LM topology does not match! { lmCPolygonCount }, { state.rsCPolygonCount }, { lmONodeCount }, { state.rsONodeCount }")
-        file.close()
-        return { 'CANCELLED' }
+    if state.rsCPolygonCount is not None or state.rsONodeCount is not None:
+        if lmCPolygonCount != state.rsCPolygonCount or lmONodeCount != state.rsONodeCount:
+            self.report({ 'ERROR' }, f"GZRS2: LM topology does not match! { lmCPolygonCount }, { state.rsCPolygonCount }, { lmONodeCount }, { state.rsONodeCount }")
+            file.close()
+            return { 'CANCELLED' }
 
     for i in range(imageCount):
         byteCount = readUInt(file)
