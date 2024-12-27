@@ -424,8 +424,8 @@ class LmImage:
 class RSELUExportState:
     convertUnits:           bool = False
     selectedOnly:           bool = False
-    visibleOnly:            bool = False
     includeChildren:        bool = False
+    visibleOnly:            bool = False
 
     logEluHeaders:          bool = False
     logEluMats:             bool = False

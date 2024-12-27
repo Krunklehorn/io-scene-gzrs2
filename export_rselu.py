@@ -98,7 +98,7 @@ def exportElu(self, context):
         if object is None:
             continue
 
-        if object.type in ['MESH', 'EMPTY']:
+        if object.type in ['EMPTY', 'MESH']:
             foundValid = True
 
             if object.type == 'MESH':
@@ -127,7 +127,7 @@ def exportElu(self, context):
             invalidCount += 1
 
     if not foundValid:
-        self.report({ 'ERROR' }, "GZRS2: ELU export requires objects of type MESH or EMPTY!")
+        self.report({ 'ERROR' }, "GZRS2: ELU export requires objects of type EMPTY or MESH!")
         return { 'CANCELLED' }
 
     if invalidCount > 0:

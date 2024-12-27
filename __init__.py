@@ -1056,7 +1056,7 @@ class ImportRSANI(Operator, ImportHelper):
 
     visibleOnly: BoolProperty(
         name = "Visible Only",
-        description = "Limit export to visible objects only.  Does not apply to TRANSFORM or BONE types",
+        description = "Limit import to visible objects only.  Does not apply to TRANSFORM or BONE types",
         default = False
     )
 

@@ -75,7 +75,7 @@ def readCol(self, path, state):
             print()
 
         def openCol1Node():
-            nonlocal state, n, trisRead
+            nonlocal n, trisRead
 
             if not state.logColNodes: skipBytes(file, 4 * 4) # skip plane
             else: plane = readPlane(file, True)
@@ -132,7 +132,7 @@ def readCol(self, path, state):
             print()
 
         def openCol2Node():
-            nonlocal state, n, trisRead
+            nonlocal n, trisRead
 
             if not state.logColNodes: skipBytes(file, 4 * 3 * 2) # skip bounding box
             else: bounds = readBounds(file, state.convertUnits, False)

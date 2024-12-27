@@ -75,7 +75,7 @@ def readBsp(self, path, state):
     p = 0
 
     def openRSBsptreeNode():
-        nonlocal state, nodeCount, vertexOffset, p
+        nonlocal nodeCount, vertexOffset, p
 
         state.bspTreeBounds.append(readBounds(file, state.convertUnits, True))
 

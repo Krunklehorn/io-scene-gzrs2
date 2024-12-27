@@ -146,7 +146,7 @@ def readRs(self, path, state):
         p = 0
 
         def openRS2OctreeNode():
-            nonlocal state, nodeCount, vertexOffset, p
+            nonlocal nodeCount, vertexOffset, p
 
             state.rsOctreeBounds.append(readBounds(file, state.convertUnits, True))
 
@@ -341,7 +341,7 @@ def readRs(self, path, state):
                     p = 0
 
                     def openRS3OctreeNode():
-                        nonlocal state, vertexOffset, p
+                        nonlocal vertexOffset, p
 
                         state.rsOctreeBounds.append(readBounds(file, state.convertUnits, False))
 
