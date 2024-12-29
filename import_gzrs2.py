@@ -552,7 +552,7 @@ def importRS2(self, context):
             if nameLower.startswith(RS_DUMMY_NAME_SPLIT_SUBSTRINGS):
                 for substrings, token, expectedCount in RS_DUMMY_NAME_SPLIT_DATA:
                     if nameLower.startswith(substrings):
-                        nameSplits = string.split(token)
+                        nameSplits = nameLower.split(token)
                         splitCount = len(splits)
                         splitCountError = splitCount != expectedCount
                         break
