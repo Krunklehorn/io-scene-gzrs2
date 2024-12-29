@@ -7,9 +7,21 @@ from mathutils import Vector, Matrix
 
 from .constants_gzrs2 import *
 
-def IndexOrNone(list, i):
+def indexOrNone(list, i):
     try:        return list.index(i)
     except:     return None
+
+def enumIdentifierToIndex(self, identifier, items):
+    for i, item in enumerate(items):
+        if item[0] == identifier:
+            return i
+
+    print(f"GZRS2: Failed to get index for enum identifier: { identifier }")
+
+    return 0
+
+def enumIndexToIdentifier(index, items):
+    return items[index][0]
 
 def vecArrayMinMax(vectors, size):
     minLen2 = float('inf')
@@ -488,7 +500,7 @@ def checkIsEffectNode(nodename):
     return False if nodename is None else '_ef' in nodename
 
 def checkIsAniTex(texBase):
-    return False if texBase is None else texBase.startswith('txa')
+    return False if texBase is None else texBase.lower().startswith('txa')
 
 def processAniTexParameters(isAniTex, texName, *, silent = False):
     if not isAniTex:
@@ -1210,7 +1222,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
         blMeshObj.matrix_world = Matrix.Rotation(math.radians(-180.0), 4, 'Z') @ eluMesh.transform
 
         # Prevent skyboxes from catching rays
-        if meshName.startswith(('obj_sky_', 'obj_ef_sky')):
+        if meshName.lower().startswith(('obj_sky_', 'obj_ef_sky')):
             blMeshObj.visible_volume_scatter = False
             blMeshObj.visible_transmission = False
             blMeshObj.visible_shadow = False

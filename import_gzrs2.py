@@ -522,13 +522,16 @@ def importRS2(self, context):
         self.report({ 'INFO' }, f"GZRS2: Valid bones were found in some props: { len(state.gzrsValidBones) }")
 
     if state.doDummies:
+        i = 0
+
         for d, dummy in enumerate(state.xmlDums):
             if d in propDums:
                 continue
 
             name = dummy['name']
+            nameLower = name.lower()
 
-            if name.startswith(('spawn_item', 'snd_amb')):
+            if nameLower.startswith(('spawn_item', 'snd_amb')):
                 continue
 
             dir = dummy['DIRECTION']
@@ -537,13 +540,94 @@ def importRS2(self, context):
             up = right.cross(dir)
             rot = Matrix((right, dir, up)).to_euler()
 
-            blDummyObj = bpy.data.objects.new(f"{ state.filename }_Dummy_{ name }", None)
-            blDummyObj.empty_display_type = 'ARROWS'
-            blDummyObj.location = dummy['POSITION']
-            blDummyObj.rotation_euler = rot
+            RS_DUMMY_NAME_SPLIT_DATA = (
+                ((  'spawn_solo', 'spawn_team'  ), '_', 3),
+                ((  'spawn_npc', 'spawn_blitz'  ), '_', 4), # spawn_npc_melee_01, spawn_npc_melee_02, TODO: verify blitz data
+                ((  'camera_pos',               ), ' ', 2), # camera_pos 01, camera_pos 01
+                ((  'wait_pos',                 ), '_', 3), # wait_pos_01
+            )
 
-            state.blDummyObjs.append(blDummyObj)
-            rootDummies.objects.link(blDummyObj)
+            RS_DUMMY_NAME_SPLIT_SUBSTRINGS = tuple(substring for substrings, _, _ in RS_DUMMY_NAME_SPLIT_DATA for substring in substrings)
+
+            if nameLower.startswith(RS_DUMMY_NAME_SPLIT_SUBSTRINGS):
+                for substrings, token, expectedCount in RS_DUMMY_NAME_SPLIT_DATA:
+                    if nameLower.startswith(substrings):
+                        nameSplits = string.split(token)
+                        splitCount = len(splits)
+                        splitCountError = splitCount != expectedCount
+                        break
+
+                if splitCountError:
+                    self.report({ 'WARNING' }, f"GZRS2: Dummy name with incorrect formatting, incorrect placement of separators, skipping: { d }, { name }")
+                    continue
+
+                nameSuffix = nameSplits[-1]
+
+                if not nameSuffix.isnumeric():
+                    self.report({ 'WARNING' }, f"GZRS2: Dummy name with incorrect formatting, unable to detect spawn index, skipping: { d }, { name }")
+                    continue
+
+                nameIndex = int(nameSuffix)
+
+            if nameLower.startswith((   'spawn_solo',   'spawn_team',
+                                        'spawn_npc',    'spawn_blitz')):    objName = f"{ state.filename }_Spawn{ i }"
+            elif nameLower.startswith(( 'camera_pos',   'wait_pos')):       objName = f"{ state.filename }_Camera{ i }"
+            else:                                                           objName = f"{ state.filename }_Dummy_{ name }"
+
+            if nameLower.startswith(('camera_pos', 'wait_pos')):
+                blObj = bpy.data.objects.new(objName, 'CAMERA')
+                props = blObj.data.gzrs2
+            else:
+                blObj = bpy.data.objects.new(objName, None)
+                blObj.empty_display_type = 'ARROWS'
+                props = blObj.gzrs2
+
+            blObj.location = dummy['POSITION']
+            blObj.rotation_euler = rot
+
+            if nameLower.startswith('spawn_solo'):
+                props.dummyType = 'SPAWN'
+                props.spawnType = 'SOLO'
+                props.spawnIndex = nameIndex
+            elif nameLower.startswith('spawn_team'):
+                props.dummyType = 'SPAWN'
+                props.spawnType = 'TEAM'
+                props.spawnIndex = nameIndex
+
+                # We assume that 'spawn_team' always prefixes a single digit number starting at 1
+                props.spawnTeamID = int(nameLower.split('spawn_team')[1][0])
+            elif nameLower.startswith('spawn_npc'):
+                props.dummyType = 'SPAWN'
+                props.spawnType = 'NPC'
+                props.spawnIndex = nameIndex
+
+                # TODO: Custom value support for npc types
+                if      nameLower.startswith('spawn_npc_melee'):    props.spawnEnemyType = 'MELEE'
+                elif    nameLower.startswith('spawn_npc_ranged'):   props.spawnEnemyType = 'RANGED'
+                elif    nameLower.startswith('spawn_npc_boss'):     props.spawnEnemyType = 'BOSS'
+            elif nameLower.startswith('spawn_blitz'):
+                props.dummyType = 'SPAWN'
+                props.spawnType = 'BLITZ'
+                props.spawnIndex = nameIndex
+
+                # TODO: Custom value support for blitzkrieg types
+                if      nameLower.startswith('spawn_blitz_barricade'):  props.spawnBlitzType = 'BARRICADE'
+                elif    nameLower.startswith('spawn_blitz_guardian'):   props.spawnBlitzType = 'GUARDIAN'
+                elif    nameLower.startswith('spawn_blitz_radar'):      props.spawnBlitzType = 'RADAR'
+                elif    nameLower.startswith('spawn_blitz_honoritem'):  props.spawnBlitzType = 'TREASURE'
+            elif nameLower.startswith('wait_pos'):
+                props.cameraIndex = nameIndex
+                props.cameraType = 'WAIT'
+            elif nameLower.startswith('camera_pos'):
+                props.cameraIndex = nameIndex
+                props.cameraType = 'TRACK'
+            elif nameLower.startswith('sun_'):
+                props.dummyType = 'SUN'
+
+            state.blDummyObjs.append(blObj)
+            rootDummies.objects.link(blObj)
+
+            i += 1
 
     skippedSounds = []
 
@@ -553,17 +637,23 @@ def importRS2(self, context):
                 skippedSounds.append(s)
                 continue
 
-            name = sound['ObjName']
-            radius = sound['RADIUS']
-            type = sound['type']
-            space = '2D' if type[0] == 'a' else '3D'
-            shape = 'AABB' if type[1] == '0' else 'SPHERE'
+            soundObjName = sound['ObjName']
+            soundFileName = sound['filename']
+            typecode = sound['type']
+            space = '2D' if typecode[0] == 'a' else '3D'
+            shape = 'AABB' if typecode[1] == '0' else 'SPHERE'
 
             if (shape == 'AABB' and not ('MIN_POSITION' in sound and 'MAX_POSITION' in sound)) or (shape == 'SPHERE' and 'CENTER' not in sound):
                 skippedSounds.append(s)
                 continue
 
-            blSoundObj = bpy.data.objects.new(f"{ state.filename }_Sound_{ name }", None)
+            blSoundObj = bpy.data.objects.new(f"{ state.filename }_Sound_{ soundObjName }", None)
+            props = blSoundObj.gzrs2
+
+            props.dummyType = 'SOUND'
+            props.soundFileName = soundFileName
+            props.soundSpace = space
+            props.soundShape = shape
 
             if shape == 'AABB':
                 p1 = sound['MIN_POSITION']
@@ -577,14 +667,9 @@ def importRS2(self, context):
             elif shape == 'SPHERE':
                 blSoundObj.empty_display_type = 'SPHERE'
                 blSoundObj.location = sound['CENTER']
-                blSoundObj.scale = (radius, radius, radius)
+                blSoundObj.empty_display_size = sound['RADIUS']
 
             blSoundObj.location.y = -blSoundObj.location.y
-
-            blSoundObj['gzrs2_sound_type'] = type
-            blSoundObj['gzrs2_sound_space'] = space
-            blSoundObj['gzrs2_sound_shape'] = shape
-            blSoundObj['gzrs2_sound_filename'] = sound['filename']
 
             state.blSoundObjs.append(blSoundObj)
             rootSounds.objects.link(blSoundObj)
@@ -593,20 +678,42 @@ def importRS2(self, context):
         self.report({ 'WARNING' }, f"GZRS2: Skipped sounds with missing attributes: { skippedSounds }")
 
     if state.doItems:
+        i = 0
+
         for gametype in state.xmlItms:
-            id = gametype['id']
+            gameID = gametype['id'].upper()
+
+            # TODO: Custom value support for game IDs
+            if gameID not in ['SOLO', 'TEAM']:
+                self.report({ 'WARNING' }, f"GZRS2: Skipped game id of unsupported type: { s }, { gameID }")
+                continue
 
             for s, spawn in enumerate(gametype['spawns']):
                 item = spawn['item']
 
-                blItemObj = bpy.data.objects.new(f"{ state.filename }_Item_{ id }{ s }_{ item }", None)
+                # TODO: Custom value support for item types
+                if len(item) >= 4:
+                    itemType = item[:-2].upper()
+                    itemID = item[-2:]
+
+                if len(item) < 4 or not itemType.isalpha() or not itemID.isnumeric():
+                    self.report({ 'WARNING' }, f"GZRS2: Skipped item of unsupported type: { s }, { gameID }, { item }")
+                    continue
+
+                blItemObj = bpy.data.objects.new(f"{ state.filename }_Item{ i }", None)
                 blItemObj.empty_display_type = 'SPHERE'
                 blItemObj.location = spawn['POSITION']
-                blItemObj['gzrs2_item_item'] = item
-                blItemObj['gzrs2_item_timesec'] = str(spawn['timesec'])
+
+                blItemObj.gzrs2.dummyType = 'ITEM'
+                blItemObj.gzrs2.itemGameID = gameID
+                blItemObj.gzrs2.itemType = itemType
+                blItemObj.gzrs2.itemID = int(itemID)
+                blItemObj.gzrs2.itemTimer = spawn['timesec']
 
                 state.blItemObjs.append(blItemObj)
                 rootItems.objects.link(blItemObj)
+
+                i += 1
 
     if doExtras:
         if state.doCollision:

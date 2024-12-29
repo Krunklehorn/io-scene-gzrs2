@@ -122,7 +122,7 @@ def importAni(self, context):
             vertexCount = min(meshVertexCount, nodeVertexCount)
             vertexRange = []
 
-            kZero = IndexOrNone(node.vertexTicks, 0) * vertexCount
+            kZero = indexOrNone(node.vertexTicks, 0) * vertexCount
 
             kdTree = KDTree(vertexCount)
 

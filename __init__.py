@@ -8,6 +8,7 @@ from .lib_gzrs2 import getEluExportConstants, getMatTreeLinksNodes, getRelevantS
 from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender
 from .lib_gzrs2 import decomposeTexpath, checkIsEffectNode, checkIsAniTex, processAniTexParameters
 from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
+from .lib_gzrs2 import enumIdentifierToIndex, enumIndexToIdentifier
 
 bl_info = {
     "name": "GZRS2/3 Format",
@@ -36,7 +37,7 @@ else:
     import bpy
     from bpy.types import Operator, Panel, PropertyGroup, AddonPreferences
     from bpy_extras.io_utils import ImportHelper, ExportHelper
-    from bpy.props import BoolProperty, StringProperty, EnumProperty, PointerProperty
+    from bpy.props import IntProperty, BoolProperty, FloatVectorProperty, StringProperty, EnumProperty, PointerProperty
 
 def cleanse_modules():
     import sys
@@ -1724,12 +1725,358 @@ class RSLM_PT_Export_Logging(Panel):
 
         layout.prop(operator, "logLmHeaders")
 
-class GZRS2Properties(PropertyGroup):
+class GZRS2ObjectProperties(PropertyGroup):
     def ensureAll(self):
-        if 'matID' not in self: self['matID'] = 0
-        if 'isBase' not in self: self['isBase'] = True
-        if 'subMatID' not in self: self['subMatID'] = -1
-        if 'subMatCount' not in self: self['subMatCount'] = 0
+        if 'dummyType'          not in self: self['dummyType']          = "NONE"
+        if 'spawnType'          not in self: self['spawnType']          = "SOLO"
+        if 'spawnIndex'         not in self: self['spawnIndex']         = 1
+        if 'spawnTeamID'        not in self: self['spawnTeamID']        = 1
+        if 'spawnEnemyType'     not in self: self['spawnEnemyType']     = "MELEE"
+        if 'spawnBlitzType'     not in self: self['spawnBlitzType']     = "BARRICADE"
+        if 'soundFileName'      not in self: self['soundFileName']      = ""
+        if 'soundSpace'         not in self: self['soundSpace']         = "2D"
+        if 'soundShape'         not in self: self['soundShape']         = "AABB"
+        if 'itemGameID'         not in self: self['itemGameID']         = "SOLO"
+        if 'itemType'           not in self: self['itemType']           = "HP"
+        if 'itemID'             not in self: self['itemID']             = 1
+        if 'itemTimer'          not in self: self['itemTimer']          = 30000
+
+    def onUpdate(self, context):
+        blObj = context.active_object
+
+        if blObj is None:
+            return
+
+        blData = blObj.data
+
+        if blData is not None:
+            return
+
+        props = blObj.gzrs2
+
+        # TODO: Custom sprite gizmos
+        if props.dummyType == 'SOUND':
+            if props.soundShape == 'AABB':
+                blObj.empty_display_type = 'CUBE'
+            elif props.soundShape == 'SPHERE':
+                blObj.empty_display_type = 'SPHERE'
+        elif props.dummyType == 'ITEM':
+            blObj.empty_display_type = 'SPHERE'
+        else:
+            blObj.empty_display_type = 'ARROWS'
+
+    dummyTypeEnumItems = (
+        ('NONE',        "None",         "Not a Realspace object. Will not be exported"),
+        ('SPAWN',       "Spawn",        "Spawn location for characters"),
+        ('SUN',         "Sun",          "Sun spot location. Not an actual light source"),
+        ('SOUND',       "Sound",        "Ambient sound, based on proximity to a sphere or axis-aligned bounding box center"),
+        ('ITEM',        "Item",         "Health, armor, ammo etc")
+    )
+
+    spawnTypeEnumItems = (
+        ('SOLO',        "Solo",         "Free-for-all and Quest spawn for players"),
+        ('TEAM',        "Team",         "Team oriented spawn for players"),
+        ('NPC',         "Enemy",        "Quest spawn for enemies"),
+        ('BLITZ',       "Blitzkrieg",   "Spawns for the blitzkrieg gametype")
+    )
+
+    spawnEnemyTypeEnumItems = (
+        ('MELEE',       "Melee",        "Spawn for melee enemies"),
+        ('RANGED',      "Ranged",       "Spawn for ranged enemies"),
+        ('BOSS',        "Boss",         "Spawn for a boss enemy")
+    )
+
+    spawnBlitzTypeEnumItems = (
+        ('BARRICADE',   "Barricade",    "Spawn for barricades"),
+        ('GUARDIAN',    "Guardian",     "Spawn for guardians"),
+        ('RADAR',       "Radar",        "Spawn for radars"),
+        ('TREASURE',    "Treasure",     "Spawn for treasures")
+    )
+
+    soundSpaceEnumItems = (
+        ('2D',          "2D",           "Two-dimensional, no stereo image. Good for reverberant, omnidirectional ambience"),
+        ('3D',          "3D",           "Three-dimensional, stereo enabled. Good for directional sounds with a clear source")
+    )
+
+    soundShapeEnumItems = (
+        ('AABB',        "AABB",         "Proximity through an axis-aligned bounding box toward it's center"),
+        ('SPHERE',      "Sphere",       "Proximity through a sphere toward it's center")
+    )
+
+    itemGameIDEnumItems = (
+        ('SOLO',        "Solo",         "Free-for-all gametypes"),
+        ('TEAM',        "Team",         "Team oriented gametypes")
+    )
+
+    itemTypeEnumItems = (
+        ('HP',          "Health",       "Refills a portion of the player's health"),
+        ('AP',          "Armor",        "Refills a portion of the player's armor"),
+        ('BULLET',      "Bullet",       "Grants some ammunition for the player's gun")
+    )
+
+    def onGetDummyType(self):       self.ensureAll(); return enumIdentifierToIndex(self, self['dummyType'],         self.dummyTypeEnumItems)
+    def onGetSpawnType(self):       self.ensureAll(); return enumIdentifierToIndex(self, self['spawnType'],         self.spawnTypeEnumItems)
+    def onGetSpawnIndex(self):      self.ensureAll(); return self['spawnIndex']
+    def onGetSpawnTeamID(self):     self.ensureAll(); return self['spawnTeamID']
+    def onGetSpawnEnemyType(self):  self.ensureAll(); return enumIdentifierToIndex(self, self['spawnEnemyType'],    self.spawnEnemyTypeEnumItems)
+    def onGetSpawnBlitzType(self):  self.ensureAll(); return enumIdentifierToIndex(self, self['spawnBlitzType'],    self.spawnBlitzTypeEnumItems)
+    def onGetSoundFileName(self):   self.ensureAll(); return self['soundFileName']
+    def onGetSoundSpace(self):      self.ensureAll(); return enumIdentifierToIndex(self, self['soundSpace'],        self.soundSpaceEnumItems)
+    def onGetSoundShape(self):      self.ensureAll(); return enumIdentifierToIndex(self, self['soundShape'],        self.soundShapeEnumItems)
+    def onGetItemGameID(self):      self.ensureAll(); return enumIdentifierToIndex(self, self['itemGameID'],        self.itemGameIDEnumItems)
+    def onGetItemType(self):        self.ensureAll(); return enumIdentifierToIndex(self, self['itemType'],          self.itemTypeEnumItems)
+    def onGetItemID(self):          self.ensureAll(); return self['itemID']
+    def onGetItemTimer(self):       self.ensureAll(); return self['itemTimer']
+
+    def onSetDummyType(self, value):        self.ensureAll(); self['dummyType']         = enumIndexToIdentifier(value, self.dummyTypeEnumItems)
+    def onSetSpawnType(self, value):        self.ensureAll(); self['spawnType']         = enumIndexToIdentifier(value, self.spawnTypeEnumItems)
+    def onSetSpawnIndex(self, value):       self.ensureAll(); self['spawnIndex']        = value
+    def onSetSpawnTeamID(self, value):      self.ensureAll(); self['spawnTeamID']       = value
+    def onSetSpawnEnemyType(self, value):   self.ensureAll(); self['spawnEnemyType']    = enumIndexToIdentifier(value, self.spawnEnemyTypeEnumItems)
+    def onSetSpawnBlitzType(self, value):   self.ensureAll(); self['spawnBlitzType']    = enumIndexToIdentifier(value, self.spawnBlitzTypeEnumItems)
+    def onSetSoundFileName(self, value):    self.ensureAll(); self['soundFileName']     = value
+    def onSetSoundSpace(self, value):       self.ensureAll(); self['soundSpace']        = enumIndexToIdentifier(value, self.soundSpaceEnumItems)
+    def onSetSoundShape(self, value):       self.ensureAll(); self['soundShape']        = enumIndexToIdentifier(value, self.soundShapeEnumItems)
+    def onSetItemGameID(self, value):       self.ensureAll(); self['itemGameID']        = enumIndexToIdentifier(value, self.itemGameIDEnumItems)
+    def onSetItemType(self, value):         self.ensureAll(); self['itemType']          = enumIndexToIdentifier(value, self.itemTypeEnumItems)
+    def onSetItemID(self, value):           self.ensureAll(); self['itemID']            = value
+    def onSetItemTimer(self, value):        self.ensureAll(); self['itemTimer']         = value
+
+    dummyType: EnumProperty(
+        name = "Type",
+        items = dummyTypeEnumItems,
+        update = onUpdate,
+        get = onGetDummyType,
+        set = onSetDummyType
+    )
+
+    spawnType: EnumProperty(
+        name = "Spawn Type",
+        items = spawnTypeEnumItems,
+        update = onUpdate,
+        get = onGetSpawnType,
+        set = onSetSpawnType
+    )
+
+    spawnIndex: IntProperty(
+        name = "Spawn Index",
+        default = 1,
+        min = 1,
+        max = 999,
+        soft_min = 1,
+        soft_max = 999,
+        subtype = 'UNSIGNED',
+        update = onUpdate,
+        get = onGetSpawnIndex,
+        set = onSetSpawnIndex
+    )
+
+    spawnTeamID: IntProperty(
+        name = "Team ID",
+        default = 1,
+        min = 1,
+        max = 9,
+        soft_min = 1,
+        soft_max = 9,
+        subtype = 'UNSIGNED',
+        update = onUpdate,
+        get = onGetSpawnTeamID,
+        set = onSetSpawnTeamID
+    )
+
+    spawnEnemyType: EnumProperty(
+        name = "Enemy Type",
+        items = spawnEnemyTypeEnumItems,
+        update = onUpdate,
+        get = onGetSpawnEnemyType,
+        set = onSetSpawnEnemyType
+    )
+
+    spawnBlitzType: EnumProperty(
+        name = "Blitzkrieg Type",
+        items = spawnBlitzTypeEnumItems,
+        update = onUpdate,
+        get = onGetSpawnBlitzType,
+        set = onSetSpawnBlitzType
+    )
+
+    soundFileName: StringProperty(
+        name = "Filename",
+        default = "",
+        subtype = "FILE_NAME",
+        update = onUpdate,
+        get = onGetSoundFileName,
+        set = onSetSoundFileName
+    )
+
+    soundSpace: EnumProperty(
+        name = "Space",
+        items = soundSpaceEnumItems,
+        update = onUpdate,
+        get = onGetSoundSpace,
+        set = onSetSoundSpace
+    )
+
+    soundShape: EnumProperty(
+        name = "Shape",
+        items = soundShapeEnumItems,
+        update = onUpdate,
+        get = onGetSoundShape,
+        set = onSetSoundShape
+    )
+
+    itemGameID: EnumProperty(
+        name = "Game ID",
+        items = itemGameIDEnumItems,
+        update = onUpdate,
+        get = onGetItemGameID,
+        set = onSetItemGameID
+    )
+
+    itemType: EnumProperty(
+        name = "Item Type",
+        items = itemTypeEnumItems,
+        update = onUpdate,
+        get = onGetItemType,
+        set = onSetItemType
+    )
+
+    itemID: IntProperty(
+        name = "Item ID",
+        default = 1,
+        min = 1,
+        max = 2**31 - 1,
+        soft_min = 1,
+        soft_max = 2**31 - 1,
+        subtype = 'UNSIGNED',
+        update = onUpdate,
+        get = onGetItemID,
+        set = onSetItemID
+    )
+
+    itemTimer: IntProperty(
+        name = "Timer",
+        default = 30000,
+        min = 0,
+        max = 2**31 - 1,
+        soft_min = 0,
+        soft_max = 2**31 - 1,
+        step = 1000,
+        subtype = 'UNSIGNED',
+        update = onUpdate,
+        get = onGetItemTimer,
+        set = onSetItemTimer
+    )
+
+    @classmethod
+    def register(cls):
+        bpy.types.Object.gzrs2 = PointerProperty(type = cls)
+
+    @classmethod
+    def unregister(cls):
+        del bpy.types.Object.gzrs2
+
+class GZRS2_PT_Realspace_Object(Panel):
+    bl_space_type = "PROPERTIES"
+    bl_region_type = "WINDOW"
+    bl_label = "Realspace"
+    bl_idname = "OBJECT_PT_realspace"
+    bl_description = "Custom properties for Realspace engine objects."
+    bl_context = "data"
+    bl_options = { 'DEFAULT_CLOSED' }
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and context.active_object.data is None
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+
+        blObj = context.active_object
+
+        props = blObj.gzrs2
+
+        column = layout.column()
+        column.prop(props, 'dummyType')
+
+        column = layout.column()
+
+        if props.dummyType == "SPAWN":
+            column.prop(props, 'spawnType')
+            column.prop(props, 'spawnIndex')
+
+            if props.spawnType == "TEAM":
+                column.prop(props, 'spawnTeamID')
+            elif props.spawnType == "NPC":
+                column.prop(props, 'spawnEnemyType')
+            elif props.spawnType == "BLITZ":
+                column.prop(props, 'spawnBlitzType')
+        elif props.dummyType == "SOUND":
+            column.prop(props, 'soundFileName')
+            column.prop(props, 'soundSpace')
+            column.prop(props, 'soundShape')
+        elif props.dummyType == "ITEM":
+            column.prop(props, 'itemGameID')
+            column.prop(props, 'itemType')
+            column.prop(props, 'itemID')
+            column.prop(props, 'itemTimer')
+
+# TODO: Camera panel won't show, not even calling poll?
+class GZRS2CameraProperties(PropertyGroup):
+    cameraIndex: IntProperty(
+        name = "Spawn Index",
+        default = 1,
+        min = 1,
+        max = 999,
+        soft_min = 1,
+        soft_max = 999,
+        subtype = 'UNSIGNED'
+    )
+
+    cameraType: EnumProperty(
+        name = "Type",
+        items = (('WAIT',       "Wait",         "Camera position between rounds, mainly used for Team Deathmatch, Duel etc"),
+                 ('TRACK',      "Track",        "Camera position along a track, mainly used on the character select screen"))
+    )
+
+    @classmethod
+    def register(cls):
+        bpy.types.Camera.gzrs2 = PointerProperty(type = cls)
+
+    @classmethod
+    def unregister(cls):
+        del bpy.types.Camera.gzrs2
+
+class GZRS2_PT_Realspace_Camera(Panel):
+    bl_space_type = "PROPERTIES"
+    bl_region_type = "WINDOW"
+    bl_label = "Realspace"
+    bl_idname = "CAMERA_PT_realspace"
+    bl_description = "Custom properties for Realspace engine cameras."
+    bl_context = "data"
+    bl_options = { 'DEFAULT_CLOSED' }
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and context.active_object.type == "CAMERA"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+
+        props = context.active_object.data.gzrs2
+
+        column = layout.column()
+        column.prop(props, 'cameraIndex')
+        column.prop(props, 'cameraType')
+
+class GZRS2MaterialProperties(PropertyGroup):
+    def ensureAll(self):
+        if 'matID'          not in self: self['matID']          = 0
+        if 'isBase'         not in self: self['isBase']         = True
+        if 'subMatID'       not in self: self['subMatID']       = -1
+        if 'subMatCount'    not in self: self['subMatCount']    = 0
 
     def onUpdate(self, context):
         self.ensureAll()
@@ -1737,31 +2084,94 @@ class GZRS2Properties(PropertyGroup):
         if self['isBase']:  self['subMatID'] = -1
         else:               self['subMatCount'] = 0
 
-    def onGetSubMatID(self):
-        self.ensureAll()
-        return self['subMatID'] if not self['isBase'] else -1
+    def onGetSubMatID(self):        self.ensureAll(); return self['subMatID']       if not  self['isBase'] else -1
+    def onGetSubMatCount(self):     self.ensureAll(); return self['subMatCount']    if      self['isBase'] else 0
 
-    def onSetSubMatID(self, value):
-        self.ensureAll()
-        self['subMatID'] = value if not self['isBase'] else -1
+    def onSetSubMatID(self, value):     self.ensureAll(); self['subMatID']      = value if not  self['isBase'] else -1
+    def onSetSubMatCount(self, value):  self.ensureAll(); self['subMatCount']   = value if      self['isBase'] else 0
 
-    def onGetSubMatCount(self):
-        self.ensureAll()
-        return self['subMatCount'] if self['isBase'] else 0
+    matID: IntProperty(
+        name = 'Material ID',
+        default = 0,
+        min = 0,
+        max = 2**31 - 1,
+        soft_min = 0,
+        soft_max = 256,
+        subtype = 'UNSIGNED',
+        update = onUpdate
+    )
 
-    def onSetSubMatCount(self, value):
-        self.ensureAll()
-        self['subMatCount'] = value if self['isBase'] else 0
+    isBase: BoolProperty(
+        name = 'Base',
+        default = True,
+        update = onUpdate
+    )
 
-    matID: bpy.props.IntProperty(name = 'Material ID', default = 0, min = 0, max = 2**31 - 1, soft_min = 0, soft_max = 256, subtype = 'UNSIGNED', update = onUpdate)
-    isBase: bpy.props.BoolProperty(name = 'Base', default = True, update = onUpdate)
-    subMatID: bpy.props.IntProperty(name = 'Sub Material ID', default = -1, min = -1, max = 2**31 - 1, soft_min = -1, soft_max = 31, update = onUpdate, get = onGetSubMatID, set = onSetSubMatID)
-    subMatCount: bpy.props.IntProperty(name = 'Sub Material Count', default = 0, min = 0, max = 2**31 - 1, soft_min = 0, soft_max = 256, subtype = 'UNSIGNED', update = onUpdate, get = onGetSubMatCount, set = onSetSubMatCount)
-    # parentMat: bpy.props.PointerProperty(type = bpy.types.Material, name = 'Parent Material')
+    subMatID: IntProperty(
+        name = 'Sub Material ID',
+        default = -1,
+        min = -1,
+        max = 2**31 - 1,
+        soft_min = -1,
+        soft_max = 31,
+        update = onUpdate,
+        get = onGetSubMatID,
+        set = onSetSubMatID
+    )
 
-    ambient: bpy.props.FloatVectorProperty(name = 'Ambient', default = (0.588235, 0.588235, 0.588235), min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'COLOR', size = 3)
-    diffuse: bpy.props.FloatVectorProperty(name = 'Diffuse', default = (0.588235, 0.588235, 0.588235), min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'COLOR', size = 3)
-    specular: bpy.props.FloatVectorProperty(name = 'Specular', default = (0.9, 0.9, 0.9), min = 0.0, max = 1.0, soft_min = 0.0, soft_max = 1.0, subtype = 'COLOR', size = 3)
+    subMatCount: IntProperty(
+        name = 'Sub Material Count',
+        default = 0,
+        min = 0,
+        max = 2**31 - 1,
+        soft_min = 0,
+        soft_max = 256,
+        subtype = 'UNSIGNED',
+        update = onUpdate,
+        get = onGetSubMatCount,
+        set = onSetSubMatCount
+    )
+
+    # TODO: Automate material IDs
+    '''
+    parentMat: PointerProperty(
+        type = bpy.types.Material,
+        name = 'Parent Material'
+    )
+    '''
+
+    ambient: FloatVectorProperty(
+        name = 'Ambient',
+        default = (0.588235, 0.588235, 0.588235),
+        min = 0.0,
+        max = 1.0,
+        soft_min = 0.0,
+        soft_max = 1.0,
+        subtype = 'COLOR',
+        size = 3
+    )
+
+    diffuse: FloatVectorProperty(
+        name = 'Diffuse',
+        default = (0.588235, 0.588235, 0.588235),
+        min = 0.0,
+        max = 1.0,
+        soft_min = 0.0,
+        soft_max = 1.0,
+        subtype = 'COLOR',
+        size = 3
+    )
+
+    specular: FloatVectorProperty(
+        name = 'Specular',
+        default = (0.9, 0.9, 0.9),
+        min = 0.0,
+        max = 1.0,
+        soft_min = 0.0,
+        soft_max = 1.0,
+        subtype = 'COLOR',
+        size = 3
+    )
 
     @classmethod
     def register(cls):
@@ -1771,7 +2181,7 @@ class GZRS2Properties(PropertyGroup):
     def unregister(cls):
         del bpy.types.Material.gzrs2
 
-class GZRS2_PT_Realspace(Panel):
+class GZRS2_PT_Realspace_Material(Panel):
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_label = "Realspace"
@@ -1782,7 +2192,7 @@ class GZRS2_PT_Realspace(Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.active_material is not None
+        return context.active_object is not None and context.active_object.active_material is not None
 
     def draw(self, context):
         layout = self.layout
@@ -1936,8 +2346,12 @@ classes = (
     ExportRSLM,
     RSLM_PT_Export_Main,
     RSLM_PT_Export_Logging,
-    GZRS2Properties,
-    GZRS2_PT_Realspace
+    GZRS2ObjectProperties,
+    GZRS2_PT_Realspace_Object,
+    GZRS2CameraProperties,
+    GZRS2_PT_Realspace_Camera,
+    GZRS2MaterialProperties,
+    GZRS2_PT_Realspace_Material
 )
 
 def menu_func_import(self, context):
