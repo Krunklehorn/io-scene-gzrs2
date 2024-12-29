@@ -454,6 +454,10 @@ def exportElu(self, context):
             faces = []
             slotIDs = set()
 
+            if vertexCount >= ELU_MAX_VERTEX or faceCount * 3 >= ELU_MAX_VERTEX:
+                self.report({ 'ERROR' }, f"GZRS2: Mesh with too many vertices, maximum is { ELU_MAX_VERTEX }, must split mesh before continuing: { meshName }")
+                return { 'CANCELLED' }
+
             useCustomNormals = blMesh.has_custom_normals
 
             for triangle in blMesh.loop_triangles:

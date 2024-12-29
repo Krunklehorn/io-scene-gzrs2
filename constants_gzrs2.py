@@ -122,6 +122,8 @@ ELU_NAME_LENGTH =               40
 ELU_PATH_LENGTH =               256
 ELU_PHYS_KEYS =                 4
 
+ELU_MAX_VERTEX =                1024 * 8
+
 ANI_TICKS_PER_SECOND =          4800
 ANI_FRAMES_PER_SECOND =         30
 ANI_TICKS_PER_FRAME =           ANI_TICKS_PER_SECOND / ANI_FRAMES_PER_SECOND
