@@ -11,28 +11,28 @@ from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdd
 from .lib_gzrs2 import enumIdentifierToIndex, enumIndexToIdentifier
 
 bl_info = {
-    "name": "GZRS2/3 Format",
-    "author": "Krunklehorn",
-    "version": (0, 9, 5),
-    "blender": (4, 2, 1),
-    "location": "File > Import-Export",
-    "description": "GunZ: The Duel RealSpace2/3 content importer.",
-    "category": "Import-Export",
+    'name': 'GZRS2/3 Format',
+    'author': 'Krunklehorn',
+    'version': (0, 9, 5),
+    'blender': (4, 2, 1),
+    'location': 'File > Import-Export',
+    'description': "GunZ: The Duel RealSpace2/3 content importer.",
+    'category': 'Import-Export',
 }
 
-if "bpy" in locals():
+if 'bpy' in locals():
     import importlib
 
-    if "import_gzrs2" in locals(): importlib.reload(import_gzrs2)
-    if "import_gzrs3" in locals(): importlib.reload(import_gzrs3)
-    if "import_rselu" in locals(): importlib.reload(import_rselu)
-    if "import_rscol" in locals(): importlib.reload(import_rscol)
-    if "import_rsnav" in locals(): importlib.reload(import_rsnav)
-    if "import_rslm" in locals(): importlib.reload(import_rslm)
-    if "import_rsani" in locals(): importlib.reload(import_rsani)
-    if "export_rselu" in locals(): importlib.reload(export_rselu)
-    if "export_rsnav" in locals(): importlib.reload(export_rsnav)
-    if "export_rslm" in locals(): importlib.reload(export_rslm)
+    if 'import_gzrs2'   in locals(): importlib.reload(import_gzrs2)
+    if 'import_gzrs3'   in locals(): importlib.reload(import_gzrs3)
+    if 'import_rselu'   in locals(): importlib.reload(import_rselu)
+    if 'import_rscol'   in locals(): importlib.reload(import_rscol)
+    if 'import_rsnav'   in locals(): importlib.reload(import_rsnav)
+    if 'import_rslm'    in locals(): importlib.reload(import_rslm)
+    if 'import_rsani'   in locals(): importlib.reload(import_rsani)
+    if 'export_rselu'   in locals(): importlib.reload(export_rselu)
+    if 'export_rsnav'   in locals(): importlib.reload(export_rsnav)
+    if 'export_rslm'    in locals(): importlib.reload(export_rslm)
 else:
     import bpy
     from bpy.types import Operator, Panel, PropertyGroup, AddonPreferences
@@ -65,18 +65,18 @@ def validateRSDataDirectory(dirpath, isRS3):
     return False
 
 class GZRS2_OT_Apply_Material_Preset(Operator):
-    bl_idname = "gzrs2.apply_material_preset"
+    bl_idname = 'gzrs2.apply_material_preset'
     bl_label = "Please select a GunZ 1 material preset..."
     bl_options = { 'REGISTER', 'INTERNAL' }
     bl_description = "Modify a material to make it compatible with the Realspace engine"
 
     materialPreset: EnumProperty(
-        name = "Preset",
-        items = (('COLORED',    "Colored",      "Color material."),
-                 ('TEXTURED',   "Textured",     "Textured material."),
-                 ('BLENDED',    "Blended",      "Textured, alpha-blended material."),
-                 ('TESTED',     "Tested",       "Textured, alpha-tested material."),
-                 ('ADDITIVE',   "Additive",     "Textured, additive material."))
+        name = 'Preset',
+        items = (('COLORED',    'Colored',      "Color material."),
+                 ('TEXTURED',   'Textured',     "Textured material."),
+                 ('BLENDED',    'Blended',      "Textured, alpha-blended material."),
+                 ('TESTED',     'Tested',       "Textured, alpha-tested material."),
+                 ('ADDITIVE',   'Additive',     "Textured, additive material."))
     )
 
     @classmethod
@@ -87,7 +87,7 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context):
-        self.layout.prop(self, "materialPreset")
+        self.layout.prop(self, 'materialPreset')
 
     def execute(self, context):
         bpy.ops.ed.undo_push()
@@ -163,16 +163,16 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         return { 'FINISHED' }
 
 class GZRS2_OT_Specify_Path_MRS(Operator):
-    bl_idname = "gzrs2.specify_path_mrs"
+    bl_idname = 'gzrs2.specify_path_mrs'
     bl_label = "Please specify the location of the extracted .mrs data"
     bl_options = { 'REGISTER', 'INTERNAL' }
     bl_description = "Specify the location of the extracted .mrs data"
 
     dataPath: StringProperty(
-        name = "Path",
-        default = "",
-        options = { "ANIMATABLE", "OUTPUT_PATH" },
-        subtype = "DIR_PATH"
+        name = 'Path',
+        default = '',
+        options = { 'ANIMATABLE', 'OUTPUT_PATH' },
+        subtype = 'DIR_PATH'
     )
 
     @classmethod
@@ -180,7 +180,7 @@ class GZRS2_OT_Specify_Path_MRS(Operator):
         return True
 
     def invoke(self, context, event):
-        self.dataPath = ""
+        self.dataPath = ''
         return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context):
@@ -188,7 +188,7 @@ class GZRS2_OT_Specify_Path_MRS(Operator):
         self.dataPath = os.path.join(self.dataPath, '')
 
         layout = self.layout
-        layout.prop(self, "dataPath")
+        layout.prop(self, 'dataPath')
 
     def execute(self, context):
         self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
@@ -203,16 +203,16 @@ class GZRS2_OT_Specify_Path_MRS(Operator):
         return { 'FINISHED' }
 
 class GZRS2_OT_Specify_Path_MRF(Operator):
-    bl_idname = "gzrs2.specify_path_mrf"
+    bl_idname = 'gzrs2.specify_path_mrf'
     bl_label = "Please specify the location of the extracted .mrf data"
     bl_options = { 'REGISTER', 'INTERNAL' }
     bl_description = "Specify the location of the extracted .mrf data"
 
     dataPath: StringProperty(
-        name = "Path",
-        default = "",
-        options = { "ANIMATABLE", "OUTPUT_PATH" },
-        subtype = "DIR_PATH"
+        name = 'Path',
+        default = '',
+        options = { 'ANIMATABLE', 'OUTPUT_PATH' },
+        subtype = 'DIR_PATH'
     )
 
     @classmethod
@@ -220,7 +220,7 @@ class GZRS2_OT_Specify_Path_MRF(Operator):
         return True
 
     def invoke(self, context, event):
-        self.dataPath = ""
+        self.dataPath = ''
         return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context):
@@ -228,7 +228,7 @@ class GZRS2_OT_Specify_Path_MRF(Operator):
         self.dataPath = os.path.join(self.dataPath, '')
 
         layout = self.layout
-        layout.prop(self, "dataPath")
+        layout.prop(self, 'dataPath')
 
     def execute(self, context):
         self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
@@ -246,19 +246,19 @@ class GZRS2Preferences(AddonPreferences):
     bl_idname = __package__
 
     rs2DataDir: StringProperty(
-        name = "RS2/.mrs",
+        name = 'RS2/.mrs',
         description = "Path to a folder containing extracted .mrs data",
-        default = "",
+        default = '',
         options = { 'ANIMATABLE', 'OUTPUT_PATH' },
-        subtype = "DIR_PATH"
+        subtype = 'DIR_PATH'
     )
 
     rs3DataDir: StringProperty(
-        name = "RS3/.mrf",
+        name = 'RS3/.mrf',
         description = "Path to a folder containing extracted .mrf data",
-        default = "",
+        default = '',
         options = { 'ANIMATABLE', 'OUTPUT_PATH' },
-        subtype = "DIR_PATH"
+        subtype = 'DIR_PATH'
     )
 
     def draw(self, context):
@@ -276,7 +276,7 @@ class GZRS2Preferences(AddonPreferences):
         column = box.column()
         column.label(text = "Valid data subdirectories for .mrs include:")
         column.label(text = "\'Interface\', \'Maps\', \'Model\', \'Quest\', \'Sfx\', \'Shader\', \'Sound\' and \'System\'")
-        column.label(text = "Example: \"C:\\Users\\krunk\\Documents\\GunZ\\clean\\")
+        column.label(text = "Example: \'C:\\Users\\krunk\\Documents\\GunZ\\clean\\")
 
         row = column.row()
         row.label(text = self.rs2DataDir)
@@ -285,7 +285,7 @@ class GZRS2Preferences(AddonPreferences):
         column = box.column()
         column.label(text = "Valid data subdirectories for .mrf include:")
         column.label(text = "\'Data\' and \'EngineRes\'")
-        column.label(text = "Example: \"C:\\Users\\krunk\\Documents\\GunZ2\\z3ResEx\\datadump\\")
+        column.label(text = "Example: \'C:\\Users\\krunk\\Documents\\GunZ2\\z3ResEx\\datadump\\")
 
         row = column.row()
         row.label(text = self.rs3DataDir)
@@ -293,283 +293,283 @@ class GZRS2Preferences(AddonPreferences):
 
 
 class ImportGZRS2(Operator, ImportHelper):
-    bl_idname = "import_scene.gzrs2"
-    bl_label = "Import RS2"
+    bl_idname = 'import_scene.gzrs2'
+    bl_label = 'Import RS2'
     bl_options = { 'UNDO', 'PRESET' }
     bl_description = "Load an RS file"
 
     filter_glob: StringProperty(
-        default = "*.rs",
+        default = '*.rs',
         options = { 'HIDDEN' }
     )
 
     panelMain: BoolProperty(
-        name = "Main",
+        name = 'Main',
         description = "Main panel of options",
         default = True
     )
 
     panelDrivers: BoolProperty(
-        name = "Drivers",
+        name = 'Drivers',
         description = "Generate drivers to quickly adjust map data",
         default = True
     )
 
     panelLogging: BoolProperty(
-        name = "Logging",
+        name = 'Logging',
         description = "Log details to the console",
         default = False
     )
 
     convertUnits: BoolProperty(
-        name = "Convert Units",
+        name = 'Convert Units',
         description = "Convert measurements from centimeters to meters",
         default = True
     )
 
     meshMode: EnumProperty(
-        name = "Mesh Mode",
-        items = (('STANDARD',   "Standard",     "Split geometry by material, optionally perform cleanup."),
-                 ('BAKE',       "Bake",         "Don't split geometry or perform any cleanup."))
+        name = 'Mesh Mode',
+        items = (('STANDARD',   'Standard',     "Split geometry by material, optionally perform cleanup."),
+                 ('BAKE',       'Bake',         "Don't split geometry or perform any cleanup."))
     )
 
     texSearchMode: EnumProperty(
-        name = "Texture Mode",
-        items = (('PATH',       "Path",         "Search for textures using the specified path (faster)"),
-                 ('BRUTE',      "Brute",        "Search for textures in surrounding filesystem (slow, may freeze)"),
-                 ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
+        name = 'Texture Mode',
+        items = (('PATH',       'Path',         "Search for textures using the specified path (faster)"),
+                 ('BRUTE',      'Brute',        "Search for textures in surrounding filesystem (slow, may freeze)"),
+                 ('SKIP',       'Skip',         "Don't search for or load any textures (fastest)"))
     )
 
     doBsptree: BoolProperty(
-        name = "Bsptree (slow)",
+        name = 'Bsptree (slow)',
         description = "Import Bsptree data",
         default = False
     )
 
     doCollision: BoolProperty(
-        name = "Collision",
+        name = 'Collision',
         description = "Import collision data",
         default = True
     )
 
     doNavigation: BoolProperty(
-        name = "Navigation",
+        name = 'Navigation',
         description = "Import navigation data",
         default = True
     )
 
     doLightmap: BoolProperty(
-        name = "Lightmap",
+        name = 'Lightmap',
         description = "Import lightmap data",
         default = True
     )
 
     doLights: BoolProperty(
-        name = "Lights",
+        name = 'Lights',
         description = "Import light data",
         default = True
     )
 
     tweakLights: BoolProperty(
-        name = "Tweak Lights",
+        name = 'Tweak Lights',
         description = "Tweaks light data to give comparable results directly in Blender",
         default = True
     )
 
     doProps: BoolProperty(
-        name = "Props",
+        name = 'Props',
         description = "Import model data",
         default = True
     )
 
     doDummies: BoolProperty(
-        name = "Dummies",
+        name = 'Dummies',
         description = "Import cameras, lense flares, spawn points and more as empties",
         default = True
     )
 
     doOcclusion: BoolProperty(
-        name = "Occlusion",
+        name = 'Occlusion',
         description = "Import occlusion planes",
         default = True
     )
 
     doFog: BoolProperty(
-        name = "Fog",
+        name = 'Fog',
         description = "Create fog volume with Volume Scatter/Absorption nodes from fog settings",
         default = True
     )
 
     doSounds: BoolProperty(
-        name = "Sounds",
+        name = 'Sounds',
         description = "Import ambient sounds",
         default = True
     )
 
     doItems: BoolProperty(
-        name = "Items",
+        name = 'Items',
         description = "Import item particles",
         default = True
     )
 
     doBounds: BoolProperty(
-        name = "Bounds (slow)",
+        name = 'Bounds (slow)',
         description = "Create empties for bsptree and octree bounding boxes",
         default = False
     )
 
     doLightDrivers: BoolProperty(
-        name = "Lights",
+        name = 'Lights',
         description = "Generate drivers to quickly control groups of similar lights",
         default = True
     )
 
     doFogDriver: BoolProperty(
-        name = "Fog",
+        name = 'Fog',
         description = "Generate driver to control fog settings",
         default = True
     )
 
     doCleanup: BoolProperty(
-        name = "Cleanup",
+        name = 'Cleanup',
         description = "Deletes loose geometry, removes doubles and sets each mesh to render smooth",
         default = True
     )
 
     logRsHeaders: BoolProperty(
-        name = "RS Headers",
+        name = 'RS Headers',
         description = "Log RS header data",
         default = True
     )
 
     logRsPortals: BoolProperty(
-        name = "RS Portals",
+        name = 'RS Portals',
         description = "Log RS portal data",
         default = True
     )
 
     logRsCells: BoolProperty(
-        name = "RS Cells",
+        name = 'RS Cells',
         description = "Log RS cell data",
         default = True
     )
 
     logRsGeometry: BoolProperty(
-        name = "RS Geometry",
+        name = 'RS Geometry',
         description = "Log RS geometry data",
         default = True
     )
 
     logRsTrees: BoolProperty(
-        name = "RS Trees",
+        name = 'RS Trees',
         description = "Log RS tree data",
         default = True
     )
 
     logRsPolygons: BoolProperty(
-        name = "RS Polygons",
+        name = 'RS Polygons',
         description = "Log RS polygon data",
         default = False
     )
 
     logRsVerts: BoolProperty(
-        name = "RS Vertices",
+        name = 'RS Vertices',
         description = "Log RS vertex data",
         default = False
     )
 
     logBspHeaders: BoolProperty(
-        name = "BSP Headers",
+        name = 'BSP Headers',
         description = "Log BSP header data",
         default = True
     )
 
     logBspPolygons: BoolProperty(
-        name = "BSP Polygons",
+        name = 'BSP Polygons',
         description = "Log BSP polygon data",
         default = False
     )
 
     logBspVerts: BoolProperty(
-        name = "BSP Vertices",
+        name = 'BSP Vertices',
         description = "Log BSP vertex data",
         default = False
     )
 
     logColHeaders: BoolProperty(
-        name = "Col Headers",
+        name = 'Col Headers',
         description = "Log Col header data",
         default = True
     )
 
     logColNodes: BoolProperty(
-        name = "Col Nodes",
+        name = 'Col Nodes',
         description = "Log Col node data",
         default = False
     )
 
     logColTris: BoolProperty(
-        name = "Col Triangles",
+        name = 'Col Triangles',
         description = "Log Col triangle data",
         default = False
     )
 
     logNavHeaders: BoolProperty(
-        name = "Nav Headers",
+        name = 'Nav Headers',
         description = "Log Nav header data",
         default = True
     )
 
     logNavData: BoolProperty(
-        name = "Nav Data",
+        name = 'Nav Data',
         description = "Log Nav data",
         default = True
     )
 
     logLmHeaders: BoolProperty(
-        name = "Lm Headers",
+        name = 'Lm Headers',
         description = "Log Lm header data",
         default = True
     )
 
     logLmImages: BoolProperty(
-        name = "Lm Images",
+        name = 'Lm Images',
         description = "Log Lm image data",
         default = False
     )
 
     logEluHeaders: BoolProperty(
-        name = "Elu Headers",
+        name = 'Elu Headers',
         description = "Log ELU header data",
         default = True
     )
 
     logEluMats: BoolProperty(
-        name = "Elu Materials",
+        name = 'Elu Materials',
         description = "Log ELU material data",
         default = True
     )
 
     logEluMeshNodes: BoolProperty(
-        name = "Elu Mesh Nodes",
+        name = 'Elu Mesh Nodes',
         description = "Log ELU mesh node data",
         default = True
     )
 
     logVerboseIndices: BoolProperty(
-        name = "Verbose Indices",
+        name = 'Verbose Indices',
         description = "Log ELU indices verbosely",
         default = False
     )
 
     logVerboseWeights: BoolProperty(
-        name = "Verbose Weights",
+        name = 'Verbose Weights',
         description = "Log ELU weights verbosely",
         default = False
     )
 
     logCleanup: BoolProperty(
-        name = "Cleanup",
+        name = 'Cleanup',
         description = "Log results of the the cleanup routine",
         default = False
     )
@@ -581,14 +581,14 @@ class ImportGZRS2(Operator, ImportHelper):
         return import_gzrs2.importRS2(self, context)
 
 class GZRS2_PT_Import_Main(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Main"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Main'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_gzrs2"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_gzrs2'
 
     def draw(self, context):
         layout = self.layout
@@ -598,52 +598,52 @@ class GZRS2_PT_Import_Main(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelMain
 
-        layout.prop(operator, "convertUnits")
-        layout.prop(operator, "meshMode")
-        layout.prop(operator, "texSearchMode")
+        layout.prop(operator, 'convertUnits')
+        layout.prop(operator, 'meshMode')
+        layout.prop(operator, 'texSearchMode')
 
         column = layout.column()
-        column.prop(operator, "doBsptree")
-        column.prop(operator, "doCollision")
-        column.prop(operator, "doNavigation")
+        column.prop(operator, 'doBsptree')
+        column.prop(operator, 'doCollision')
+        column.prop(operator, 'doNavigation')
         column.enabled = operator.meshMode != 'BAKE'
 
-        layout.prop(operator, "doLightmap")
-        layout.prop(operator, "doLights")
+        layout.prop(operator, 'doLightmap')
+        layout.prop(operator, 'doLights')
 
         column = layout.column()
-        column.prop(operator, "tweakLights")
+        column.prop(operator, 'tweakLights')
         column.enabled = operator.doLights
 
-        layout.prop(operator, "doProps")
+        layout.prop(operator, 'doProps')
 
         column = layout.column()
-        column.prop(operator, "doDummies")
-        column.prop(operator, "doOcclusion")
+        column.prop(operator, 'doDummies')
+        column.prop(operator, 'doOcclusion')
         column.enabled = operator.meshMode != 'BAKE'
 
-        layout.prop(operator, "doFog")
+        layout.prop(operator, 'doFog')
 
         column = layout.column()
-        column.prop(operator, "doSounds")
-        column.prop(operator, "doItems")
-        column.prop(operator, "doBounds")
+        column.prop(operator, 'doSounds')
+        column.prop(operator, 'doItems')
+        column.prop(operator, 'doBounds')
         column.enabled = operator.meshMode != 'BAKE'
 
-        layout.prop(operator, "doCleanup")
+        layout.prop(operator, 'doCleanup')
 
 class GZRS2_PT_Import_Drivers(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Drivers"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Drivers'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_gzrs2"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_gzrs2'
 
     def draw_header(self, context):
-        self.layout.prop(context.space_data.active_operator, "panelDrivers", text = "")
+        self.layout.prop(context.space_data.active_operator, 'panelDrivers', text = "")
 
     def draw(self, context):
         layout = self.layout
@@ -653,21 +653,21 @@ class GZRS2_PT_Import_Drivers(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelDrivers
 
-        layout.prop(operator, "doLightDrivers")
-        layout.prop(operator, "doFogDriver")
+        layout.prop(operator, 'doLightDrivers')
+        layout.prop(operator, 'doFogDriver')
 
 class GZRS2_PT_Import_Logging(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Logging"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_gzrs2"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_gzrs2'
 
     def draw_header(self, context):
-        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
 
     def draw(self, context):
         layout = self.layout
@@ -677,114 +677,114 @@ class GZRS2_PT_Import_Logging(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelLogging
 
-        layout.prop(operator, "logRsHeaders")
-        layout.prop(operator, "logRsPortals")
-        layout.prop(operator, "logRsCells")
-        layout.prop(operator, "logRsGeometry")
-        layout.prop(operator, "logRsTrees")
-        layout.prop(operator, "logRsPolygons")
-        layout.prop(operator, "logRsVerts")
-        layout.prop(operator, "logBspHeaders")
-        layout.prop(operator, "logBspPolygons")
-        layout.prop(operator, "logBspVerts")
-        layout.prop(operator, "logColHeaders")
-        layout.prop(operator, "logColNodes")
-        layout.prop(operator, "logColTris")
-        layout.prop(operator, "logNavHeaders")
-        layout.prop(operator, "logNavData")
-        layout.prop(operator, "logLmHeaders")
-        layout.prop(operator, "logLmImages")
-        layout.prop(operator, "logEluHeaders")
-        layout.prop(operator, "logEluMats")
-        layout.prop(operator, "logEluMeshNodes")
+        layout.prop(operator, 'logRsHeaders')
+        layout.prop(operator, 'logRsPortals')
+        layout.prop(operator, 'logRsCells')
+        layout.prop(operator, 'logRsGeometry')
+        layout.prop(operator, 'logRsTrees')
+        layout.prop(operator, 'logRsPolygons')
+        layout.prop(operator, 'logRsVerts')
+        layout.prop(operator, 'logBspHeaders')
+        layout.prop(operator, 'logBspPolygons')
+        layout.prop(operator, 'logBspVerts')
+        layout.prop(operator, 'logColHeaders')
+        layout.prop(operator, 'logColNodes')
+        layout.prop(operator, 'logColTris')
+        layout.prop(operator, 'logNavHeaders')
+        layout.prop(operator, 'logNavData')
+        layout.prop(operator, 'logLmHeaders')
+        layout.prop(operator, 'logLmImages')
+        layout.prop(operator, 'logEluHeaders')
+        layout.prop(operator, 'logEluMats')
+        layout.prop(operator, 'logEluMeshNodes')
 
         column = layout.column()
-        column.prop(operator, "logVerboseIndices")
-        column.prop(operator, "logVerboseWeights")
+        column.prop(operator, 'logVerboseIndices')
+        column.prop(operator, 'logVerboseWeights')
         column.enabled = operator.logEluMeshNodes
 
-        layout.prop(operator, "logCleanup")
+        layout.prop(operator, 'logCleanup')
 
 class ImportGZRS3(Operator, ImportHelper):
-    bl_idname = "import_scene.gzrs3"
-    bl_label = "Import RS3"
+    bl_idname = 'import_scene.gzrs3'
+    bl_label = 'Import RS3'
     bl_options = { 'UNDO', 'PRESET' }
     bl_description = "Load a SCENE.XML/PROP.XML file"
 
     filter_glob: StringProperty(
-        default = "*.scene.xml;*.prop.xml",
+        default = '*.scene.xml;*.prop.xml',
         options = { 'HIDDEN' }
     )
 
     panelMain: BoolProperty(
-        name = "Main",
+        name = 'Main',
         description = "Main panel of options",
         default = True
     )
 
     panelLogging: BoolProperty(
-        name = "Logging",
+        name = 'Logging',
         description = "Log details to the console",
         default = False
     )
 
     convertUnits: BoolProperty(
-        name = "Convert Units",
+        name = 'Convert Units',
         description = "Convert measurements from centimeters to meters",
         default = True
     )
 
     texSearchMode: EnumProperty(
-        name = "Texture Mode",
-        items = (('PATH',       "Path",         "Search for textures using the specified path (faster)"),
-                 ('BRUTE',      "Brute",        "Search for textures in surrounding filesystem (slow, may freeze)"),
-                 ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
+        name = 'Texture Mode',
+        items = (('PATH',       'Path',         "Search for textures using the specified path (faster)"),
+                 ('BRUTE',      'Brute',        "Search for textures in surrounding filesystem (slow, may freeze)"),
+                 ('SKIP',       'Skip',         "Don't search for or load any textures (fastest)"))
     )
 
     doCleanup: BoolProperty(
-        name = "Cleanup",
+        name = 'Cleanup',
         description = "Deletes loose geometry, removes doubles and sets each mesh to render smooth",
         default = True
     )
 
     logSceneNodes: BoolProperty(
-        name = "Scene Nodes",
+        name = 'Scene Nodes',
         description = "Log scene node data",
         default = True
     )
 
     logEluHeaders: BoolProperty(
-        name = "Elu Headers",
+        name = 'Elu Headers',
         description = "Log ELU header data",
         default = True
     )
 
     logEluMats: BoolProperty(
-        name = "Elu Materials",
+        name = 'Elu Materials',
         description = "Log ELU material data",
         default = True
     )
 
     logEluMeshNodes: BoolProperty(
-        name = "Elu Mesh Nodes",
+        name = 'Elu Mesh Nodes',
         description = "Log ELU mesh node data",
         default = True
     )
 
     logVerboseIndices: BoolProperty(
-        name = "Verbose Indices",
+        name = 'Verbose Indices',
         description = "Log ELU indices verbosely",
         default = False
     )
 
     logVerboseWeights: BoolProperty(
-        name = "Verbose Weights",
+        name = 'Verbose Weights',
         description = "Log ELU weights verbosely",
         default = False
     )
 
     logCleanup: BoolProperty(
-        name = "Cleanup",
+        name = 'Cleanup',
         description = "Log results of the the cleanup routine",
         default = False
     )
@@ -796,14 +796,14 @@ class ImportGZRS3(Operator, ImportHelper):
         return import_gzrs3.importRS3(self, context)
 
 class GZRS3_PT_Import_Main(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Main"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Main'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_gzrs3"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_gzrs3'
 
     def draw(self, context):
         layout = self.layout
@@ -813,23 +813,23 @@ class GZRS3_PT_Import_Main(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelMain
 
-        layout.prop(operator, "convertUnits")
-        layout.prop(operator, "texSearchMode")
+        layout.prop(operator, 'convertUnits')
+        layout.prop(operator, 'texSearchMode')
 
-        layout.prop(operator, "doCleanup")
+        layout.prop(operator, 'doCleanup')
 
 class GZRS3_PT_Import_Logging(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Logging"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_gzrs3"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_gzrs3'
 
     def draw_header(self, context):
-        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
 
     def draw(self, context):
         layout = self.layout
@@ -839,104 +839,104 @@ class GZRS3_PT_Import_Logging(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelLogging
 
-        layout.prop(operator, "logSceneNodes")
-        layout.prop(operator, "logEluHeaders")
-        layout.prop(operator, "logEluMats")
-        layout.prop(operator, "logEluMeshNodes")
+        layout.prop(operator, 'logSceneNodes')
+        layout.prop(operator, 'logEluHeaders')
+        layout.prop(operator, 'logEluMats')
+        layout.prop(operator, 'logEluMeshNodes')
 
         column = layout.column()
-        column.prop(operator, "logVerboseIndices")
-        column.prop(operator, "logVerboseWeights")
+        column.prop(operator, 'logVerboseIndices')
+        column.prop(operator, 'logVerboseWeights')
         column.enabled = operator.logEluMeshNodes
 
-        layout.prop(operator, "logCleanup")
+        layout.prop(operator, 'logCleanup')
 
 class ImportRSELU(Operator, ImportHelper):
-    bl_idname = "import_scene.rselu"
-    bl_label = "Import ELU"
+    bl_idname = 'import_scene.rselu'
+    bl_label = 'Import ELU'
     bl_options = { 'UNDO', 'PRESET' }
     bl_description = "Load an ELU file"
 
     filter_glob: StringProperty(
-        default = "*.elu",
+        default = '*.elu',
         options = { 'HIDDEN' }
     )
 
     panelMain: BoolProperty(
-        name = "Main",
+        name = 'Main',
         description = "Main panel of options",
         default = True
     )
 
     panelLogging: BoolProperty(
-        name = "Logging",
+        name = 'Logging',
         description = "Log details to the console",
         default = False
     )
 
     convertUnits: BoolProperty(
-        name = "Convert Units",
+        name = 'Convert Units',
         description = "Convert measurements from centimeters to meters",
         default = True
     )
 
     texSearchMode: EnumProperty(
-        name = "Texture Mode",
-        items = (('PATH',       "Path",         "Search for textures using the specified path (faster)"),
-                 ('BRUTE',      "Brute",        "Search for textures in surrounding filesystem (slow, may freeze)"),
-                 ('SKIP',       "Skip",         "Don't search for or load any textures (fastest)"))
+        name = 'Texture Mode',
+        items = (('PATH',       'Path',         "Search for textures using the specified path (faster)"),
+                 ('BRUTE',      'Brute',        "Search for textures in surrounding filesystem (slow, may freeze)"),
+                 ('SKIP',       'Skip',         "Don't search for or load any textures (fastest)"))
     )
 
     doBoneRolls: BoolProperty(
-        name = "Bone Rolls",
+        name = 'Bone Rolls',
         description = "Re-calculate all bone rolls to the positive world z-axis. Required for twist bone constraints to work properly",
         default = False
     )
 
     doTwistConstraints: BoolProperty(
-        name = "Twist Constraints",
+        name = 'Twist Constraints',
         description = "Automatically add constraints for twist bones. Bone rolls are required to be re-calculated first",
         default = True
     )
 
     doCleanup: BoolProperty(
-        name = "Cleanup",
+        name = 'Cleanup',
         description = "Deletes loose geometry, removes doubles and sets each mesh to render smooth",
         default = True
     )
 
     logEluHeaders: BoolProperty(
-        name = "Elu Headers",
+        name = 'Elu Headers',
         description = "Log ELU header data",
         default = True
     )
 
     logEluMats: BoolProperty(
-        name = "Elu Materials",
+        name = 'Elu Materials',
         description = "Log ELU material data",
         default = True
     )
 
     logEluMeshNodes: BoolProperty(
-        name = "Elu Mesh Nodes",
+        name = 'Elu Mesh Nodes',
         description = "Log ELU mesh node data",
         default = True
     )
 
     logVerboseIndices: BoolProperty(
-        name = "Verbose Indices",
+        name = 'Verbose Indices',
         description = "Log ELU indices verbosely",
         default = False
     )
 
     logVerboseWeights: BoolProperty(
-        name = "Verbose Weights",
+        name = 'Verbose Weights',
         description = "Log ELU weights verbosely",
         default = False
     )
 
     logCleanup: BoolProperty(
-        name = "Cleanup",
+        name = 'Cleanup',
         description = "Log results of the the cleanup routine",
         default = False
     )
@@ -948,14 +948,14 @@ class ImportRSELU(Operator, ImportHelper):
         return import_rselu.importElu(self, context)
 
 class RSELU_PT_Import_Main(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Main"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Main'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rselu"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_rselu'
 
     def draw(self, context):
         layout = self.layout
@@ -965,29 +965,29 @@ class RSELU_PT_Import_Main(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelMain
 
-        layout.prop(operator, "convertUnits")
-        layout.prop(operator, "texSearchMode")
+        layout.prop(operator, 'convertUnits')
+        layout.prop(operator, 'texSearchMode')
 
-        layout.prop(operator, "doBoneRolls")
+        layout.prop(operator, 'doBoneRolls')
 
         column = layout.column()
-        column.prop(operator, "doTwistConstraints")
+        column.prop(operator, 'doTwistConstraints')
         column.enabled = operator.doBoneRolls
 
-        layout.prop(operator, "doCleanup")
+        layout.prop(operator, 'doCleanup')
 
 class RSELU_PT_Import_Logging(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Logging"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rselu"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_rselu'
 
     def draw_header(self, context):
-        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
 
     def draw(self, context):
         layout = self.layout
@@ -997,78 +997,78 @@ class RSELU_PT_Import_Logging(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelLogging
 
-        layout.prop(operator, "logEluHeaders")
-        layout.prop(operator, "logEluMats")
-        layout.prop(operator, "logEluMeshNodes")
+        layout.prop(operator, 'logEluHeaders')
+        layout.prop(operator, 'logEluMats')
+        layout.prop(operator, 'logEluMeshNodes')
 
         column = layout.column()
-        column.prop(operator, "logVerboseIndices")
-        column.prop(operator, "logVerboseWeights")
+        column.prop(operator, 'logVerboseIndices')
+        column.prop(operator, 'logVerboseWeights')
         column.enabled = operator.logEluMeshNodes
 
-        layout.prop(operator, "logCleanup")
+        layout.prop(operator, 'logCleanup')
 
 class ImportRSANI(Operator, ImportHelper):
-    bl_idname = "import_scene.rsani"
-    bl_label = "Import ANI"
+    bl_idname = 'import_scene.rsani'
+    bl_label = 'Import ANI'
     bl_options = { 'UNDO', 'PRESET' }
     bl_description = "Load an ANI file"
 
     filter_glob: StringProperty(
-        default = "*.ani",
+        default = '*.ani',
         options = { 'HIDDEN' }
     )
 
     panelMain: BoolProperty(
-        name = "Main",
+        name = 'Main',
         description = "Main panel of options",
         default = True
     )
 
     panelLogging: BoolProperty(
-        name = "Logging",
+        name = 'Logging',
         description = "Log details to the console",
         default = False
     )
 
     convertUnits: BoolProperty(
-        name = "Convert Units",
+        name = 'Convert Units',
         description = "Convert measurements from centimeters to meters",
         default = True
     )
 
     overwriteAction: BoolProperty(
-        name = "Overwrite Action",
+        name = 'Overwrite Action',
         description = "Overwrite action data if found by matching name. Disable to always create a new action",
         default = True
     )
 
     selectedOnly: BoolProperty(
-        name = "Selected Only",
+        name = 'Selected Only',
         description = "Limit import to selected objects only. Does not apply to TRANSFORM or BONE types",
         default = False
     )
 
     includeChildren: BoolProperty(
-        name = "Include Children",
+        name = 'Include Children',
         description = "Include children of selected objects.  Does not apply to TRANSFORM or BONE types",
         default = True
     )
 
     visibleOnly: BoolProperty(
-        name = "Visible Only",
+        name = 'Visible Only',
         description = "Limit import to visible objects only.  Does not apply to TRANSFORM or BONE types",
         default = False
     )
 
     logAniHeaders: BoolProperty(
-        name = "Ani Headers",
+        name = 'Ani Headers',
         description = "Log Ani header data",
         default = True
     )
 
     logAniNodes: BoolProperty(
-        name = "Ani Nodes",
+        name = 'Ani Nodes',
         description = "Log ANI node data",
         default = True
     )
@@ -1080,14 +1080,14 @@ class ImportRSANI(Operator, ImportHelper):
         return import_rsani.importAni(self, context)
 
 class RSANI_PT_Import_Main(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Main"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Main'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rsani"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_rsani'
 
     def draw(self, context):
         layout = self.layout
@@ -1097,28 +1097,28 @@ class RSANI_PT_Import_Main(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelMain
 
-        layout.prop(operator, "convertUnits")
-        layout.prop(operator, "overwriteAction")
-        layout.prop(operator, "selectedOnly")
+        layout.prop(operator, 'convertUnits')
+        layout.prop(operator, 'overwriteAction')
+        layout.prop(operator, 'selectedOnly')
 
         column = layout.column()
-        column.prop(operator, "includeChildren")
+        column.prop(operator, 'includeChildren')
         column.enabled = operator.selectedOnly
 
-        layout.prop(operator, "visibleOnly")
+        layout.prop(operator, 'visibleOnly')
 
 class RSANI_PT_Import_Logging(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Logging"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rsani"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_rsani'
 
     def draw_header(self, context):
-        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
 
     def draw(self, context):
         layout = self.layout
@@ -1128,64 +1128,64 @@ class RSANI_PT_Import_Logging(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelLogging
 
-        layout.prop(operator, "logAniHeaders")
-        layout.prop(operator, "logAniNodes")
+        layout.prop(operator, 'logAniHeaders')
+        layout.prop(operator, 'logAniNodes')
 
 class ImportRSCOL(Operator, ImportHelper):
-    bl_idname = "import_scene.rscol"
-    bl_label = "Import COL"
+    bl_idname = 'import_scene.rscol'
+    bl_label = 'Import COL'
     bl_options = { 'UNDO', 'PRESET' }
     bl_description = "Load a COL/CL2 file"
 
     filter_glob: StringProperty(
-        default = "*.col;*.cl2",
+        default = '*.col;*.cl2',
         options = { 'HIDDEN' }
     )
 
     panelMain: BoolProperty(
-        name = "Main",
+        name = 'Main',
         description = "Main panel of options",
         default = True
     )
 
     panelLogging: BoolProperty(
-        name = "Logging",
+        name = 'Logging',
         description = "Log details to the console",
         default = False
     )
 
     convertUnits: BoolProperty(
-        name = "Convert Units",
+        name = 'Convert Units',
         description = "Convert measurements from centimeters to meters",
         default = True
     )
 
     doCleanup: BoolProperty(
-        name = "Cleanup (EXPERIMENTAL)",
+        name = 'Cleanup (EXPERIMENTAL)',
         description = "A combination of knife intersection, three types of dissolve, merge by distance, tris-to-quads, and hole filling",
         default = False
     )
 
     logColHeaders: BoolProperty(
-        name = "Col Headers",
+        name = 'Col Headers',
         description = "Log Col header data",
         default = True
     )
 
     logColNodes: BoolProperty(
-        name = "Col Nodes",
+        name = 'Col Nodes',
         description = "Log Col node data",
         default = False
     )
 
     logColTris: BoolProperty(
-        name = "Col Triangles",
+        name = 'Col Triangles',
         description = "Log Col triangle data",
         default = False
     )
 
     logCleanup: BoolProperty(
-        name = "Cleanup",
+        name = 'Cleanup',
         description = "Log results of the the cleanup routine",
         default = False
     )
@@ -1197,14 +1197,14 @@ class ImportRSCOL(Operator, ImportHelper):
         return import_rscol.importCol(self, context)
 
 class RSCOL_PT_Import_Main(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Main"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Main'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rscol"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_rscol'
 
     def draw(self, context):
         layout = self.layout
@@ -1214,21 +1214,21 @@ class RSCOL_PT_Import_Main(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelMain
 
-        layout.prop(operator, "convertUnits")
-        layout.prop(operator, "doCleanup")
+        layout.prop(operator, 'convertUnits')
+        layout.prop(operator, 'doCleanup')
 
 class RSCOL_PT_Import_Logging(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Logging"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rscol"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_rscol'
 
     def draw_header(self, context):
-        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
 
     def draw(self, context):
         layout = self.layout
@@ -1238,48 +1238,48 @@ class RSCOL_PT_Import_Logging(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelLogging
 
-        layout.prop(operator, "logColHeaders")
-        layout.prop(operator, "logColNodes")
-        layout.prop(operator, "logColTris")
-        layout.prop(operator, "logCleanup")
+        layout.prop(operator, 'logColHeaders')
+        layout.prop(operator, 'logColNodes')
+        layout.prop(operator, 'logColTris')
+        layout.prop(operator, 'logCleanup')
 
 class ImportRSNAV(Operator, ImportHelper):
-    bl_idname = "import_scene.rsnav"
-    bl_label = "Import NAV"
+    bl_idname = 'import_scene.rsnav'
+    bl_label = 'Import NAV'
     bl_options = { 'UNDO', 'PRESET' }
     bl_description = "Load a NAV file"
 
     filter_glob: StringProperty(
-        default = "*.nav",
+        default = '*.nav',
         options = { 'HIDDEN' }
     )
 
     panelMain: BoolProperty(
-        name = "Main",
+        name = 'Main',
         description = "Main panel of options",
         default = True
     )
 
     panelLogging: BoolProperty(
-        name = "Logging",
+        name = 'Logging',
         description = "Log details to the console",
         default = False
     )
 
     convertUnits: BoolProperty(
-        name = "Convert Units",
+        name = 'Convert Units',
         description = "Convert measurements from centimeters to meters",
         default = True
     )
 
     logNavHeaders: BoolProperty(
-        name = "Nav Headers",
+        name = 'Nav Headers',
         description = "Log Nav header data",
         default = True
     )
 
     logNavData: BoolProperty(
-        name = "Nav Data",
+        name = 'Nav Data',
         description = "Log Nav data",
         default = True
     )
@@ -1291,14 +1291,14 @@ class ImportRSNAV(Operator, ImportHelper):
         return import_rsnav.importNav(self, context)
 
 class RSNAV_PT_Import_Main(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Main"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Main'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rsnav"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_rsnav'
 
     def draw(self, context):
         layout = self.layout
@@ -1308,20 +1308,20 @@ class RSNAV_PT_Import_Main(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelMain
 
-        layout.prop(operator, "convertUnits")
+        layout.prop(operator, 'convertUnits')
 
 class RSNAV_PT_Import_Logging(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Logging"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rsnav"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_rsnav'
 
     def draw_header(self, context):
-        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
 
     def draw(self, context):
         layout = self.layout
@@ -1331,28 +1331,28 @@ class RSNAV_PT_Import_Logging(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelLogging
 
-        layout.prop(operator, "logNavHeaders")
-        layout.prop(operator, "logNavData")
+        layout.prop(operator, 'logNavHeaders')
+        layout.prop(operator, 'logNavData')
 
 class ImportRSLM(Operator, ImportHelper):
-    bl_idname = "import_scene.rslm"
-    bl_label = "Import LM"
+    bl_idname = 'import_scene.rslm'
+    bl_label = 'Import LM'
     bl_options = { 'UNDO', 'PRESET' }
     bl_description = "Load an LM file"
 
     filter_glob: StringProperty(
-        default = "*.lm",
+        default = '*.lm',
         options = { 'HIDDEN' }
     )
 
     logLmHeaders: BoolProperty(
-        name = "Lm Headers",
+        name = 'Lm Headers',
         description = "Log Lm header data",
         default = False
     )
 
     logLmImages: BoolProperty(
-        name = "Lm Images",
+        name = 'Lm Images',
         description = "Log Lm image data",
         default = False
     )
@@ -1364,14 +1364,14 @@ class ImportRSLM(Operator, ImportHelper):
         return import_rslm.importLm(self, context)
 
 class RSLM_PT_Import_Logging(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Logging"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "IMPORT_SCENE_OT_rslm"
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_rslm'
 
     def draw(self, context):
         layout = self.layout
@@ -1380,89 +1380,89 @@ class RSLM_PT_Import_Logging(Panel):
         layout.use_property_split = True
         layout.use_property_decorate = False
 
-        layout.prop(operator, "logLmHeaders")
-        layout.prop(operator, "logLmImages")
+        layout.prop(operator, 'logLmHeaders')
+        layout.prop(operator, 'logLmImages')
 
 class ExportRSELU(Operator, ExportHelper):
-    bl_idname = "export_scene.rselu"
-    bl_label = "Export ELU"
+    bl_idname = 'export_scene.rselu'
+    bl_label = 'Export ELU'
     bl_options = { 'UNDO', 'PRESET' }
     bl_description = "Save an ELU file"
 
-    filename_ext = ".elu"
+    filename_ext = '.elu'
     filter_glob: StringProperty(
-        default = "*.elu",
+        default = '*.elu',
         options = { 'HIDDEN' }
     )
 
     panelMain: BoolProperty(
-        name = "Main",
+        name = 'Main',
         description = "Main panel of options",
         default = True
     )
 
     panelLogging: BoolProperty(
-        name = "Logging",
+        name = 'Logging',
         description = "Log details to the console",
         default = False
     )
 
     convertUnits: BoolProperty(
-        name = "Convert Units",
+        name = 'Convert Units',
         description = "Convert measurements from meters to centimeters",
         default = True
     )
 
     selectedOnly: BoolProperty(
-        name = "Selected Only",
+        name = 'Selected Only',
         description = "Limit export to selected objects only",
         default = False
     )
 
     includeChildren: BoolProperty(
-        name = "Include Children",
+        name = 'Include Children',
         description = "Include children of selected objects",
         default = True
     )
 
     visibleOnly: BoolProperty(
-        name = "Visible Only",
+        name = 'Visible Only',
         description = "Limit export to visible objects only",
         default = False
     )
 
     implicitEffects: BoolProperty(
-        name = "Implicit Effects",
+        name = 'Implicit Effects',
         description = "Nullifies the Additive flag for Realspace2 file names containing '_ef' and object names containing either '_ef' or 'ef_'. Disable this to take manual control",
         default = True
     )
 
     logEluHeaders: BoolProperty(
-        name = "Elu Headers",
+        name = 'Elu Headers',
         description = "Log ELU header data",
         default = True
     )
 
     logEluMats: BoolProperty(
-        name = "Elu Materials",
+        name = 'Elu Materials',
         description = "Log ELU material data",
         default = True
     )
 
     logEluMeshNodes: BoolProperty(
-        name = "Elu Mesh Nodes",
+        name = 'Elu Mesh Nodes',
         description = "Log ELU mesh node data",
         default = True
     )
 
     logVerboseIndices: BoolProperty(
-        name = "Verbose Indices",
+        name = 'Verbose Indices',
         description = "Log ELU indices verbosely",
         default = False
     )
 
     logVerboseWeights: BoolProperty(
-        name = "Verbose Weights",
+        name = 'Verbose Weights',
         description = "Log ELU weights verbosely",
         default = False
     )
@@ -1474,14 +1474,14 @@ class ExportRSELU(Operator, ExportHelper):
         return export_rselu.exportElu(self, context)
 
 class RSELU_PT_Export_Main(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Main"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Main'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_rselu"
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_rselu'
 
     def draw(self, context):
         layout = self.layout
@@ -1491,28 +1491,28 @@ class RSELU_PT_Export_Main(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelMain
 
-        layout.prop(operator, "convertUnits")
-        layout.prop(operator, "selectedOnly")
+        layout.prop(operator, 'convertUnits')
+        layout.prop(operator, 'selectedOnly')
 
         column = layout.column()
-        column.prop(operator, "includeChildren")
+        column.prop(operator, 'includeChildren')
         column.enabled = operator.selectedOnly
 
-        layout.prop(operator, "visibleOnly")
-        layout.prop(operator, "implicitEffects")
+        layout.prop(operator, 'visibleOnly')
+        layout.prop(operator, 'implicitEffects')
 
 class RSELU_PT_Export_Logging(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Logging"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_rselu"
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_rselu'
 
     def draw_header(self, context):
-        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
 
     def draw(self, context):
         layout = self.layout
@@ -1522,53 +1522,53 @@ class RSELU_PT_Export_Logging(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelLogging
 
-        layout.prop(operator, "logEluHeaders")
-        layout.prop(operator, "logEluMats")
-        layout.prop(operator, "logEluMeshNodes")
+        layout.prop(operator, 'logEluHeaders')
+        layout.prop(operator, 'logEluMats')
+        layout.prop(operator, 'logEluMeshNodes')
 
         column = layout.column()
-        column.prop(operator, "logVerboseIndices")
-        column.prop(operator, "logVerboseWeights")
+        column.prop(operator, 'logVerboseIndices')
+        column.prop(operator, 'logVerboseWeights')
         column.enabled = operator.logEluMeshNodes
 
 class ExportRSNAV(Operator, ExportHelper):
-    bl_idname = "export_scene.rsnav"
-    bl_label = "Export NAV"
+    bl_idname = 'export_scene.rsnav'
+    bl_label = 'Export NAV'
     bl_options = { 'UNDO', 'PRESET' }
     bl_description = "Save an NAV file"
 
-    filename_ext = ".nav"
+    filename_ext = '.nav'
     filter_glob: StringProperty(
-        default = "*.nav",
+        default = '*.nav',
         options = { 'HIDDEN' }
     )
 
     panelMain: BoolProperty(
-        name = "Main",
+        name = 'Main',
         description = "Main panel of options",
         default = True
     )
 
     panelLogging: BoolProperty(
-        name = "Logging",
+        name = 'Logging',
         description = "Log details to the console",
         default = False
     )
 
     convertUnits: BoolProperty(
-        name = "Convert Units",
+        name = 'Convert Units',
         description = "Convert measurements from meters to centimeters",
         default = True
     )
 
     logNavHeaders: BoolProperty(
-        name = "Nav Headers",
+        name = 'Nav Headers',
         description = "Log NAV header data",
         default = True
     )
 
     logNavData: BoolProperty(
-        name = "Nav Data",
+        name = 'Nav Data',
         description = "Log NAV mesh data",
         default = True
     )
@@ -1580,14 +1580,14 @@ class ExportRSNAV(Operator, ExportHelper):
         return export_rsnav.exportNav(self, context)
 
 class RSNAV_PT_Export_Main(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Main"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Main'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_rsnav"
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_rsnav'
 
     def draw(self, context):
         layout = self.layout
@@ -1597,20 +1597,20 @@ class RSNAV_PT_Export_Main(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelMain
 
-        layout.prop(operator, "convertUnits")
+        layout.prop(operator, 'convertUnits')
 
 class RSNAV_PT_Export_Logging(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Logging"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_rsnav"
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_rsnav'
 
     def draw_header(self, context):
-        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
 
     def draw(self, context):
         layout = self.layout
@@ -1620,53 +1620,53 @@ class RSNAV_PT_Export_Logging(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelLogging
 
-        layout.prop(operator, "logNavHeaders")
-        layout.prop(operator, "logNavData")
+        layout.prop(operator, 'logNavHeaders')
+        layout.prop(operator, 'logNavData')
 
 class ExportRSLM(Operator, ExportHelper):
-    bl_idname = "export_scene.rslm"
-    bl_label = "Export LM"
+    bl_idname = 'export_scene.rslm'
+    bl_label = 'Export LM'
     bl_options = { 'UNDO', 'PRESET' }
     bl_description = "Save an LM file"
 
-    filename_ext = ".lm"
+    filename_ext = '.lm'
     filter_glob: StringProperty(
-        default = "*.rs.lm",
+        default = '*.rs.lm',
         options = { 'HIDDEN' }
     )
 
     panelMain: BoolProperty(
-        name = "Main",
+        name = 'Main',
         description = "Main panel of options",
         default = True
     )
 
     panelLogging: BoolProperty(
-        name = "Logging",
+        name = 'Logging',
         description = "Log details to the console",
         default = False
     )
 
     doUVs: BoolProperty(
-        name = "UV Data",
+        name = 'UV Data',
         description = "Export UV data, requires an active mesh object with valid UVs in channel 3 as well as a GunZ 1 .rs file for the same map in the same directory",
         default = True
     )
 
     lmVersion4: BoolProperty(
-        name = "Version 4",
+        name = 'Version 4',
         description = "Fixes bit depth issues and makes use of DXT1 compression, not compatible with vanilla GunZ",
         default = False
     )
 
     mod4Fix: BoolProperty(
-        name = "MOD4 Fix",
+        name = 'MOD4 Fix',
         description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag. Disable if re-exporting an existing lightmap",
         default = True
     )
 
     logLmHeaders: BoolProperty(
-        name = "Lm Headers",
+        name = 'Lm Headers',
         description = "Log Lm header data",
         default = True
     )
@@ -1678,14 +1678,14 @@ class ExportRSLM(Operator, ExportHelper):
         return export_rslm.exportLm(self, context)
 
 class RSLM_PT_Export_Main(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Main"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Main'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_rslm"
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_rslm'
 
     def draw(self, context):
         layout = self.layout
@@ -1695,25 +1695,25 @@ class RSLM_PT_Export_Main(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelMain
 
-        layout.prop(operator, "doUVs")
-        layout.prop(operator, "lmVersion4")
+        layout.prop(operator, 'doUVs')
+        layout.prop(operator, 'lmVersion4')
 
         column = layout.column()
-        column.prop(operator, "mod4Fix")
+        column.prop(operator, 'mod4Fix')
         column.enabled = not operator.lmVersion4
 
 class RSLM_PT_Export_Logging(Panel):
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOL_PROPS"
-    bl_label = "Logging"
-    bl_parent_id = "FILE_PT_operator"
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_rslm"
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_rslm'
 
     def draw_header(self, context):
-        self.layout.prop(context.space_data.active_operator, "panelLogging", text = "")
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
 
     def draw(self, context):
         layout = self.layout
@@ -1723,21 +1723,21 @@ class RSLM_PT_Export_Logging(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelLogging
 
-        layout.prop(operator, "logLmHeaders")
+        layout.prop(operator, 'logLmHeaders')
 
 class GZRS2ObjectProperties(PropertyGroup):
     def ensureAll(self):
-        if 'dummyType'          not in self: self['dummyType']          = "NONE"
-        if 'spawnType'          not in self: self['spawnType']          = "SOLO"
+        if 'dummyType'          not in self: self['dummyType']          = 'NONE'
+        if 'spawnType'          not in self: self['spawnType']          = 'SOLO'
         if 'spawnIndex'         not in self: self['spawnIndex']         = 1
         if 'spawnTeamID'        not in self: self['spawnTeamID']        = 1
-        if 'spawnEnemyType'     not in self: self['spawnEnemyType']     = "MELEE"
-        if 'spawnBlitzType'     not in self: self['spawnBlitzType']     = "BARRICADE"
-        if 'soundFileName'      not in self: self['soundFileName']      = ""
-        if 'soundSpace'         not in self: self['soundSpace']         = "2D"
-        if 'soundShape'         not in self: self['soundShape']         = "AABB"
-        if 'itemGameID'         not in self: self['itemGameID']         = "SOLO"
-        if 'itemType'           not in self: self['itemType']           = "HP"
+        if 'spawnEnemyType'     not in self: self['spawnEnemyType']     = 'MELEE'
+        if 'spawnBlitzType'     not in self: self['spawnBlitzType']     = 'BARRICADE'
+        if 'soundFileName'      not in self: self['soundFileName']      = ''
+        if 'soundSpace'         not in self: self['soundSpace']         = '2D'
+        if 'soundShape'         not in self: self['soundShape']         = 'AABB'
+        if 'itemGameID'         not in self: self['itemGameID']         = 'SOLO'
+        if 'itemType'           not in self: self['itemType']           = 'HP'
         if 'itemID'             not in self: self['itemID']             = 1
         if 'itemTimer'          not in self: self['itemTimer']          = 30000
 
@@ -1766,52 +1766,52 @@ class GZRS2ObjectProperties(PropertyGroup):
             blObj.empty_display_type = 'ARROWS'
 
     dummyTypeEnumItems = (
-        ('NONE',        "None",         "Not a Realspace object. Will not be exported"),
-        ('SPAWN',       "Spawn",        "Spawn location for characters"),
-        ('SUN',         "Sun",          "Sun spot location. Not an actual light source"),
-        ('SOUND',       "Sound",        "Ambient sound, based on proximity to a sphere or axis-aligned bounding box center"),
-        ('ITEM',        "Item",         "Health, armor, ammo etc")
+        ('NONE',        'None',         "Not a Realspace object. Will not be exported"),
+        ('SPAWN',       'Spawn',        "Spawn location for characters"),
+        ('SUN',         'Sun',          "Sun spot location. Not an actual light source"),
+        ('SOUND',       'Sound',        "Ambient sound, based on proximity to a sphere or axis-aligned bounding box center"),
+        ('ITEM',        'Item',         "Health, armor, ammo etc")
     )
 
     spawnTypeEnumItems = (
-        ('SOLO',        "Solo",         "Free-for-all and Quest spawn for players"),
-        ('TEAM',        "Team",         "Team oriented spawn for players"),
-        ('NPC',         "Enemy",        "Quest spawn for enemies"),
-        ('BLITZ',       "Blitzkrieg",   "Spawns for the blitzkrieg gametype")
+        ('SOLO',        'Solo',         "Free-for-all and Quest spawn for players"),
+        ('TEAM',        'Team',         "Team oriented spawn for players"),
+        ('NPC',         'Enemy',        "Quest spawn for enemies"),
+        ('BLITZ',       'Blitzkrieg',   "Spawns for the blitzkrieg gametype")
     )
 
     spawnEnemyTypeEnumItems = (
-        ('MELEE',       "Melee",        "Spawn for melee enemies"),
-        ('RANGED',      "Ranged",       "Spawn for ranged enemies"),
-        ('BOSS',        "Boss",         "Spawn for a boss enemy")
+        ('MELEE',       'Melee',        "Spawn for melee enemies"),
+        ('RANGED',      'Ranged',       "Spawn for ranged enemies"),
+        ('BOSS',        'Boss',         "Spawn for a boss enemy")
     )
 
     spawnBlitzTypeEnumItems = (
-        ('BARRICADE',   "Barricade",    "Spawn for barricades"),
-        ('GUARDIAN',    "Guardian",     "Spawn for guardians"),
-        ('RADAR',       "Radar",        "Spawn for radars"),
-        ('TREASURE',    "Treasure",     "Spawn for treasures")
+        ('BARRICADE',   'Barricade',    "Spawn for barricades"),
+        ('GUARDIAN',    'Guardian',     "Spawn for guardians"),
+        ('RADAR',       'Radar',        "Spawn for radars"),
+        ('TREASURE',    'Treasure',     "Spawn for treasures")
     )
 
     soundSpaceEnumItems = (
-        ('2D',          "2D",           "Two-dimensional, no stereo image. Good for reverberant, omnidirectional ambience"),
-        ('3D',          "3D",           "Three-dimensional, stereo enabled. Good for directional sounds with a clear source")
+        ('2D',          '2D',           "Two-dimensional, no stereo image. Good for reverberant, omnidirectional ambience"),
+        ('3D',          '3D',           "Three-dimensional, stereo enabled. Good for directional sounds with a clear source")
     )
 
     soundShapeEnumItems = (
-        ('AABB',        "AABB",         "Proximity through an axis-aligned bounding box toward it's center"),
-        ('SPHERE',      "Sphere",       "Proximity through a sphere toward it's center")
+        ('AABB',        'AABB',         "Proximity through an axis-aligned bounding box toward it's center"),
+        ('SPHERE',      'Sphere',       "Proximity through a sphere toward it's center")
     )
 
     itemGameIDEnumItems = (
-        ('SOLO',        "Solo",         "Free-for-all gametypes"),
-        ('TEAM',        "Team",         "Team oriented gametypes")
+        ('SOLO',        'Solo',         "Free-for-all gametypes"),
+        ('TEAM',        'Team',         "Team oriented gametypes")
     )
 
     itemTypeEnumItems = (
-        ('HP',          "Health",       "Refills a portion of the player's health"),
-        ('AP',          "Armor",        "Refills a portion of the player's armor"),
-        ('BULLET',      "Bullet",       "Grants some ammunition for the player's gun")
+        ('HP',          'Health',       "Refills a portion of the player's health"),
+        ('AP',          'Armor',        "Refills a portion of the player's armor"),
+        ('BULLET',      'Bullet',       "Grants some ammunition for the player's gun")
     )
 
     def onGetDummyType(self):       self.ensureAll(); return enumIdentifierToIndex(self, self['dummyType'],         self.dummyTypeEnumItems)
@@ -1843,7 +1843,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     def onSetItemTimer(self, value):        self.ensureAll(); self['itemTimer']         = value
 
     dummyType: EnumProperty(
-        name = "Type",
+        name = 'Type',
         items = dummyTypeEnumItems,
         update = onUpdate,
         get = onGetDummyType,
@@ -1851,7 +1851,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     spawnType: EnumProperty(
-        name = "Spawn Type",
+        name = 'Spawn Type',
         items = spawnTypeEnumItems,
         update = onUpdate,
         get = onGetSpawnType,
@@ -1859,7 +1859,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     spawnIndex: IntProperty(
-        name = "Spawn Index",
+        name = 'Spawn Index',
         default = 1,
         min = 1,
         max = 999,
@@ -1872,7 +1872,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     spawnTeamID: IntProperty(
-        name = "Team ID",
+        name = 'Team ID',
         default = 1,
         min = 1,
         max = 9,
@@ -1885,7 +1885,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     spawnEnemyType: EnumProperty(
-        name = "Enemy Type",
+        name = 'Enemy Type',
         items = spawnEnemyTypeEnumItems,
         update = onUpdate,
         get = onGetSpawnEnemyType,
@@ -1893,7 +1893,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     spawnBlitzType: EnumProperty(
-        name = "Blitzkrieg Type",
+        name = 'Blitzkrieg Type',
         items = spawnBlitzTypeEnumItems,
         update = onUpdate,
         get = onGetSpawnBlitzType,
@@ -1901,16 +1901,16 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     soundFileName: StringProperty(
-        name = "Filename",
-        default = "",
-        subtype = "FILE_NAME",
+        name = 'Filename',
+        default = '',
+        subtype = 'FILE_NAME',
         update = onUpdate,
         get = onGetSoundFileName,
         set = onSetSoundFileName
     )
 
     soundSpace: EnumProperty(
-        name = "Space",
+        name = 'Space',
         items = soundSpaceEnumItems,
         update = onUpdate,
         get = onGetSoundSpace,
@@ -1918,7 +1918,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     soundShape: EnumProperty(
-        name = "Shape",
+        name = 'Shape',
         items = soundShapeEnumItems,
         update = onUpdate,
         get = onGetSoundShape,
@@ -1926,7 +1926,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     itemGameID: EnumProperty(
-        name = "Game ID",
+        name = 'Game ID',
         items = itemGameIDEnumItems,
         update = onUpdate,
         get = onGetItemGameID,
@@ -1934,7 +1934,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     itemType: EnumProperty(
-        name = "Item Type",
+        name = 'Item Type',
         items = itemTypeEnumItems,
         update = onUpdate,
         get = onGetItemType,
@@ -1942,7 +1942,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     itemID: IntProperty(
-        name = "Item ID",
+        name = 'Item ID',
         default = 1,
         min = 1,
         max = 2**31 - 1,
@@ -1955,7 +1955,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     itemTimer: IntProperty(
-        name = "Timer",
+        name = 'Timer',
         default = 30000,
         min = 0,
         max = 2**31 - 1,
@@ -1977,12 +1977,12 @@ class GZRS2ObjectProperties(PropertyGroup):
         del bpy.types.Object.gzrs2
 
 class GZRS2_PT_Realspace_Object(Panel):
-    bl_space_type = "PROPERTIES"
-    bl_region_type = "WINDOW"
-    bl_label = "Realspace"
-    bl_idname = "OBJECT_PT_realspace"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_label = 'Realspace'
+    bl_idname = 'OBJECT_PT_realspace'
     bl_description = "Custom properties for Realspace engine objects."
-    bl_context = "data"
+    bl_context = 'data'
     bl_options = { 'DEFAULT_CLOSED' }
 
     @classmethod
@@ -2002,21 +2002,21 @@ class GZRS2_PT_Realspace_Object(Panel):
 
         column = layout.column()
 
-        if props.dummyType == "SPAWN":
+        if props.dummyType == 'SPAWN':
             column.prop(props, 'spawnType')
             column.prop(props, 'spawnIndex')
 
-            if props.spawnType == "TEAM":
+            if props.spawnType == 'TEAM':
                 column.prop(props, 'spawnTeamID')
-            elif props.spawnType == "NPC":
+            elif props.spawnType == 'NPC':
                 column.prop(props, 'spawnEnemyType')
-            elif props.spawnType == "BLITZ":
+            elif props.spawnType == 'BLITZ':
                 column.prop(props, 'spawnBlitzType')
-        elif props.dummyType == "SOUND":
+        elif props.dummyType == 'SOUND':
             column.prop(props, 'soundFileName')
             column.prop(props, 'soundSpace')
             column.prop(props, 'soundShape')
-        elif props.dummyType == "ITEM":
+        elif props.dummyType == 'ITEM':
             column.prop(props, 'itemGameID')
             column.prop(props, 'itemType')
             column.prop(props, 'itemID')
@@ -2025,7 +2025,7 @@ class GZRS2_PT_Realspace_Object(Panel):
 # TODO: Camera panel won't show, not even calling poll?
 class GZRS2CameraProperties(PropertyGroup):
     cameraIndex: IntProperty(
-        name = "Spawn Index",
+        name = 'Spawn Index',
         default = 1,
         min = 1,
         max = 999,
@@ -2035,9 +2035,9 @@ class GZRS2CameraProperties(PropertyGroup):
     )
 
     cameraType: EnumProperty(
-        name = "Type",
-        items = (('WAIT',       "Wait",         "Camera position between rounds, mainly used for Team Deathmatch, Duel etc"),
-                 ('TRACK',      "Track",        "Camera position along a track, mainly used on the character select screen"))
+        name = 'Type',
+        items = (('WAIT',       'Wait',         "Camera position between rounds, mainly used for Team Deathmatch, Duel etc"),
+                 ('TRACK',      'Track',        "Camera position along a track, mainly used on the character select screen"))
     )
 
     @classmethod
@@ -2049,17 +2049,17 @@ class GZRS2CameraProperties(PropertyGroup):
         del bpy.types.Camera.gzrs2
 
 class GZRS2_PT_Realspace_Camera(Panel):
-    bl_space_type = "PROPERTIES"
-    bl_region_type = "WINDOW"
-    bl_label = "Realspace"
-    bl_idname = "CAMERA_PT_realspace"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_label = 'Realspace'
+    bl_idname = 'CAMERA_PT_realspace'
     bl_description = "Custom properties for Realspace engine cameras."
-    bl_context = "data"
+    bl_context = 'data'
     bl_options = { 'DEFAULT_CLOSED' }
 
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None and context.active_object.type == "CAMERA"
+        return context.active_object is not None and context.active_object.type == 'CAMERA'
 
     def draw(self, context):
         layout = self.layout
@@ -2192,12 +2192,12 @@ class GZRS2MaterialProperties(PropertyGroup):
         del bpy.types.Material.gzrs2
 
 class GZRS2_PT_Realspace_Material(Panel):
-    bl_space_type = "PROPERTIES"
-    bl_region_type = "WINDOW"
-    bl_label = "Realspace"
-    bl_idname = "MATERIAL_PT_realspace"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_label = 'Realspace'
+    bl_idname = 'MATERIAL_PT_realspace'
     bl_description = "Custom properties for Realspace engine materials."
-    bl_context = "material"
+    bl_context = 'material'
     bl_options = { 'DEFAULT_CLOSED' }
 
     @classmethod
@@ -2262,64 +2262,64 @@ class GZRS2_PT_Realspace_Material(Panel):
         box = layout.box()
         column = box.column()
         row = column.row()
-        row.label(text = 'Principled BSDF:')
+        row.label(text = "Principled BSDF:")
         row.label(text = shaderLabel)
         row = column.row()
-        row.label(text = 'Object Info:')
+        row.label(text = "Object Info:")
         row.label(text = infoLabel)
         row = column.row()
-        row.label(text = 'Transparent Shader:')
+        row.label(text = "Transparent Shader:")
         row.label(text = transparentLabel)
         row = column.row()
-        row.label(text = 'Mix Shader:')
+        row.label(text = "Mix Shader:")
         row.label(text = mixLabel)
         row = column.row()
-        row.label(text = 'Clip Math:')
+        row.label(text = "Clip Math:")
         row.label(text = clipLabel)
         row = column.row()
-        row.label(text = 'Add Shader:')
+        row.label(text = "Add Shader:")
         row.label(text = addLabel)
 
         box = layout.box()
         column = box.column()
         row = column.row()
-        row.label(text = 'Texpath:')
+        row.label(text = "Texpath:")
         row.label(text = texpath if shaderValid else 'N/A')
         row = column.row()
-        row.label(text = 'Alphapath:')
+        row.label(text = "Alphapath:")
         row.label(text = alphapath if shaderValid else 'N/A')
 
         box = layout.box()
         column = box.column()
         row = column.row()
-        row.label(text = 'Twosided:')
+        row.label(text = "Twosided:")
         row.label(text = str(twosided) if shaderValid else 'N/A')
         row = column.row()
-        row.label(text = 'Additive:')
+        row.label(text = "Additive:")
         row.label(text = str(additive) if shaderValid else 'N/A')
         row = column.row()
-        row.label(text = 'Alphatest:')
+        row.label(text = "Alphatest:")
         row.label(text = str(alphatest) if shaderValid else 'N/A')
         row = column.row()
-        row.label(text = 'Use Opacity:')
+        row.label(text = "Use Opacity:")
         row.label(text = str(useopacity) if shaderValid else 'N/A')
 
         box = layout.box()
         column = box.column()
         row = column.row()
-        row.label(text = 'Is Effect:')
+        row.label(text = "Is Effect:")
         row.label(text = str(isEffect) if shaderValid else 'N/A')
         row = column.row()
-        row.label(text = 'Is Animated:')
+        row.label(text = "Is Animated:")
         row.label(text = str(isAniTex) if shaderValid else 'N/A')
         row = column.row()
-        row.label(text = 'Frame Count:')
+        row.label(text = "Frame Count:")
         row.label(text = str(frameCount) if shaderValid and success else 'N/A')
         row = column.row()
-        row.label(text = 'Frame Speed:')
+        row.label(text = "Frame Speed:")
         row.label(text = str(frameSpeed) if shaderValid and success else 'N/A')
         row = column.row()
-        row.label(text = 'Frame Gap:')
+        row.label(text = "Frame Gap:")
         row.label(text = str(frameGap) if shaderValid and success else 'N/A')
 
 classes = (
@@ -2366,18 +2366,18 @@ classes = (
 )
 
 def menu_func_import(self, context):
-    self.layout.operator(ImportGZRS2.bl_idname, text = "GunZ RS2 (.rs)")
-    self.layout.operator(ImportGZRS3.bl_idname, text = "GunZ RS3 (.scene.xml/.prop.xml)")
-    self.layout.operator(ImportRSELU.bl_idname, text = "GunZ ELU (.elu)")
-    self.layout.operator(ImportRSANI.bl_idname, text = "GunZ ANI (.ani)")
-    self.layout.operator(ImportRSCOL.bl_idname, text = "GunZ COL (.col/.cl2)")
-    self.layout.operator(ImportRSNAV.bl_idname, text = "GunZ NAV (.nav)")
-    self.layout.operator(ImportRSLM.bl_idname, text = "GunZ LM (.lm)")
+    self.layout.operator(ImportGZRS2.bl_idname, text = 'GunZ RS2 (.rs)')
+    self.layout.operator(ImportGZRS3.bl_idname, text = 'GunZ RS3 (.scene.xml/.prop.xml)')
+    self.layout.operator(ImportRSELU.bl_idname, text = 'GunZ ELU (.elu)')
+    self.layout.operator(ImportRSANI.bl_idname, text = 'GunZ ANI (.ani)')
+    self.layout.operator(ImportRSCOL.bl_idname, text = 'GunZ COL (.col/.cl2)')
+    self.layout.operator(ImportRSNAV.bl_idname, text = 'GunZ NAV (.nav)')
+    self.layout.operator(ImportRSLM.bl_idname, text = 'GunZ LM (.lm)')
 
 def menu_func_export(self, context):
-    self.layout.operator(ExportRSELU.bl_idname, text = "GunZ ELU (.elu)")
-    self.layout.operator(ExportRSNAV.bl_idname, text = "GunZ NAV (.nav)")
-    self.layout.operator(ExportRSLM.bl_idname, text = "GunZ LM (.lm)")
+    self.layout.operator(ExportRSELU.bl_idname, text = 'GunZ ELU (.elu)')
+    self.layout.operator(ExportRSNAV.bl_idname, text = 'GunZ NAV (.nav)')
+    self.layout.operator(ExportRSLM.bl_idname, text = 'GunZ LM (.lm)')
 
 def register():
     for cls in classes:
@@ -2396,5 +2396,5 @@ def unregister():
     cleanse_modules()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     register()

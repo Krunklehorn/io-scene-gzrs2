@@ -155,7 +155,7 @@ def importAni(self, context):
             for k in range(node.vertexKeyCount):
                 frame = int(round(node.vertexTicks[k] / ANI_TICKS_PER_FRAME))
 
-                currShape = blObj.shape_key_add(name = f'ani{ frame }', from_mix = False)
+                currShape = blObj.shape_key_add(name = f"ani{ frame }", from_mix = False)
                 shapePoints = currShape.points
 
                 for v, i in vertexRange:
@@ -322,7 +322,7 @@ def importAni(self, context):
             poseMats[meshName] = baseMat
             parentWorld = poseMats[blPoseBone.parent.name] if blPoseBone.parent is not None else Matrix.Identity(4)
 
-            pathPrefix = f'pose.bones[\"{ meshName }\"].'
+            pathPrefix = f"pose.bones[\"{ meshName }\"]."
             locPath = pathPrefix + 'location'
             rotPath = pathPrefix + 'rotation_quaternion'
 
