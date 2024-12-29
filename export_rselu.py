@@ -288,7 +288,7 @@ def exportElu(self, context):
         ambient = (0.588235, 0.588235, 0.588235, 1.0)
         diffuse = (0.588235, 0.588235, 0.588235, 1.0)
         specular = (0.9, 0.9, 0.9, 1.0)
-        power = 0.0
+        exponent = 0.0
 
         texpath = ''
         alphapath = ''
@@ -312,10 +312,7 @@ def exportElu(self, context):
             ambient = (blMat.gzrs2.ambient[0], blMat.gzrs2.ambient[1], blMat.gzrs2.ambient[2], 1.0)
             diffuse = (blMat.gzrs2.diffuse[0], blMat.gzrs2.diffuse[1], blMat.gzrs2.diffuse[2], 1.0)
             specular = (blMat.gzrs2.specular[0], blMat.gzrs2.specular[1], blMat.gzrs2.specular[2], 1.0)
-            power = (1 - shader.inputs[2].default_value) * 100 # Roughness
-
-            if version <= ELU_5002 and power == 0:
-                power = 20
+            exponent = blMat.gzrs2.exponent
 
             texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid)
             texpath = getValidImageNodePath(self, texture, maxPathLength, matID, matName)
@@ -345,7 +342,7 @@ def exportElu(self, context):
             print("Ambient:            ({:>5.03f}, {:>5.03f}, {:>5.03f}, {:>5.03f})".format(*ambient))
             print("Diffuse:            ({:>5.03f}, {:>5.03f}, {:>5.03f}, {:>5.03f})".format(*diffuse))
             print("Specular:           ({:>5.03f}, {:>5.03f}, {:>5.03f}, {:>5.03f})".format(*specular))
-            print(f"Power:              { power }")
+            print(f"Exponent:           { exponent }")
             print()
             print(f"Sub Mat Count:      { subMatCount }")
             print(f"Texture path:       { texpath }")
@@ -374,7 +371,7 @@ def exportElu(self, context):
                     print()
 
         eluMats.append(EluMaterialExport(matID, subMatID,
-                                         ambient, diffuse, specular, power,
+                                         ambient, diffuse, specular, exponent,
                                          subMatCount, texpath, alphapath,
                                          twosided, additive, alphatest))
 
@@ -750,7 +747,7 @@ def exportElu(self, context):
         writeVec4(file, eluMat.ambient)
         writeVec4(file, eluMat.diffuse)
         writeVec4(file, eluMat.specular)
-        writeFloat(file, eluMat.power)
+        writeFloat(file, eluMat.exponent)
 
         writeUInt(file, eluMat.subMatCount)
 

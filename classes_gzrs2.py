@@ -289,7 +289,7 @@ class EluMaterial:
     ambient:            Vector = (0, 0, 0, 0)
     diffuse:            Vector = (0, 0, 0, 0)
     specular:           Vector = (0, 0, 0, 0)
-    power:              float = 0.0
+    exponent:           float = 0.0
     subMatCount:        int = 0
     texpath:            str = ""
     alphapath:          str = ""
@@ -457,7 +457,7 @@ class EluMaterialExport:
     ambient:            Vector = (0, 0, 0, 0)
     diffuse:            Vector = (0, 0, 0, 0)
     specular:           Vector = (0, 0, 0, 0)
-    power:              float = 0.0
+    exponent:           float = 0.0
     subMatCount:        int = 0
     texpath:            str = ""
     alphapath:          str = ""

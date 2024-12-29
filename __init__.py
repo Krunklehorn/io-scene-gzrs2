@@ -37,7 +37,7 @@ else:
     import bpy
     from bpy.types import Operator, Panel, PropertyGroup, AddonPreferences
     from bpy_extras.io_utils import ImportHelper, ExportHelper
-    from bpy.props import IntProperty, BoolProperty, FloatVectorProperty, StringProperty, EnumProperty, PointerProperty
+    from bpy.props import IntProperty, BoolProperty, FloatProperty, FloatVectorProperty, StringProperty, EnumProperty, PointerProperty
 
 def cleanse_modules():
     import sys
@@ -2173,6 +2173,16 @@ class GZRS2MaterialProperties(PropertyGroup):
         size = 3
     )
 
+    exponent: FloatProperty(
+        name = 'Exponent',
+        default = 0.0,
+        min = 0.0,
+        max = 100.0,
+        soft_min = 0.0,
+        soft_max = 100.0,
+        subtype = 'UNSIGNED'
+    )
+
     @classmethod
     def register(cls):
         bpy.types.Material.gzrs2 = PointerProperty(type = cls)
@@ -2244,6 +2254,7 @@ class GZRS2_PT_Realspace_Material(Panel):
         column.prop(props, 'ambient')
         column.prop(props, 'diffuse')
         column.prop(props, 'specular')
+        column.prop(props, 'exponent')
 
         column = layout.column()
         column.operator(GZRS2_OT_Apply_Material_Preset.bl_idname, text = "Change Preset")

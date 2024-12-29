@@ -551,7 +551,6 @@ def setupMatBase(name, *, blMat = None, shader = None, output = None, info = Non
     shader.location = (20, 300)
     shader.select = False
 
-    shader.inputs[2].default_value = 0.5 # Roughness
     shader.inputs[12].default_value = 0.0 # Specular IOR Level
     shader.inputs[27].default_value = 0.0 # Emission Strength
 
@@ -867,7 +866,7 @@ def setupEluMat(self, m, eluMat, state):
     ambient = eluMat.ambient
     diffuse = eluMat.diffuse
     specular = eluMat.specular
-    power = eluMat.power
+    exponent = eluMat.exponent
     alphatest = eluMat.alphatest
     useopacity = eluMat.useopacity
     additive = eluMat.additive
@@ -885,7 +884,7 @@ def setupEluMat(self, m, eluMat, state):
         if not compareColors(diffuse,    eluMat2.diffuse):   continue
         if not compareColors(specular,   eluMat2.specular):  continue
 
-        if not math.isclose(power,       eluMat2.power,      rel_tol = ELU_VALUE_THRESHOLD): continue
+        if not math.isclose(exponent,    eluMat2.exponent,   rel_tol = ELU_VALUE_THRESHOLD): continue
         if not math.isclose(alphatest,   eluMat2.alphatest,  rel_tol = ELU_VALUE_THRESHOLD): continue
 
         if useopacity   != eluMat2.useopacity:  continue
@@ -903,8 +902,6 @@ def setupEluMat(self, m, eluMat, state):
     matName = texName or f"Material_{ m }"
     blMat, tree, links, nodes, shader, _, _, transparent, mix = setupMatBase(matName)
 
-    shader.inputs[2].default_value = 1.0 - (power / 100.0) # Roughness
-
     blMat.gzrs2.matID = matID
     blMat.gzrs2.isBase = subMatID == -1
     blMat.gzrs2.subMatID = subMatID
@@ -913,6 +910,7 @@ def setupEluMat(self, m, eluMat, state):
     blMat.gzrs2.ambient = (ambient[0], ambient[1], ambient[2])
     blMat.gzrs2.diffuse = (diffuse[0], diffuse[1], diffuse[2])
     blMat.gzrs2.specular = (specular[0], specular[1], specular[2])
+    blMat.gzrs2.exponent = eluMat.exponent
 
     if texBase and isValidTextureName(texBase):
         success, texpath, loadFake = textureSearchLoadFake(self, texBase, texDir, False, state)

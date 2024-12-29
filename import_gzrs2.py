@@ -323,8 +323,6 @@ def importRS2(self, context):
         xmlRsMatName = xmlRsMat.get('name', f"Material_{ m }")
         blMat, tree, links, nodes, shader, _, _, transparent, mix = setupMatBase(xmlRsMatName)
 
-        shader.inputs[12].default_value = 0.0 # Specular IOR Level
-
         blMat.gzrs2.matID = m
 
         processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state)

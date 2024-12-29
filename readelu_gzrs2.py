@@ -124,17 +124,17 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
         ambient = readVec4(file)
         diffuse = readVec4(file)
         specular = readVec4(file)
-        power = readFloat(file)
+        exponent = readFloat(file)
 
         if version <= ELU_5002:
-            if power == 20:
-                power = 0
+            if exponent == 20.0:
+                exponent = 0.0
 
         if state.logEluMats:
             print("Ambient:            ({:>5.03f}, {:>5.03f}, {:>5.03f}, {:>5.03f})".format(*ambient))
             print("Diffuse:            ({:>5.03f}, {:>5.03f}, {:>5.03f}, {:>5.03f})".format(*diffuse))
             print("Specular:           ({:>5.03f}, {:>5.03f}, {:>5.03f}, {:>5.03f})".format(*specular))
-            print(f"Power:              { power }")
+            print(f"Exponent:           { exponent }")
             print()
 
         subMatCount = readUInt(file)
@@ -201,7 +201,7 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
                     print()
 
         eluMat = EluMaterial(path, matID, subMatID,
-                             ambient, diffuse, specular, power,
+                             ambient, diffuse, specular, exponent,
                              subMatCount, texpath, alphapath,
                              twosided, additive, alphatest, useopacity,
                              texBase, texName, texExt, texDir,
