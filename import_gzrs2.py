@@ -553,7 +553,7 @@ def importRS2(self, context):
                 for substrings, token, expectedCount in RS_DUMMY_NAME_SPLIT_DATA:
                     if nameLower.startswith(substrings):
                         nameSplits = nameLower.split(token)
-                        splitCount = len(splits)
+                        splitCount = len(nameSplits)
                         splitCountError = splitCount != expectedCount
                         break
 
@@ -575,7 +575,8 @@ def importRS2(self, context):
             else:                                                           objName = f"{ state.filename }_Dummy_{ name }"
 
             if nameLower.startswith(('camera_pos', 'wait_pos')):
-                blObj = bpy.data.objects.new(objName, 'CAMERA')
+                blData = bpy.data.cameras.new(objName)
+                blObj = bpy.data.objects.new(objName, blData)
                 props = blObj.data.gzrs2
             else:
                 blObj = bpy.data.objects.new(objName, None)
