@@ -503,7 +503,8 @@ def exportElu(self, context):
 
             for blMatSlot in eluMeshObj.material_slots:
                 if blMatSlot.material is None:
-                    continue
+                    self.report({ 'ERROR' }, f"GZRS2: Mesh with empty material slot! { meshName }")
+                    return { 'CANCELLED' }
 
                 if matID is None:
                     matID = blMatSlot.material.gzrs2.matID
