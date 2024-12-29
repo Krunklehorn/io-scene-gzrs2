@@ -520,7 +520,10 @@ def importRS2(self, context):
         self.report({ 'INFO' }, f"GZRS2: Valid bones were found in some props: { len(state.gzrsValidBones) }")
 
     if state.doDummies:
-        i = 0
+        reorientLocal = Matrix.Rotation(math.radians(90.0), 4, 'X')
+
+        s = 1
+        c = 1
 
         for d, dummy in enumerate(state.xmlDums):
             if d in propDums:
@@ -533,10 +536,8 @@ def importRS2(self, context):
                 continue
 
             dir = dummy['DIRECTION']
-            up = Vector((0, 0, 1))
-            right = dir.cross(up)
-            up = right.cross(dir)
-            rot = Matrix((right, dir, up)).to_euler()
+
+            rot = dir.to_track_quat('Y', 'Z').to_matrix()
 
             RS_DUMMY_NAME_SPLIT_DATA = (
                 ((  'spawn_solo', 'spawn_team'  ), '_', 3),
@@ -567,22 +568,30 @@ def importRS2(self, context):
 
                 nameIndex = int(nameSuffix)
 
-            if nameLower.startswith((   'spawn_solo',   'spawn_team',
-                                        'spawn_npc',    'spawn_blitz')):    objName = f"{ state.filename }_Spawn{ i }"
-            elif nameLower.startswith(( 'camera_pos',   'wait_pos')):       objName = f"{ state.filename }_Camera{ i }"
-            else:                                                           objName = f"{ state.filename }_Dummy_{ name }"
+            # TODO: Ugly code, pull these out to separate lists
+            if nameLower.startswith(('spawn_solo', 'spawn_team', 'spawn_npc', 'spawn_blitz')):
+                objName = f"{ state.filename }_Spawn{ s }"
+                s += 1
+            elif nameLower.startswith(('camera_pos', 'wait_pos')):
+                objName = f"{ state.filename }_Camera{ c }"
+                c += 1
+            else:
+                objName = f"{ state.filename }_Dummy_{ name }"
 
             if nameLower.startswith(('camera_pos', 'wait_pos')):
                 blData = bpy.data.cameras.new(objName)
                 blObj = bpy.data.objects.new(objName, blData)
+                blObj.location = dummy['POSITION']
+                blObj.rotation_euler = (rot.to_4x4() @ reorientLocal).to_euler()
+
                 props = blObj.data.gzrs2
             else:
                 blObj = bpy.data.objects.new(objName, None)
                 blObj.empty_display_type = 'ARROWS'
-                props = blObj.gzrs2
+                blObj.location = dummy['POSITION']
+                blObj.rotation_euler = rot.to_euler()
 
-            blObj.location = dummy['POSITION']
-            blObj.rotation_euler = rot
+                props = blObj.gzrs2
 
             if nameLower.startswith('spawn_solo'):
                 props.dummyType = 'SPAWN'
@@ -625,8 +634,6 @@ def importRS2(self, context):
 
             state.blDummyObjs.append(blObj)
             rootDummies.objects.link(blObj)
-
-            i += 1
 
     skippedSounds = []
 

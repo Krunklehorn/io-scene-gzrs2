@@ -22,6 +22,7 @@ def parseVec3(data, nodeName, convertUnits, flipY):
     vec = Vector((float(s) for s in data.split(' ')))
     if nodeName in ['POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT'] and convertUnits: vec *= 0.01
     if flipY and nodeName in ['POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT']: vec.y = -vec.y
+    if nodeName in ['DIRECTION', 'UP']: vec.normalize()
 
     return vec
 
@@ -29,6 +30,7 @@ def parseXYZ(node, nodeName, convertUnits, flipY):
     vec = Vector((float(node.getAttribute('x')), float(node.getAttribute('y')), float(node.getAttribute('z'))))
     if nodeName in ['POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT'] and convertUnits: vec *= 0.01
     if flipY and nodeName in ['POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT']: vec.y = -vec.y
+    if nodeName in ['DIRECTION', 'UP']: vec.normalize()
 
     return vec
 
