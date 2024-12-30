@@ -1163,9 +1163,9 @@ class ImportRSCOL(Operator, ImportHelper):
     )
 
     doCleanup: BoolProperty(
-        name = 'Cleanup (EXPERIMENTAL)',
+        name = 'Cleanup',
         description = "A combination of knife intersection, three types of dissolve, merge by distance, tris-to-quads, and hole filling",
-        default = False
+        default = True
     )
 
     logColHeaders: BoolProperty(

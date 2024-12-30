@@ -779,20 +779,20 @@ def importRS2(self, context):
                 props = blFlagObj.data.gzrs2
                 props.meshSubtype = 'FLAG'
 
-                if 'DIRECTION' in flag:             props.flagDirection     = flag['DIRECTION']
-                if 'POWER' in flag:                 props.flagPower         = flag['POWER']
+                if 'DIRECTION'      in flag:            props.flagDirection     = flag['DIRECTION']
+                if 'POWER'          in flag:            props.flagPower         = flag['POWER']
 
                 for windtype in flag['windtypes']:
-                    if 'TYPE' in windtype:          props.flagWindType      = dataOrFirst(FLAG_WINDTYPE_DATA, windtype['TYPE'])
-                    if 'DELAY' in windtype:         props.flagWindDelay     = windtype['DELAY']
+                    if 'TYPE'       in windtype:        props.flagWindType      = dataOrFirst(FLAG_WINDTYPE_DATA, windtype['TYPE'], 0)
+                    if 'DELAY'      in windtype:        props.flagWindDelay     = windtype['DELAY']
 
                     # TODO: Multiple windtype data
                     continue
 
                 for limit in flag['limits']:
-                    if 'AXIS'       in limit: props.flagLimitAxis       = dataOrFirst(FLAG_LIMIT_AXIS_DATA, limit['AXIS'])
-                    if 'POSITION'   in limit: props.flagLimitOffset     = limit['POSITION']
-                    if 'COMPARE'    in limit: props.flagLimitCompare    = dataOrFirst(FLAG_LIMIT_COMPARE_DATA, limit['AXIS'])
+                    if 'AXIS'       in limit:           props.flagLimitAxis     = dataOrFirst(FLAG_LIMIT_AXIS_DATA, limit['AXIS'], 0)
+                    if 'POSITION'   in limit:           props.flagLimitOffset   = limit['POSITION']
+                    if 'COMPARE'    in limit:           props.flagLimitCompare  = dataOrFirst(FLAG_LIMIT_COMPARE_DATA, limit['AXIS'], 0)
 
                     # TODO: Multiple limit data
                     continue
@@ -829,8 +829,8 @@ def importRS2(self, context):
     if doExtras:
         if state.doCollision:
             colName = f"{ state.filename }_Collision"
-            blColObj = setupColMesh(colName, state)
-            rootExtras.objects.link(blColObj)
+            colExt = os.path.basename(colpath).split(os.extsep)[-1].lower()
+            blColObj = setupColMesh(colName, rootExtras, context, colExt, state)
 
             for viewLayer in context.scene.view_layers:
                 blColObj.hide_set(True, view_layer = viewLayer)

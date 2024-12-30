@@ -15,9 +15,9 @@ def indexOrNone(list, i):
     try:        return list.index(i)
     except:     return None
 
-def dataOrFirst(list, i):
-    try:        return list[i][0]
-    except:     return list[0][0]
+def dataOrFirst(list, i, o):
+    try:        return list[i][o]
+    except:     return list[0][o]
 
 def enumIdentifierToIndex(self, identifier, items):
     for i, item in enumerate(items):
@@ -807,7 +807,7 @@ def getErrorMat(state):
 
     return blErrorMat
 
-def setupColMesh(name, state):
+def setupColMesh(name, collection, context, extension, state):
     blColMat = setupDebugMat(name, (1.0, 0.0, 1.0, 0.25))
 
     blColMesh = bpy.data.meshes.new(name)
@@ -828,6 +828,97 @@ def setupColMesh(name, state):
     state.blColObj = blColObj
 
     blColObj.data.materials.append(blColMat)
+
+    collection.objects.link(blColObj)
+
+    for viewLayer in context.scene.view_layers:
+        blColObj.hide_set(False, view_layer = viewLayer)
+        viewLayer.objects.active = blColObj
+
+    if state.doCleanup and state.logCleanup:
+        print()
+        print("=== Col Mesh Cleanup ===")
+        print()
+
+    if state.doCleanup:
+        reportCount = 0
+
+        bpy.ops.object.select_all(action = 'DESELECT')
+        blColObj.select_set(True)
+        bpy.ops.object.select_all(action = 'DESELECT')
+
+        bpy.ops.object.mode_set(mode = 'EDIT')
+
+        bpy.ops.mesh.select_mode(type = 'VERT')
+        bpy.ops.mesh.select_all(action = 'SELECT')
+
+        reportCount += 3
+
+        def subCleanup():
+            nonlocal reportCount
+
+            for _ in range(10):
+                bpy.ops.mesh.dissolve_degenerate()
+                bpy.ops.mesh.delete_loose()
+                bpy.ops.mesh.select_all(action = 'SELECT')
+                bpy.ops.mesh.remove_doubles(threshold = 0.0001)
+                reportCount += 4
+
+        def cleanupFunc():
+            nonlocal reportCount
+
+            if extension == 'col':
+                bpy.ops.mesh.intersect(mode = 'SELECT', separate_mode = 'ALL', threshold = 0.0001, solver = 'FAST')
+                bpy.ops.mesh.select_all(action = 'SELECT')
+                reportCount += 2
+
+                subCleanup()
+
+                bpy.ops.mesh.intersect(mode = 'SELECT', separate_mode = 'ALL')
+                bpy.ops.mesh.select_all(action = 'SELECT')
+                reportCount += 2
+
+                subCleanup()
+
+                for _ in range(10):
+                    bpy.ops.mesh.fill_holes(sides = 0)
+                    bpy.ops.mesh.tris_convert_to_quads(face_threshold = 0.0174533, shape_threshold = 0.0174533)
+                    reportCount += 2
+
+                    subCleanup()
+
+                bpy.ops.mesh.vert_connect_nonplanar(angle_limit = 0.0174533)
+                reportCount += 1
+
+                subCleanup()
+            elif extension == 'cl2':
+                bpy.ops.mesh.remove_doubles(threshold = 0.0001, use_sharp_edge_from_normals = True)
+                bpy.ops.mesh.tris_convert_to_quads(face_threshold = 0.0174533, shape_threshold = 0.0174533)
+                reportCount += 2
+
+            bpy.ops.mesh.dissolve_limited(angle_limit = 0.0174533)
+            bpy.ops.mesh.delete_loose(use_faces = True)
+            bpy.ops.mesh.select_all(action = 'SELECT')
+            bpy.ops.mesh.normals_make_consistent(inside = True)
+            bpy.ops.mesh.select_all(action = 'DESELECT')
+            reportCount += 5
+
+            bpy.ops.object.mode_set(mode = 'OBJECT')
+
+        if state.logCleanup:
+            print(name)
+            cleanupFunc()
+            print()
+        else:
+            with redirect_stdout(state.silentIO):
+                cleanupFunc()
+
+        deleteInfoReports(reportCount, context)
+
+        blColMesh.gzrs2.meshType = 'COLLISION'
+
+    bpy.ops.object.select_all(action = 'DESELECT')
+    deleteInfoReports(1, context)
 
     return blColObj
 
