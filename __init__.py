@@ -1433,12 +1433,6 @@ class ExportRSELU(Operator, ExportHelper):
         default = False
     )
 
-    implicitEffects: BoolProperty(
-        name = 'Implicit Effects',
-        description = "Nullifies the Additive flag for Realspace2 file names containing '_ef' and object names containing either '_ef' or 'ef_'. Disable this to take manual control",
-        default = True
-    )
-
     logEluHeaders: BoolProperty(
         name = 'Elu Headers',
         description = "Log ELU header data",
@@ -1501,7 +1495,6 @@ class RSELU_PT_Export_Main(Panel):
         column.enabled = operator.selectedOnly
 
         layout.prop(operator, 'visibleOnly')
-        layout.prop(operator, 'implicitEffects')
 
 class RSELU_PT_Export_Logging(Panel):
     bl_space_type = 'FILE_BROWSER'

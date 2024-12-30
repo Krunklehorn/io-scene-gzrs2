@@ -48,7 +48,6 @@ def exportElu(self, context):
     state.selectedOnly = self.selectedOnly
     state.includeChildren = self.includeChildren and self.selectedOnly
     state.visibleOnly = self.visibleOnly
-    state.implicitEffects = self.implicitEffects
 
     if self.panelLogging:
         print()
@@ -330,9 +329,6 @@ def exportElu(self, context):
 
             if not success:
                 return { 'CANCELLED' }
-
-            if isEffect and state.implicitEffects:
-                additive = False
 
         if state.logEluMats:
             print(f"===== Material { m } =====")
