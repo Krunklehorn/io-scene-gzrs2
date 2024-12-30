@@ -361,6 +361,8 @@ def importRS2(self, context):
                 blBspMesh = bpy.data.meshes.new(bspMeshName)
                 blBspMeshObj = bpy.data.objects.new(bspMeshName, blBspMesh)
 
+                blBspMesh.gzrs2.meshType = 'RAW'
+
                 state.blBspMeshes.append(blBspMesh)
                 state.blBspMeshObjs.append(blBspMeshObj)
 
@@ -368,6 +370,8 @@ def importRS2(self, context):
 
             blOctMesh = bpy.data.meshes.new(octMeshName)
             blOctMeshObj = bpy.data.objects.new(octMeshName, blOctMesh)
+
+            blOctMesh.gzrs2.meshType = 'WORLD'
 
             state.blOctMeshes.append(blOctMesh)
             state.blOctMeshObjs.append(blOctMeshObj)
@@ -399,6 +403,8 @@ def importRS2(self, context):
     def setupUnifiedMesh(name, setupFunc, isBakeMesh = False):
         blMesh = bpy.data.meshes.new(name)
         blObj = bpy.data.objects.new(name, blMesh)
+
+        blMesh.gzrs2.meshType = 'RAW'
 
         meshMatIDs = setupFunc(self, -1, blMesh, state)
 
@@ -771,7 +777,7 @@ def importRS2(self, context):
 
                 blFlagObj = blMeshObj
                 props = blFlagObj.data.gzrs2
-                props.meshType = 'FLAG'
+                props.meshSubtype = 'FLAG'
 
                 if 'DIRECTION' in flag:             props.flagDirection     = flag['DIRECTION']
                 if 'POWER' in flag:                 props.flagPower         = flag['POWER']
@@ -858,6 +864,8 @@ def importRS2(self, context):
 
             blOccMesh = bpy.data.meshes.new(occName)
             blOccObj = bpy.data.objects.new(occName, blOccMesh)
+
+            blOccMesh.gzrs2.meshType = 'OCCLUSION'
 
             blOccMesh.from_pydata(occVerts, (), occFaces)
             blOccMesh.validate()

@@ -2139,8 +2139,23 @@ class GZRS2MeshProperties(PropertyGroup):
     # TODO: Custom sprite gizmos
     meshType: EnumProperty(
         name = 'Type',
-        items = (('NONE',       'None',         "No special properties for this mesh"),
-                 ('FLAG',       'Flag',         "Mesh is affected by wind forces"))
+        items = (
+            ('NONE',        'None',         "Not a Realspace mesh. Will not be exported"),
+            ('RAW',         'Raw',          "Freshly imported, may need modification. Will not be exported"),
+            ('WORLD',       'World',        "World mesh, lit statically, necessary for graphics, must be fully sealed with no leaks"),
+            ('COLLISION',   'Collision',    "Collision mesh, not visible, necessary for gameplay, must be fully sealed with no leaks"),
+            ('NAVIGATION',  'Navigation',   "Navigation mesh, not visible, only necessary for Quest mode"),
+            ('OCCLUSION',   'Occlusion',    "Occlusion planes, not visible, used to improve performance by skipping world and detail geometry"),
+            ('DETAIL',      'Detail',       "Detail mesh, lit dynamically, does not contribute to bsptree or octree data. Recorded in .rs.xml, exports to .elu")
+        )
+    )
+
+    meshSubtype: EnumProperty(
+        name = 'Subtype',
+        items = (
+            ('NONE',            'None',         "Mesh has no special properties"),
+            ('FLAG',            'Flag',         "Mesh is affected by wind forces")
+        )
     )
 
     flagDirection: IntProperty(
@@ -2229,14 +2244,17 @@ class GZRS2_PT_Realspace_Mesh(Panel):
 
         column = layout.column()
 
-        if props.meshType == 'FLAG':
-            column.prop(props, 'flagDirection')
-            column.prop(props, 'flagPower')
-            column.prop(props, 'flagWindType')
-            column.prop(props, 'flagWindDelay')
-            column.prop(props, 'flagLimitAxis')
-            column.prop(props, 'flagLimitOffset')
-            column.prop(props, 'flagLimitCompare')
+        if props.meshType == 'DETAIL':
+            column.prop(props, 'meshSubtype')
+
+            if props.meshSubtype == 'FLAG':
+                column.prop(props, 'flagDirection')
+                column.prop(props, 'flagPower')
+                column.prop(props, 'flagWindType')
+                column.prop(props, 'flagWindDelay')
+                column.prop(props, 'flagLimitAxis')
+                column.prop(props, 'flagLimitOffset')
+                column.prop(props, 'flagLimitCompare')
 
 class GZRS2CameraProperties(PropertyGroup):
     cameraIndex: IntProperty(

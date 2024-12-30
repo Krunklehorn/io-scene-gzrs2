@@ -813,6 +813,8 @@ def setupColMesh(name, state):
     blColMesh = bpy.data.meshes.new(name)
     blColObj = bpy.data.objects.new(name, blColMesh)
 
+    blColMesh.gzrs2.meshType = 'RAW'
+
     colFaces = tuple(tuple(range(i, i + 3)) for i in range(0, len(state.colVerts), 3))
 
     blColMesh.from_pydata(state.colVerts, (), colFaces)
@@ -840,6 +842,8 @@ def setupNavMesh(state):
 
     blNavFacesObj = bpy.data.objects.new(facesName, blNavFaces)
     blNavLinksObj = bpy.data.objects.new(linksName, blNavLinks)
+
+    blNavFaces.gzrs2.meshType = 'NAVIGATION'
 
     blNavFaces.from_pydata(state.navVerts, (), state.navFaces)
     blNavFaces.validate()
@@ -1182,6 +1186,8 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
 
     blMesh = bpy.data.meshes.new(meshName)
     blMeshObj = bpy.data.objects.new(meshName, blMesh)
+
+    blMesh.gzrs2.meshType = 'DETAIL'
 
     for face in eluMesh.faces:
         degree = face.degree
