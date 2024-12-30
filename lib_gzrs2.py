@@ -7,9 +7,17 @@ from mathutils import Vector, Matrix
 
 from .constants_gzrs2 import *
 
+def getOrNone(list, i):
+    try:        return list[i]
+    except:     return None
+
 def indexOrNone(list, i):
     try:        return list.index(i)
     except:     return None
+
+def dataOrFirst(list, i):
+    try:        return list[i][0]
+    except:     return list[0][0]
 
 def enumIdentifierToIndex(self, identifier, items):
     for i, item in enumerate(items):

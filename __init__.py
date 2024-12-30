@@ -1,5 +1,7 @@
 import os
 
+from mathutils import Vector
+
 from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rsnav, import_rslm, import_rsani
 from . import export_rselu, export_rsnav, export_rslm
 
@@ -406,9 +408,9 @@ class ImportGZRS2(Operator, ImportHelper):
         default = True
     )
 
-    doItems: BoolProperty(
-        name = 'Items',
-        description = "Import item particles",
+    doMisc: BoolProperty(
+        name = 'Misc',
+        description = "Import item, flag and smoke data",
         default = True
     )
 
@@ -626,7 +628,7 @@ class GZRS2_PT_Import_Main(Panel):
 
         column = layout.column()
         column.prop(operator, 'doSounds')
-        column.prop(operator, 'doItems')
+        column.prop(operator, 'doMisc')
         column.prop(operator, 'doBounds')
         column.enabled = operator.meshMode != 'BAKE'
 
@@ -1740,16 +1742,18 @@ class GZRS2ObjectProperties(PropertyGroup):
         if 'itemType'           not in self: self['itemType']           = 'HP'
         if 'itemID'             not in self: self['itemID']             = 1
         if 'itemTimer'          not in self: self['itemTimer']          = 30000
+        if 'smokeType'          not in self: self['smokeType']          = 'SS'
+        if 'smokeDirection'     not in self: self['smokeDirection']     = 0
+        if 'smokePower'         not in self: self['smokePower']         = 0.0
+        if 'smokeDelay'         not in self: self['smokeDelay']         = 100
+        if 'smokeSize'          not in self: self['smokeSize']          = 40.0
+        if 'smokeLife'          not in self: self['smokeLife']          = 1.0
+        if 'smokeToggleMinTime' not in self: self['smokeToggleMinTime'] = 2.0
 
     def onUpdate(self, context):
         blObj = context.active_object
 
-        if blObj is None:
-            return
-
-        blData = blObj.data
-
-        if blData is not None:
+        if blObj is None or blObj.data is not None:
             return
 
         props = blObj.gzrs2
@@ -1770,7 +1774,8 @@ class GZRS2ObjectProperties(PropertyGroup):
         ('SPAWN',       'Spawn',        "Spawn location for characters"),
         ('SUN',         'Sun',          "Sun spot location. Not an actual light source"),
         ('SOUND',       'Sound',        "Ambient sound, based on proximity to a sphere or axis-aligned bounding box center"),
-        ('ITEM',        'Item',         "Health, armor, ammo etc")
+        ('ITEM',        'Item',         "Health, armor, ammo etc"),
+        ('SMOKE',       'Smoke',        "Smoke particle generator")
     )
 
     spawnTypeEnumItems = (
@@ -1814,33 +1819,53 @@ class GZRS2ObjectProperties(PropertyGroup):
         ('BULLET',      'Bullet',       "Grants some ammunition for the player's gun")
     )
 
-    def onGetDummyType(self):       self.ensureAll(); return enumIdentifierToIndex(self, self['dummyType'],         self.dummyTypeEnumItems)
-    def onGetSpawnType(self):       self.ensureAll(); return enumIdentifierToIndex(self, self['spawnType'],         self.spawnTypeEnumItems)
-    def onGetSpawnIndex(self):      self.ensureAll(); return self['spawnIndex']
-    def onGetSpawnTeamID(self):     self.ensureAll(); return self['spawnTeamID']
-    def onGetSpawnEnemyType(self):  self.ensureAll(); return enumIdentifierToIndex(self, self['spawnEnemyType'],    self.spawnEnemyTypeEnumItems)
-    def onGetSpawnBlitzType(self):  self.ensureAll(); return enumIdentifierToIndex(self, self['spawnBlitzType'],    self.spawnBlitzTypeEnumItems)
-    def onGetSoundFileName(self):   self.ensureAll(); return self['soundFileName']
-    def onGetSoundSpace(self):      self.ensureAll(); return enumIdentifierToIndex(self, self['soundSpace'],        self.soundSpaceEnumItems)
-    def onGetSoundShape(self):      self.ensureAll(); return enumIdentifierToIndex(self, self['soundShape'],        self.soundShapeEnumItems)
-    def onGetItemGameID(self):      self.ensureAll(); return enumIdentifierToIndex(self, self['itemGameID'],        self.itemGameIDEnumItems)
-    def onGetItemType(self):        self.ensureAll(); return enumIdentifierToIndex(self, self['itemType'],          self.itemTypeEnumItems)
-    def onGetItemID(self):          self.ensureAll(); return self['itemID']
-    def onGetItemTimer(self):       self.ensureAll(); return self['itemTimer']
+    smokeTypeEnumItems = (
+        ('SS',          'Smoke',        "Standard smoke, think Factory"),
+        ('ST',          'Train Steam',  "Train steam"),
+        ('TS',          'Train Smoke',  "Train smoke (unused)")
+    )
 
-    def onSetDummyType(self, value):        self.ensureAll(); self['dummyType']         = enumIndexToIdentifier(value, self.dummyTypeEnumItems)
-    def onSetSpawnType(self, value):        self.ensureAll(); self['spawnType']         = enumIndexToIdentifier(value, self.spawnTypeEnumItems)
-    def onSetSpawnIndex(self, value):       self.ensureAll(); self['spawnIndex']        = value
-    def onSetSpawnTeamID(self, value):      self.ensureAll(); self['spawnTeamID']       = value
-    def onSetSpawnEnemyType(self, value):   self.ensureAll(); self['spawnEnemyType']    = enumIndexToIdentifier(value, self.spawnEnemyTypeEnumItems)
-    def onSetSpawnBlitzType(self, value):   self.ensureAll(); self['spawnBlitzType']    = enumIndexToIdentifier(value, self.spawnBlitzTypeEnumItems)
-    def onSetSoundFileName(self, value):    self.ensureAll(); self['soundFileName']     = value
-    def onSetSoundSpace(self, value):       self.ensureAll(); self['soundSpace']        = enumIndexToIdentifier(value, self.soundSpaceEnumItems)
-    def onSetSoundShape(self, value):       self.ensureAll(); self['soundShape']        = enumIndexToIdentifier(value, self.soundShapeEnumItems)
-    def onSetItemGameID(self, value):       self.ensureAll(); self['itemGameID']        = enumIndexToIdentifier(value, self.itemGameIDEnumItems)
-    def onSetItemType(self, value):         self.ensureAll(); self['itemType']          = enumIndexToIdentifier(value, self.itemTypeEnumItems)
-    def onSetItemID(self, value):           self.ensureAll(); self['itemID']            = value
-    def onSetItemTimer(self, value):        self.ensureAll(); self['itemTimer']         = value
+    def onGetDummyType(self):           self.ensureAll(); return enumIdentifierToIndex(self, self['dummyType'],         self.dummyTypeEnumItems)
+    def onGetSpawnType(self):           self.ensureAll(); return enumIdentifierToIndex(self, self['spawnType'],         self.spawnTypeEnumItems)
+    def onGetSpawnIndex(self):          self.ensureAll(); return self['spawnIndex']
+    def onGetSpawnTeamID(self):         self.ensureAll(); return self['spawnTeamID']
+    def onGetSpawnEnemyType(self):      self.ensureAll(); return enumIdentifierToIndex(self, self['spawnEnemyType'],    self.spawnEnemyTypeEnumItems)
+    def onGetSpawnBlitzType(self):      self.ensureAll(); return enumIdentifierToIndex(self, self['spawnBlitzType'],    self.spawnBlitzTypeEnumItems)
+    def onGetSoundFileName(self):       self.ensureAll(); return self['soundFileName']
+    def onGetSoundSpace(self):          self.ensureAll(); return enumIdentifierToIndex(self, self['soundSpace'],        self.soundSpaceEnumItems)
+    def onGetSoundShape(self):          self.ensureAll(); return enumIdentifierToIndex(self, self['soundShape'],        self.soundShapeEnumItems)
+    def onGetItemGameID(self):          self.ensureAll(); return enumIdentifierToIndex(self, self['itemGameID'],        self.itemGameIDEnumItems)
+    def onGetItemType(self):            self.ensureAll(); return enumIdentifierToIndex(self, self['itemType'],          self.itemTypeEnumItems)
+    def onGetItemID(self):              self.ensureAll(); return self['itemID']
+    def onGetItemTimer(self):           self.ensureAll(); return self['itemTimer']
+    def onGetSmokeType(self):           self.ensureAll(); return enumIdentifierToIndex(self, self['smokeType'],         self.smokeTypeEnumItems)
+    def onGetSmokeDirection(self):      self.ensureAll(); return self['smokeDirection']
+    def onGetSmokePower(self):          self.ensureAll(); return self['smokePower']
+    def onGetSmokeDelay(self):          self.ensureAll(); return self['smokeDelay']
+    def onGetSmokeSize(self):           self.ensureAll(); return self['smokeSize']
+    def onGetSmokeLife(self):           self.ensureAll(); return self['smokeLife']
+    def onGetSmokeToggleMinTime(self):  self.ensureAll(); return self['smokeToggleMinTime']
+
+    def onSetDummyType(self, value):            self.ensureAll(); self['dummyType']             = enumIndexToIdentifier(value, self.dummyTypeEnumItems)
+    def onSetSpawnType(self, value):            self.ensureAll(); self['spawnType']             = enumIndexToIdentifier(value, self.spawnTypeEnumItems)
+    def onSetSpawnIndex(self, value):           self.ensureAll(); self['spawnIndex']            = value
+    def onSetSpawnTeamID(self, value):          self.ensureAll(); self['spawnTeamID']           = value
+    def onSetSpawnEnemyType(self, value):       self.ensureAll(); self['spawnEnemyType']        = enumIndexToIdentifier(value, self.spawnEnemyTypeEnumItems)
+    def onSetSpawnBlitzType(self, value):       self.ensureAll(); self['spawnBlitzType']        = enumIndexToIdentifier(value, self.spawnBlitzTypeEnumItems)
+    def onSetSoundFileName(self, value):        self.ensureAll(); self['soundFileName']         = value
+    def onSetSoundSpace(self, value):           self.ensureAll(); self['soundSpace']            = enumIndexToIdentifier(value, self.soundSpaceEnumItems)
+    def onSetSoundShape(self, value):           self.ensureAll(); self['soundShape']            = enumIndexToIdentifier(value, self.soundShapeEnumItems)
+    def onSetItemGameID(self, value):           self.ensureAll(); self['itemGameID']            = enumIndexToIdentifier(value, self.itemGameIDEnumItems)
+    def onSetItemType(self, value):             self.ensureAll(); self['itemType']              = enumIndexToIdentifier(value, self.itemTypeEnumItems)
+    def onSetItemID(self, value):               self.ensureAll(); self['itemID']                = value
+    def onSetItemTimer(self, value):            self.ensureAll(); self['itemTimer']             = value
+    def onSetSmokeType(self, value):            self.ensureAll(); self['smokeType']             = enumIndexToIdentifier(value, self.smokeTypeEnumItems)
+    def onSetSmokeDirection(self, value):       self.ensureAll(); self['smokeDirection']        = value
+    def onSetSmokePower(self, value):           self.ensureAll(); self['smokePower']            = value
+    def onSetSmokeDelay(self, value):           self.ensureAll(); self['smokeDelay']            = value
+    def onSetSmokeSize(self, value):            self.ensureAll(); self['smokeSize']             = value
+    def onSetSmokeLife(self, value):            self.ensureAll(); self['smokeLife']             = value
+    def onSetSmokeToggleMinTime(self, value):   self.ensureAll(); self['smokeToggleMinTime']    = value
 
     dummyType: EnumProperty(
         name = 'Type',
@@ -1961,12 +1986,98 @@ class GZRS2ObjectProperties(PropertyGroup):
         max = 2**31 - 1,
         soft_min = 0,
         soft_max = 2**31 - 1,
-        step = 1000,
         subtype = 'UNSIGNED',
         update = onUpdate,
         get = onGetItemTimer,
         set = onSetItemTimer
     )
+
+    smokeType: EnumProperty(
+        name = 'Smoke Type',
+        items = smokeTypeEnumItems,
+        update = onUpdate,
+        get = onGetSmokeType,
+        set = onSetSmokeType
+    )
+
+    smokeDirection: IntProperty(
+        name = 'Smoke Direction',
+        default = 0,
+        min = 0,
+        max = 359,
+        soft_min = 0,
+        soft_max = 359,
+        subtype = 'ANGLE',
+        update = onUpdate,
+        get = onGetSmokeDirection,
+        set = onSetSmokeDirection
+    )
+
+    smokePower: FloatProperty(
+        name = 'Smoke Power',
+        default = 0.0,
+        min = 0.0,
+        max = 100.0,
+        soft_min = 0.0,
+        soft_max = 100.0,
+        subtype = 'UNSIGNED',
+        update = onUpdate,
+        get = onGetSmokePower,
+        set = onSetSmokePower
+    )
+
+    smokeDelay: IntProperty(
+        name = 'Smoke Delay',
+        default = 0,
+        min = 0,
+        max = 1000,
+        soft_min = 0,
+        soft_max = 1000,
+        subtype = 'UNSIGNED',
+        update = onUpdate,
+        get = onGetSmokeDelay,
+        set = onSetSmokeDelay
+    )
+
+    smokeSize: FloatProperty(
+        name = 'Smoke Size',
+        default = 40.0,
+        min = 0.0,
+        max = 500.0,
+        soft_min = 0.0,
+        soft_max = 500.0,
+        subtype = 'UNSIGNED',
+        update = onUpdate,
+        get = onGetSmokeSize,
+        set = onSetSmokeSize
+    )
+
+    smokeLife: FloatProperty(
+        name = 'Smoke Life',
+        default = 1.0,
+        min = 0.0,
+        max = 10.0,
+        soft_min = 0.0,
+        soft_max = 10.0,
+        subtype = 'UNSIGNED',
+        update = onUpdate,
+        get = onGetSmokeLife,
+        set = onSetSmokeLife
+    )
+
+    smokeToggleMinTime: FloatProperty(
+        name = 'Toggle Minimum Time',
+        default = 2.0,
+        min = 0.0,
+        max = 10.0,
+        soft_min = 0.0,
+        soft_max = 10.0,
+        subtype = 'UNSIGNED',
+        update = onUpdate,
+        get = onGetSmokeToggleMinTime,
+        set = onSetSmokeToggleMinTime
+    )
+
 
     @classmethod
     def register(cls):
@@ -2021,8 +2132,119 @@ class GZRS2_PT_Realspace_Object(Panel):
             column.prop(props, 'itemType')
             column.prop(props, 'itemID')
             column.prop(props, 'itemTimer')
+        elif props.dummyType == 'SMOKE':
+            column.prop(props, 'smokeType')
+            column.prop(props, 'smokeDirection')
+            column.prop(props, 'smokePower')
+            column.prop(props, 'smokeDelay')
+            column.prop(props, 'smokeSize')
+            column.prop(props, 'smokeLife')
+            if props.smokeType == 'SS' or props.smokeType == 'TS':
+                column.prop(props, 'smokeToggleMinTime')
 
-# TODO: Camera panel won't show, not even calling poll?
+class GZRS2MeshProperties(PropertyGroup):
+    # TODO: Custom sprite gizmos
+    meshType: EnumProperty(
+        name = 'Type',
+        items = (('NONE',       'None',         "No special properties for this mesh"),
+                 ('FLAG',       'Flag',         "Mesh is affected by wind forces"))
+    )
+
+    flagDirection: IntProperty(
+        name = 'Flag Direction',
+        default = 0,
+        min = 0,
+        max = 359,
+        soft_min = 0,
+        soft_max = 359,
+        subtype = 'ANGLE'
+    )
+
+    flagPower: FloatProperty(
+        name = 'Flag Power',
+        default = 0.0,
+        min = 0.0,
+        max = 10.0,
+        soft_min = 0.0,
+        soft_max = 10.0,
+        subtype = 'UNSIGNED'
+    )
+
+    flagWindType: EnumProperty(
+        name = 'Type',
+        items = FLAG_WINDTYPE_DATA
+    )
+
+    flagWindDelay: IntProperty(
+        name = 'Wind Delay',
+        default = 0,
+        min = 0,
+        max = 10000,
+        soft_min = 0,
+        soft_max = 10000,
+        subtype = 'UNSIGNED'
+    )
+
+    flagLimitAxis: EnumProperty(
+        name = 'Limit Axis',
+        items = FLAG_LIMIT_AXIS_DATA
+    )
+
+    flagLimitOffset: FloatProperty(
+        name = 'Limit Offset',
+        default = 0.0,
+        min = -10000.0,
+        max = 10000.0,
+        soft_min = -10000.0,
+        soft_max = 10000.0
+    )
+
+    flagLimitCompare: EnumProperty(
+        name = 'Limit Operator',
+        items = FLAG_LIMIT_COMPARE_DATA
+    )
+
+    @classmethod
+    def register(cls):
+        bpy.types.Mesh.gzrs2 = PointerProperty(type = cls)
+
+    @classmethod
+    def unregister(cls):
+        del bpy.types.Mesh.gzrs2
+
+class GZRS2_PT_Realspace_Mesh(Panel):
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_label = 'Realspace'
+    bl_idname = 'MESH_PT_realspace'
+    bl_description = "Custom properties for Realspace engine meshes."
+    bl_context = 'data'
+    bl_options = { 'DEFAULT_CLOSED' }
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and context.active_object.type == 'MESH'
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+
+        props = context.active_object.data.gzrs2
+
+        column = layout.column()
+        column.prop(props, 'meshType')
+
+        column = layout.column()
+
+        if props.meshType == 'FLAG':
+            column.prop(props, 'flagDirection')
+            column.prop(props, 'flagPower')
+            column.prop(props, 'flagWindType')
+            column.prop(props, 'flagWindDelay')
+            column.prop(props, 'flagLimitAxis')
+            column.prop(props, 'flagLimitOffset')
+            column.prop(props, 'flagLimitCompare')
+
 class GZRS2CameraProperties(PropertyGroup):
     cameraIndex: IntProperty(
         name = 'Spawn Index',
@@ -2359,6 +2581,8 @@ classes = (
     RSLM_PT_Export_Logging,
     GZRS2ObjectProperties,
     GZRS2_PT_Realspace_Object,
+    GZRS2MeshProperties,
+    GZRS2_PT_Realspace_Mesh,
     GZRS2CameraProperties,
     GZRS2_PT_Realspace_Camera,
     GZRS2MaterialProperties,

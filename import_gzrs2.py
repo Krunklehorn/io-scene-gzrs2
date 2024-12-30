@@ -77,7 +77,7 @@ def importRS2(self, context):
     state.doOcclusion       = self.doOcclusion      and self.meshMode != 'BAKE'
     state.doFog             = self.doFog
     state.doSounds          = self.doSounds         and self.meshMode != 'BAKE'
-    state.doItems           = self.doItems          and self.meshMode != 'BAKE'
+    state.doMisc            = self.doMisc           and self.meshMode != 'BAKE'
     state.doBounds          = self.doBounds         and self.meshMode != 'BAKE'
     state.doLightDrivers    = self.doLightDrivers
     state.doFogDriver       = self.doFogDriver
@@ -139,9 +139,14 @@ def importRS2(self, context):
         self.report({ 'ERROR' }, "GZRS2: Map xml not found, no materials or objects to generate!")
 
     xmlSpawn = False
-    spawnxmlpath = os.path.join(state.directory, "spawn.xml")
+    xmlFlag = False
+    xmlSmoke = False
 
-    if state.doItems:
+    if state.doMisc:
+        spawnxmlpath = os.path.join(state.directory, "spawn.xml")
+        flagxmlpath = os.path.join(state.directory, "flag.xml")
+        smokexmlpath = os.path.join(state.directory, "smoke.xml")
+
         for ext in XML_EXTENSIONS:
             spawnxmlpath = pathExists(os.path.join(state.directory, f"spawn.{ ext }"))
 
@@ -150,7 +155,25 @@ def importRS2(self, context):
                     xmlSpawn = minidom.parseString(file.read())
                 break
 
-        if not spawnxmlpath: self.report({ 'INFO' }, "GZRS2: Items requested but spawn.xml not found, no items to generate.")
+        for ext in XML_EXTENSIONS:
+            flagxmlpath = pathExists(os.path.join(state.directory, f"flag.{ ext }"))
+
+            if flagxmlpath:
+                with open(flagxmlpath, encoding = 'utf-8') as file:
+                    xmlFlag = minidom.parseString(file.read())
+                break
+
+        for ext in XML_EXTENSIONS:
+            smokexmlpath = pathExists(os.path.join(state.directory, f"smoke.{ ext }"))
+
+            if smokexmlpath:
+                with open(smokexmlpath, encoding = 'utf-8') as file:
+                    xmlSmoke = minidom.parseString(file.read())
+                break
+
+        if not spawnxmlpath:    self.report({ 'INFO' }, "GZRS2: Items requested but spawn.xml not found, no items to generate.")
+        if not flagxmlpath:     self.report({ 'INFO' }, "GZRS2: Flags requested but flag.xml not found, no flags to generate.")
+        if not smokexmlpath:    self.report({ 'INFO' }, "GZRS2: Smoke requested but smoke.xml not found, no smoke to generate.")
 
     if xmlRs:
         state.xmlRsMats = parseRsXML(self, xmlRs, 'MATERIAL', state)
@@ -161,16 +184,18 @@ def importRS2(self, context):
         if state.doFog:         state.xmlFogs = parseRsXML(self, xmlRs, 'FOG', state)
         if state.doSounds:      state.xmlAmbs = parseRsXML(self, xmlRs, 'AMBIENTSOUND', state)
 
-    if xmlSpawn:
-        if state.doItems:       state.xmlItms = parseSpawnXML(self, xmlSpawn, state)
+    if state.doMisc:
+        if xmlSpawn:            state.xmlItms = parseSpawnXML(self, xmlSpawn, state)
+        if xmlFlag:             state.xmlFlgs = parseFlagXML(self, xmlFlag)
+        if xmlSmoke:            state.xmlSmks = parseSmokeXML(xmlSmoke)
 
-    state.doLights =        state.doLights and      len(state.xmlLits) != 0
-    state.doProps =         state.doProps and       len(state.xmlObjs) != 0
-    state.doDummies =       state.doDummies and     len(state.xmlDums) != 0
-    state.doOcclusion =     state.doOcclusion and   len(state.xmlOccs) != 0
-    state.doFog =           state.doFog and         len(state.xmlFogs) != 0
-    state.doSounds =        state.doSounds and      len(state.xmlAmbs) != 0
-    state.doItems =         state.doItems and       len(state.xmlItms) != 0
+    state.doLights =        state.doLights          and len(state.xmlLits) > 0
+    state.doProps =         state.doProps           and len(state.xmlObjs) > 0
+    state.doDummies =       state.doDummies         and len(state.xmlDums) > 0
+    state.doOcclusion =     state.doOcclusion       and len(state.xmlOccs) > 0
+    state.doFog =           state.doFog             and len(state.xmlFogs) > 0
+    state.doSounds =        state.doSounds          and len(state.xmlAmbs) > 0
+    state.doMisc =          state.doMisc            and len(state.xmlItms) > 0 or len(state.xmlFlgs) > 0 or len(state.xmlSmks) > 0
 
     readRs(self, rspath, state)
 
@@ -271,7 +296,7 @@ def importRS2(self, context):
     rootProps =                 collections.new(f"{ state.filename }_Props")                    if state.doProps else False
     rootDummies =               collections.new(f"{ state.filename }_Dummies")                  if state.doDummies else False
     rootSounds =                collections.new(f"{ state.filename }_Sounds")                   if state.doSounds else False
-    rootItems =                 collections.new(f"{ state.filename }_Items")                    if state.doItems else False
+    rootMisc =                  collections.new(f"{ state.filename }_Misc")                     if state.doMisc else False
     rootExtras =                collections.new(f"{ state.filename }_Extras")                   if doExtras else False
     rootBoundsBsp =             collections.new(f"{ state.filename }_Bounds_Bsptree")           if state.doBounds and state.doBsptree else False
     rootBoundsOct =             collections.new(f"{ state.filename }_Bounds_Octree")            if state.doBounds else False
@@ -298,7 +323,7 @@ def importRS2(self, context):
     if state.doProps:       rootMap.children.link(rootProps)
     if state.doDummies:     rootMap.children.link(rootDummies)
     if state.doSounds:      rootMap.children.link(rootSounds)
-    if state.doItems:       rootMap.children.link(rootItems)
+    if state.doMisc:        rootMap.children.link(rootMisc)
     if doExtras:            rootMap.children.link(rootExtras)
     if state.doBounds:
         if state.doBsptree:
@@ -522,8 +547,9 @@ def importRS2(self, context):
     if state.doDummies:
         reorientLocal = Matrix.Rotation(math.radians(90.0), 4, 'X')
 
-        s = 1
-        c = 1
+        sp = 1
+        ca = 1
+        sm = 1
 
         for d, dummy in enumerate(state.xmlDums):
             if d in propDums:
@@ -543,7 +569,7 @@ def importRS2(self, context):
                 ((  'spawn_solo', 'spawn_team'  ), '_', 3),
                 ((  'spawn_npc', 'spawn_blitz'  ), '_', 4), # spawn_npc_melee_01, spawn_npc_melee_02, TODO: verify blitz data
                 ((  'camera_pos',               ), ' ', 2), # camera_pos 01, camera_pos 01
-                ((  'wait_pos',                 ), '_', 3), # wait_pos_01
+                ((  'wait_pos',                 ), '_', 3)  # wait_pos_01
             )
 
             RS_DUMMY_NAME_SPLIT_SUBSTRINGS = tuple(substring for substrings, _, _ in RS_DUMMY_NAME_SPLIT_DATA for substring in substrings)
@@ -557,24 +583,27 @@ def importRS2(self, context):
                         break
 
                 if splitCountError:
-                    self.report({ 'WARNING' }, f"GZRS2: Dummy name with incorrect formatting, incorrect placement of separators, skipping: { d }, { name }")
+                    self.report({ 'WARNING' }, f"GZRS2: Dummy name with incorrect formatting, incorrect placement of separators, skipping: { name }")
                     continue
 
                 nameSuffix = nameSplits[-1]
 
                 if not nameSuffix.isnumeric():
-                    self.report({ 'WARNING' }, f"GZRS2: Dummy name with incorrect formatting, unable to detect spawn index, skipping: { d }, { name }")
+                    self.report({ 'WARNING' }, f"GZRS2: Dummy name with incorrect formatting, unable to detect spawn index, skipping: { name }")
                     continue
 
                 nameIndex = int(nameSuffix)
 
             # TODO: Ugly code, pull these out to separate lists
             if nameLower.startswith(('spawn_solo', 'spawn_team', 'spawn_npc', 'spawn_blitz')):
-                objName = f"{ state.filename }_Spawn{ s }"
-                s += 1
+                objName = f"{ state.filename }_Spawn{ sp }"
+                sp += 1
             elif nameLower.startswith(('camera_pos', 'wait_pos')):
-                objName = f"{ state.filename }_Camera{ c }"
-                c += 1
+                objName = f"{ state.filename }_Camera{ ca }"
+                ca += 1
+            elif nameLower.startswith(('smk_')):
+                objName = f"{ state.filename }_Smoke{ sm }"
+                sm += 1
             else:
                 objName = f"{ state.filename }_Dummy_{ name }"
 
@@ -629,6 +658,15 @@ def importRS2(self, context):
             elif nameLower.startswith('camera_pos'):
                 props.cameraIndex = nameIndex
                 props.cameraType = 'TRACK'
+            elif nameLower.startswith(('smk_')):
+                props.dummyType = 'SMOKE'
+
+                # TODO: Custom value support for smoke types
+                if      nameLower.startswith(('smk_ss')):   props.smokeType = 'SS'
+                elif    nameLower.startswith(('smk_st')):   props.smokeType = 'ST'
+                elif    nameLower.startswith(('smk_ts')):   props.smokeType = 'TS'
+
+                state.blSmokePairs.append((nameLower, blObj))
             elif nameLower.startswith('sun_'):
                 props.dummyType = 'SUN'
 
@@ -654,8 +692,8 @@ def importRS2(self, context):
                 continue
 
             blSoundObj = bpy.data.objects.new(f"{ state.filename }_Sound_{ soundObjName }", None)
-            props = blSoundObj.gzrs2
 
+            props = blSoundObj.gzrs2
             props.dummyType = 'SOUND'
             props.soundFileName = soundFileName
             props.soundSpace = space
@@ -683,18 +721,18 @@ def importRS2(self, context):
     if len(skippedSounds) > 0:
         self.report({ 'WARNING' }, f"GZRS2: Skipped sounds with missing attributes: { skippedSounds }")
 
-    if state.doItems:
-        i = 0
+    if state.doMisc:
+        i = 1
 
         for gametype in state.xmlItms:
             gameID = gametype['id'].upper()
 
             # TODO: Custom value support for game IDs
             if gameID not in ['SOLO', 'TEAM']:
-                self.report({ 'WARNING' }, f"GZRS2: Skipped game id of unsupported type: { s }, { gameID }")
+                self.report({ 'WARNING' }, f"GZRS2: Skipped game id of unsupported type: { gameID }")
                 continue
 
-            for s, spawn in enumerate(gametype['spawns']):
+            for spawn in gametype['spawns']:
                 item = spawn['item']
 
                 # TODO: Custom value support for item types
@@ -703,23 +741,84 @@ def importRS2(self, context):
                     itemID = item[-2:]
 
                 if len(item) < 4 or not itemType.isalpha() or not itemID.isnumeric():
-                    self.report({ 'WARNING' }, f"GZRS2: Skipped item of unsupported type: { s }, { gameID }, { item }")
+                    self.report({ 'WARNING' }, f"GZRS2: Skipped item of unsupported type: { gameID }, { item }")
                     continue
 
                 blItemObj = bpy.data.objects.new(f"{ state.filename }_Item{ i }", None)
                 blItemObj.empty_display_type = 'SPHERE'
                 blItemObj.location = spawn['POSITION']
 
-                blItemObj.gzrs2.dummyType = 'ITEM'
-                blItemObj.gzrs2.itemGameID = gameID
-                blItemObj.gzrs2.itemType = itemType
-                blItemObj.gzrs2.itemID = int(itemID)
-                blItemObj.gzrs2.itemTimer = spawn['timesec']
+                props = blItemObj.gzrs2
+                props.dummyType = 'ITEM'
+                props.itemGameID = gameID
+                props.itemType = itemType
+                props.itemID = int(itemID)
+                props.itemTimer = spawn['timesec']
 
                 state.blItemObjs.append(blItemObj)
-                rootItems.objects.link(blItemObj)
+                rootMisc.objects.link(blItemObj)
 
                 i += 1
+
+        for flag in state.xmlFlgs:
+            name = flag['NAME'].split('.')[0]
+
+            blFlagObj = None
+
+            for eluMesh, blMeshObj in state.blObjPairs:
+                if eluMesh.meshName != name:
+                    continue
+
+                blFlagObj = blMeshObj
+                props = blFlagObj.data.gzrs2
+                props.meshType = 'FLAG'
+
+                if 'DIRECTION' in flag:             props.flagDirection     = flag['DIRECTION']
+                if 'POWER' in flag:                 props.flagPower         = flag['POWER']
+
+                for windtype in flag['windtypes']:
+                    if 'TYPE' in windtype:          props.flagWindType      = dataOrFirst(FLAG_WINDTYPE_DATA, windtype['TYPE'])
+                    if 'DELAY' in windtype:         props.flagWindDelay     = windtype['DELAY']
+
+                    # TODO: Multiple windtype data
+                    continue
+
+                for limit in flag['limits']:
+                    if 'AXIS'       in limit: props.flagLimitAxis       = dataOrFirst(FLAG_LIMIT_AXIS_DATA, limit['AXIS'])
+                    if 'POSITION'   in limit: props.flagLimitOffset     = limit['POSITION']
+                    if 'COMPARE'    in limit: props.flagLimitCompare    = dataOrFirst(FLAG_LIMIT_COMPARE_DATA, limit['AXIS'])
+
+                    # TODO: Multiple limit data
+                    continue
+
+                break
+
+            if blFlagObj is None:
+                self.report({ 'WARNING' }, f"GZRS2: Flag data unable to find a match, skipping: { name }")
+
+        for smoke in state.xmlSmks:
+            name = smoke['NAME'].split('.')[0]
+
+            blSmokeDummy = None
+
+            for nameLower, blDummyObj in state.blSmokePairs:
+                if nameLower != name.lower():
+                    continue
+
+                blSmokeDummy = blDummyObj
+                props = blSmokeDummy.gzrs2
+
+                if 'DIRECTION' in smoke:        props.smokeDirection        = smoke['DIRECTION']
+                if 'POWER' in smoke:            props.smokePower            = smoke['POWER']
+                if 'DELAY' in smoke:            props.smokeDelay            = smoke['DELAY']
+                if 'SIZE' in smoke:             props.smokeSize             = smoke['SIZE']
+                if 'LIFE' in smoke:             props.smokeLife             = smoke['LIFE']
+                if 'TOGGLEMINTIME' in smoke:    props.smokeToggleMinTime    = smoke['TOGGLEMINTIME']
+
+                break
+
+            if blSmokeDummy is None:
+                self.report({ 'WARNING' }, f"GZRS2: Smoke data unable to find a match, skipping: { name }")
 
     if doExtras:
         if state.doCollision:

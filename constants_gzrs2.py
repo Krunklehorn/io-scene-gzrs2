@@ -158,6 +158,35 @@ RS_SOUND_THRESHOLD =            0.000001
 ELU_VALUE_THRESHOLD =           0.01
 ANI_VERTEX_THRESHOLD =          0.0001
 
+FLAG_WINDTYPE_DATA = (
+    ('NO_WIND',                 'None',             ""),
+    ('RANDOM_WIND',             'Random',           ""),
+    ('CALM_WIND',               'Calm',             ""),
+    ('LIGHT_AIR_WIND',          'Light Air',        ""),
+    ('SLIGHT_BREEZE_WIND',      'Slight Breeze',    ""),
+    ('GENTLE_BREEZE_WIND',      'Gentle Breeze',    ""),
+    ('MODERATE_BREEZE_WIND',    'Moderate Breeze',  ""),
+    ('FRESH_BREEZE_WIND',       'Fresh Breeze',     ""),
+    ('STRONG_BREEZE_WIND',      'Strong Breeze',    ""),
+    ('NEAR_GALE_WIND',          'Near Gale',        ""),
+    ('GALE_WIND',               'Gale',             ""),
+    ('STRONG_GALE_WIND',        'Strong Gale',      ""),
+    ('STROM_WIND',              'Storm',            ""),
+    ('VIOLENT_STROM_WIND',      'Violent Storm',    ""),
+    ('HURRICANE_WIND',          'Hurricane',        "")
+)
+
+FLAG_LIMIT_AXIS_DATA = (
+    ('X',           'X',        "X-axis"),
+    ('Y',           'Y',        "Y-axis"),
+    ('Z',           'Z',        "Z-axis")
+)
+
+FLAG_LIMIT_COMPARE_DATA = (
+    ('GREATER',     'Greater',  "Vertex position greater than the specified position along the specified axis"),
+    ('LESS',        'Less',     "Vertex position less than specified position along the specified axis")
+)
+
 DDSD_CAPS =                     0x00000001
 DDSD_HEIGHT =                   0x00000002
 DDSD_WIDTH =                    0x00000004

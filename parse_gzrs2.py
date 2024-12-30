@@ -110,7 +110,7 @@ def parseSpawnXML(self, xmlSpawn, state):
         spawns = gametype.getElementsByTagName('SPAWN')
 
         for spawn in spawns:
-            spawnEntry = defaultdict(lambda: False)
+            spawnEntry = {}
             spawnEntry['item'] = spawn.getAttribute('item')
             spawnEntry['timesec'] = int(spawn.getAttribute('timesec'))
 
@@ -125,6 +125,71 @@ def parseSpawnXML(self, xmlSpawn, state):
         gametypeEntries.append(gametypeEntry)
 
     return gametypeEntries
+
+def parseFlagXML(self, xmlFlag):
+    flags = xmlFlag.getElementsByTagName('FLAG')
+    flagEntries = []
+
+    for flag in flags:
+        name = flag.getAttribute('NAME')
+        direction = int(flag.getAttribute('DIRECTION'))
+        power = float(flag.getAttribute('POWER'))
+
+        flagEntry = {
+            'NAME': name,
+            'DIRECTION': direction,
+            'POWER': power,
+            'windtypes': [],
+            'limits': [] # ZClothEmblem.cpp
+        }
+
+        windtypes = flag.getElementsByTagName('WINDTYPE')
+
+        for windtype in windtypes:
+            flagEntry['windtypes'].append({
+                'TYPE': int(windtype.getAttribute('TYPE')),
+                'DELAY': int(windtype.getAttribute('DELAY'))
+            })
+
+        limits = flag.getElementsByTagName('RESTRICTION')
+
+        for limit in limits:
+            limitEntry = {}
+
+            if limit.hasAttribute('POSITION'):
+                print(name)
+                print(limit.getAttribute('POSITION'))
+                print(float(limit.getAttribute('POSITION')))
+
+            if limit.hasAttribute('AXIS'):      limitEntry['AXIS']      = int(limit.getAttribute('AXIS'))
+            if limit.hasAttribute('POSITION'):  limitEntry['POSITION']  = float(limit.getAttribute('POSITION'))
+            if limit.hasAttribute('COMPARE'):   limitEntry['COMPARE']   = int(limit.getAttribute('COMPARE'))
+
+            flagEntry['limits'].append(limitEntry)
+
+        flagEntries.append(flagEntry)
+
+    return flagEntries
+
+def parseSmokeXML(xmlSmoke):
+    smokes = xmlSmoke.getElementsByTagName('SMOKE')
+    smokeEntries = []
+
+    for smoke in smokes:
+        smokeEntry = {
+            'NAME': smoke.getAttribute('NAME'),
+            'DIRECTION': int(smoke.getAttribute('DIRECTION')),
+            'POWER': float(smoke.getAttribute('POWER')),
+            'DELAY': int(smoke.getAttribute('DELAY')),
+            'SIZE': float(smoke.getAttribute('SIZE'))
+        }
+
+        if smoke.hasAttribute('LIFE'):              smokeEntry['LIFE']              = float(smoke.getAttribute('LIFE'))
+        if smoke.hasAttribute('TOGGLEMINTIME'):     smokeEntry['TOGGLEMINTIME']     = float(smoke.getAttribute('TOGGLEMINTIME'))
+
+        smokeEntries.append(smokeEntry)
+
+    return smokeEntries
 
 def parseSceneXML(self, xmlScene, xmlName, state):
     instances = xmlScene.getElementsByTagName('SCENEINSTANCE')

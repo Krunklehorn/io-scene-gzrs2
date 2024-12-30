@@ -23,7 +23,7 @@ class GZRS2State:
     doOcclusion:        bool = False
     doFog:              bool = False
     doSounds:           bool = False
-    doItems:            bool = False
+    doMisc:             bool = False
     doBounds:           bool = False
     doLightDrivers:     bool = False
     doFogDriver:        bool = False
@@ -82,6 +82,8 @@ class GZRS2State:
     xmlFogs:            list = field(default_factory = list)
     xmlAmbs:            list = field(default_factory = list)
     xmlItms:            list = field(default_factory = list)
+    xmlFlgs:            list = field(default_factory = list)
+    xmlSmks:            list = field(default_factory = list)
 
     rsCPolygonCount:    int | None = None
     rsCVertexCount:     int | None = None
@@ -174,6 +176,7 @@ class GZRS2State:
     blXmlEluMatPairs:   list = field(default_factory = list)
     blObjPairs:         list = field(default_factory = list)
     blBonePairs:        list = field(default_factory = list)
+    blSmokePairs:       list = field(default_factory = list)
 
     blArmature:         Armature    = None
     blArmatureObj:      Object      = None
