@@ -256,7 +256,8 @@ def importRS2(self, context):
 
     if state.doProps:
         for p, prop in enumerate(state.xmlObjs):
-            elupath = os.path.join(state.directory, prop['name'])
+            propName = prop['name']
+            elupath = os.path.join(state.directory, propName)
 
             for ext in XML_EXTENSIONS:
                 eluxmlpath = pathExists(f"{ elupath }.{ ext }")
@@ -265,6 +266,10 @@ def importRS2(self, context):
                     with open(eluxmlpath, encoding = 'utf-8') as file:
                         state.xmlEluMats[p] = minidom.parseString(file.read())
                     break
+
+            if not pathExists(elupath):
+                self.report({ 'INFO' }, f"GZRS2: Prop requested but .elu file not found, skipping: { propName }")
+                continue
 
             readElu(self, elupath, state)
 
