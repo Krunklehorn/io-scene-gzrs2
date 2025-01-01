@@ -32,7 +32,7 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import bpy, os, math
+import bpy, os, math, re
 import xml.dom.minidom as minidom
 
 from contextlib import redirect_stdout
@@ -349,11 +349,25 @@ def importRS2(self, context):
                                 lcBounds.collection is rootBoundsOct)):
                             lcBounds.hide_viewport = True
 
+    b = 1
+    o = 1
+
     for m, xmlRsMat in enumerate(state.xmlRsMats):
-        xmlRsMatName = xmlRsMat.get('name', f"Material_{ m }")
+        nameSplit = xmlRsMat.get('name', f"Material_{ m }").split('_mt_')
+
+        xmlRsMatName = RE_ESCAPE_GZD.sub('', nameSplit[0])
+        xmlRsMatName = RE_ESCAPE_MAP.sub('', xmlRsMatName)
+
+        surfaceTag = nameSplit[1].upper() if len(nameSplit) == 2 else 'NONE'
+        materialSound = surfaceTag if surfaceTag in MATERIAL_SOUND_TAGS else 'NONE'
+
+        if surfaceTag not in MATERIAL_SOUND_TAGS:
+            self.report({ 'WARNING' }, f"GZRS2: Undocumented or invalid surface tag, please submit to Krunk#6051 for testing: { surfaceTag }")
+
         blMat, tree, links, nodes, shader, _, _, transparent, mix = setupMatBase(xmlRsMatName)
 
         blMat.gzrs2.matID = m
+        blMat.gzrs2.sound = materialSound
 
         processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state)
 
@@ -361,7 +375,7 @@ def importRS2(self, context):
 
         if state.meshMode == 'STANDARD':
             if state.doBsptree:
-                bspMeshName = f"Bsp_{ xmlRsMatName }"
+                bspMeshName = f"{ state.filename }_Bsptree{ b }"
 
                 blBspMesh = bpy.data.meshes.new(bspMeshName)
                 blBspMeshObj = bpy.data.objects.new(bspMeshName, blBspMesh)
@@ -371,7 +385,7 @@ def importRS2(self, context):
                 state.blBspMeshes.append(blBspMesh)
                 state.blBspMeshObjs.append(blBspMeshObj)
 
-            octMeshName = f"Oct_{ xmlRsMatName }"
+            octMeshName = f"{ state.filename }_Octree{ o }"
 
             blOctMesh = bpy.data.meshes.new(octMeshName)
             blOctMeshObj = bpy.data.objects.new(octMeshName, blOctMesh)
@@ -380,6 +394,9 @@ def importRS2(self, context):
 
             state.blOctMeshes.append(blOctMesh)
             state.blOctMeshObjs.append(blOctMeshObj)
+
+            b += 1
+            o += 1
 
     if state.doCleanup and state.logCleanup:
         print()

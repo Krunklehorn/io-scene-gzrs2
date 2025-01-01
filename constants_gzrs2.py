@@ -187,6 +187,26 @@ FLAG_LIMIT_COMPARE_DATA = (
     ('LESS',        'Less',     "Vertex position less than specified position along the specified axis")
 )
 
+MATERIAL_SOUND_DATA = (
+    ('NONE',    'None',             ""),
+    ('CLO',     'Cloth (Missing)',  ""),
+    ('CON',     'Concrete',         ""),
+    ('DRT',     'Dirt',             ""),
+    ('FSH',     'Flesh',            ""),
+    ('GLS',     'Glass',            ""),
+    ('MET',     'Metal',            ""),
+    ('PNT',     'Gravel',           ""),
+    ('SND',     'Sand',             ""),
+    ('SNW',     'Snow',             ""),
+    ('WAT',     'Water',            ""),
+    ('WOD',     'Wood',             "")
+)
+
+MATERIAL_SOUND_TAGS = [data[0] for data in MATERIAL_SOUND_DATA]
+
+RE_ESCAPE_GZD = re.compile(re.escape('gzd_'), re.IGNORECASE)
+RE_ESCAPE_MAP = re.compile(re.escape('map_'), re.IGNORECASE)
+
 DDSD_CAPS =                     0x00000001
 DDSD_HEIGHT =                   0x00000002
 DDSD_WIDTH =                    0x00000004

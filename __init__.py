@@ -2416,6 +2416,11 @@ class GZRS2MaterialProperties(PropertyGroup):
         subtype = 'UNSIGNED'
     )
 
+    sound: EnumProperty(
+        name = 'Sound',
+        items = MATERIAL_SOUND_DATA
+    )
+
     @classmethod
     def register(cls):
         bpy.types.Material.gzrs2 = PointerProperty(type = cls)
@@ -2488,6 +2493,7 @@ class GZRS2_PT_Realspace_Material(Panel):
         column.prop(props, 'diffuse')
         column.prop(props, 'specular')
         column.prop(props, 'exponent')
+        column.prop(props, 'sound')
 
         column = layout.column()
         column.operator(GZRS2_OT_Apply_Material_Preset.bl_idname, text = "Change Preset")
