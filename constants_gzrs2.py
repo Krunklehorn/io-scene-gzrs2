@@ -1,4 +1,4 @@
-import os
+import os, re
 
 TEX_UPWARD_SEARCH_LIMIT =       4
 RES_UPWARD_SEARCH_LIMIT =       5
