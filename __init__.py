@@ -2493,7 +2493,10 @@ class GZRS2_PT_Realspace_Material(Panel):
         column.prop(props, 'diffuse')
         column.prop(props, 'specular')
         column.prop(props, 'exponent')
+
+        column = layout.column()
         column.prop(props, 'sound')
+        column.enabled = '_mt_' not in blMat.name
 
         column = layout.column()
         column.operator(GZRS2_OT_Apply_Material_Preset.bl_idname, text = "Change Preset")
