@@ -19,16 +19,16 @@ def dataOrFirst(list, i, o):
     try:        return list[i][o]
     except:     return list[0][o]
 
-def enumIdentifierToIndex(self, identifier, items):
+def enumTagToIndex(self, tag, items):
     for i, item in enumerate(items):
-        if item[0] == identifier:
+        if item[0] == tag:
             return i
 
-    print(f"GZRS2: Failed to get index for enum identifier: { identifier }")
+    print(f"GZRS2: Failed to get index for enum tag: { tag }")
 
     return 0
 
-def enumIndexToIdentifier(index, items):
+def enumIndexToTag(index, items):
     return items[index][0]
 
 def vecArrayMinMax(vectors, size):

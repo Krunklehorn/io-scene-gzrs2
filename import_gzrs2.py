@@ -782,7 +782,7 @@ def importRS2(self, context):
 
                 blFlagObj = blMeshObj
                 props = blFlagObj.data.gzrs2
-                props.meshSubtype = 'FLAG'
+                props.detailSubtype = 'FLAG'
 
                 if 'DIRECTION'      in flag:            props.flagDirection     = flag['DIRECTION']
                 if 'POWER'          in flag:            props.flagPower         = flag['POWER']
