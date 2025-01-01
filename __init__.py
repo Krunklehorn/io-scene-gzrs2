@@ -2143,14 +2143,14 @@ class GZRS2MeshProperties(PropertyGroup):
             ('NONE',            'None',         "Not a Realspace mesh. Will not be exported"),
             ('RAW',             'Raw',          "Freshly imported, may need modification. Will not be exported"),
             ('WORLD',           'World',        "World mesh, lit statically, necessary for graphics, must be fully sealed with no leaks"),
+            ('PROP',            'Prop',         "Prop mesh, lit dynamically, does not contribute to bsptree or octree data. Recorded in .rs.xml, exports to .elu"),
             ('COLLISION',       'Collision',    "Collision mesh, not visible, necessary for gameplay, must be fully sealed with no leaks"),
             ('NAVIGATION',      'Navigation',   "Navigation mesh, not visible, only necessary for Quest mode"),
-            ('OCCLUSION',       'Occlusion',    "Occlusion planes, not visible, used to improve performance by skipping world and detail geometry"),
-            ('DETAIL',          'Detail',       "Detail mesh, lit dynamically, does not contribute to bsptree or octree data. Recorded in .rs.xml, exports to .elu")
+            ('OCCLUSION',       'Occlusion',    "Occlusion planes, not visible, used to improve performance by skipping world and detail geometry")
         )
     )
 
-    detailSubtype: EnumProperty(
+    propSubtype: EnumProperty(
         name = 'Subtype',
         items = (
             ('NONE',            'None',         "Mesh has no special properties"),
@@ -2244,10 +2244,10 @@ class GZRS2_PT_Realspace_Mesh(Panel):
 
         column = layout.column()
 
-        if props.meshType == 'DETAIL':
-            column.prop(props, 'detailSubtype')
+        if props.meshType == 'PROP':
+            column.prop(props, 'propSubtype')
 
-            if props.detailSubtype == 'FLAG':
+            if props.propSubtype == 'FLAG':
                 column.prop(props, 'flagDirection')
                 column.prop(props, 'flagPower')
                 column.prop(props, 'flagWindType')

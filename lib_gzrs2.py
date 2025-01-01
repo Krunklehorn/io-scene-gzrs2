@@ -1278,7 +1278,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     blMesh = bpy.data.meshes.new(meshName)
     blMeshObj = bpy.data.objects.new(meshName, blMesh)
 
-    blMesh.gzrs2.meshType = 'DETAIL'
+    blMesh.gzrs2.meshType = 'PROP'
 
     for face in eluMesh.faces:
         degree = face.degree
