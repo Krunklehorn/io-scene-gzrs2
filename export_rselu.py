@@ -32,7 +32,7 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import os, io, shutil
+import os, io
 
 from mathutils import Vector, Matrix
 
@@ -677,89 +677,86 @@ def exportElu(self, context):
 
     createBackupFile(elupath)
 
-    file = io.open(elupath, 'wb')
+    with open(elupath, 'wb') as file:
+        writeUInt(file, id)
+        writeUInt(file, version)
+        writeInt(file, matCount)
+        writeInt(file, meshCount)
 
-    writeUInt(file, id)
-    writeUInt(file, version)
-    writeInt(file, matCount)
-    writeInt(file, meshCount)
+        for eluMat in eluMats:
+            writeInt(file, eluMat.matID)
+            writeInt(file, eluMat.subMatID)
 
-    for eluMat in eluMats:
-        writeInt(file, eluMat.matID)
-        writeInt(file, eluMat.subMatID)
+            writeVec4(file, eluMat.ambient)
+            writeVec4(file, eluMat.diffuse)
+            writeVec4(file, eluMat.specular)
+            writeFloat(file, eluMat.exponent)
 
-        writeVec4(file, eluMat.ambient)
-        writeVec4(file, eluMat.diffuse)
-        writeVec4(file, eluMat.specular)
-        writeFloat(file, eluMat.exponent)
+            writeUInt(file, eluMat.subMatCount)
 
-        writeUInt(file, eluMat.subMatCount)
+            if version <= ELU_5005:
+                writeString(file, eluMat.texpath, ELU_NAME_LENGTH)
+                writeString(file, eluMat.alphapath, ELU_NAME_LENGTH)
+            else:
+                writeString(file, eluMat.texpath, ELU_PATH_LENGTH)
+                writeString(file, eluMat.alphapath, ELU_PATH_LENGTH)
 
-        if version <= ELU_5005:
-            writeString(file, eluMat.texpath, ELU_NAME_LENGTH)
-            writeString(file, eluMat.alphapath, ELU_NAME_LENGTH)
-        else:
-            writeString(file, eluMat.texpath, ELU_PATH_LENGTH)
-            writeString(file, eluMat.alphapath, ELU_PATH_LENGTH)
+            if version >= ELU_5002: writeBool32(file, eluMat.twosided)
+            if version >= ELU_5004: writeBool32(file, eluMat.additive)
+            if version == ELU_5007: writeUInt(file, eluMat.alphatest)
 
-        if version >= ELU_5002: writeBool32(file, eluMat.twosided)
-        if version >= ELU_5004: writeBool32(file, eluMat.additive)
-        if version == ELU_5007: writeUInt(file, eluMat.alphatest)
+        for eluMesh in eluMeshes:
+            writeString(file, eluMesh.meshName, ELU_NAME_LENGTH)
+            writeString(file, eluMesh.parentName, ELU_NAME_LENGTH)
 
-    for eluMesh in eluMeshes:
-        writeString(file, eluMesh.meshName, ELU_NAME_LENGTH)
-        writeString(file, eluMesh.parentName, ELU_NAME_LENGTH)
+            writeTransform(file, eluMesh.transform, state.convertUnits, True)
 
-        writeTransform(file, eluMesh.transform, state.convertUnits, True)
+            if version >= ELU_5001:
+                writeVec3(file, eluMesh.apScale)
 
-        if version >= ELU_5001:
-            writeVec3(file, eluMesh.apScale)
+            if version >= ELU_5003:
+                writeVec4(file, eluMesh.rotAA) # TODO: coordinates or directions?
+                writeVec4(file, eluMesh.scaleAA) # TODO: coordinates or directions?
+                writeTransform(file, eluMesh.etcMatrix, state.convertUnits, True)
 
-        if version >= ELU_5003:
-            writeVec4(file, eluMesh.rotAA) # TODO: coordinates or directions?
-            writeVec4(file, eluMesh.scaleAA) # TODO: coordinates or directions?
-            writeTransform(file, eluMesh.etcMatrix, state.convertUnits, True)
+            writeUInt(file, eluMesh.vertexCount)
+            writeCoordinateArray(file, eluMesh.vertices, state.convertUnits, True)
+            writeUInt(file, eluMesh.faceCount)
 
-        writeUInt(file, eluMesh.vertexCount)
-        writeCoordinateArray(file, eluMesh.vertices, state.convertUnits, True)
-        writeUInt(file, eluMesh.faceCount)
+            if eluMesh.faceCount > 0:
+                for face in eluMesh.faces:
+                    writeUIntArray(file, face.indices)
 
-        if eluMesh.faceCount > 0:
-            for face in eluMesh.faces:
-                writeUIntArray(file, face.indices)
+                    # zero-fills unused z-coordinates
+                    writeUV3(file, face.uv1s[0])
+                    writeUV3(file, face.uv1s[1])
+                    writeUV3(file, face.uv1s[2])
 
-                # zero-fills unused z-coordinates
-                writeUV3(file, face.uv1s[0])
-                writeUV3(file, face.uv1s[1])
-                writeUV3(file, face.uv1s[2])
+                    writeInt(file, face.slotID)
 
-                writeInt(file, face.slotID)
+                    if version >= ELU_5002:
+                        writeInt(file, 0) # unused id
 
-                if version >= ELU_5002:
-                    writeInt(file, 0) # unused id
+                if version >= ELU_5005:
+                    for face in eluMesh.faces:
+                        writeDirection(file, face.normal, True)
+                        writeDirectionArray(file, face.normals, True)
 
             if version >= ELU_5005:
-                for face in eluMesh.faces:
-                    writeDirection(file, face.normal, True)
-                    writeDirectionArray(file, face.normals, True)
+                writeUInt(file, eluMesh.colorCount)
+                writeVec3Array(file, eluMesh.colors)
 
-        if version >= ELU_5005:
-            writeUInt(file, eluMesh.colorCount)
-            writeVec3Array(file, eluMesh.colors)
+            writeInt(file, eluMesh.matID)
+            writeUInt(file, eluMesh.weightCount)
 
-        writeInt(file, eluMesh.matID)
-        writeUInt(file, eluMesh.weightCount)
+            for weight in eluMesh.weights:
+                for k in range(ELU_PHYS_KEYS):
+                    writeString(file, weight.meshNames[k], ELU_NAME_LENGTH)
 
-        for weight in eluMesh.weights:
-            for k in range(ELU_PHYS_KEYS):
-                writeString(file, weight.meshNames[k], ELU_NAME_LENGTH)
+                writeFloatArray(file, weight.values)
 
-            writeFloatArray(file, weight.values)
-
-            writeUIntArray(file, weight.meshIDs)
-            writeUInt(file, weight.degree)
-            writeCoordinateArray(file, weight.offsets, state.convertUnits, True)
-
-    file.close()
+                writeUIntArray(file, weight.meshIDs)
+                writeUInt(file, weight.degree)
+                writeCoordinateArray(file, weight.offsets, state.convertUnits, True)
 
     return { 'FINISHED' }

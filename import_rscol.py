@@ -67,8 +67,9 @@ def importCol(self, context):
     state.filename = splitname[0]
     extension = splitname[-1].lower()
 
-    if readCol(self, colpath, state):
-        return { 'CANCELLED' }
+    with open(colpath, 'rb') as file:
+        if readCol(self, file, colpath, state):
+            return { 'CANCELLED' }
 
     colName = f"{ state.filename }_Collision"
     blColObj = setupColMesh(colName, context.collection, context, extension, state)

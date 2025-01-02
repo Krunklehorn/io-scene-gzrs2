@@ -50,8 +50,9 @@ def importAni(self, context):
     state.directory = os.path.dirname(anipath)
     state.filename = os.path.basename(anipath).split(os.extsep)[0]
 
-    if readAni(self, anipath, state):
-        return { 'CANCELLED' }
+    with open(anipath, 'rb') as file:
+        if readAni(self, file, anipath, state):
+            return { 'CANCELLED' }
 
     bpy.ops.ed.undo_push()
 

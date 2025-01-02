@@ -197,15 +197,18 @@ def importRS2(self, context):
     state.doSounds =        state.doSounds          and len(state.xmlAmbs) > 0
     state.doMisc =          state.doMisc            and len(state.xmlItms) > 0 or len(state.xmlFlgs) > 0 or len(state.xmlSmks) > 0
 
-    readRs(self, rspath, state)
+    with open(rspath, 'rb') as file:
+        if readRs(self, file, rspath, state):
+            return { 'CANCELLED' }
 
     if state.doBsptree:
         for ext in BSP_EXTENSIONS:
             bsppath = pathExists(f"{ rspath }.{ ext }")
 
             if bsppath:
-                if readBsp(self, bsppath, state):
-                    return { 'CANCELLED' }
+                with open(bsppath, 'rb') as file:
+                    if readBsp(self, file, bsppath, state):
+                        return { 'CANCELLED' }
                 break
 
         if not bsppath:
@@ -217,8 +220,9 @@ def importRS2(self, context):
             colpath = pathExists(f"{ rspath }.{ ext }")
 
             if colpath:
-                if readCol(self, colpath, state):
-                    return { 'CANCELLED' }
+                with open(colpath, 'rb') as file:
+                    if readCol(self, file, colpath, state):
+                        return { 'CANCELLED' }
                 break
 
         if not colpath:
@@ -230,8 +234,9 @@ def importRS2(self, context):
             navpath = pathExists(f"{ rspath }.{ ext }")
 
             if navpath:
-                if readNav(self, navpath, state):
-                    return { 'CANCELLED' }
+                with open(navpath, 'rb') as file:
+                    if readNav(self, file, navpath, state):
+                        return { 'CANCELLED' }
                 break
 
         if not navpath:
@@ -243,8 +248,9 @@ def importRS2(self, context):
             lmpath = pathExists(f"{ rspath }.{ ext }")
 
             if lmpath:
-                if readLm(self, lmpath, state):
-                    return { 'CANCELLED' }
+                with open(lmpath, 'rb') as file:
+                    if readLm(self, file, lmpath, state):
+                        return { 'CANCELLED' }
                 break
 
         if not lmpath:
@@ -271,7 +277,9 @@ def importRS2(self, context):
                 self.report({ 'INFO' }, f"GZRS2: Prop requested but .elu file not found, skipping: { propName }")
                 continue
 
-            readElu(self, elupath, state)
+            with open(elupath, 'rb') as file:
+                if readElu(self, file, elupath, state):
+                    return { 'CANCELLED' }
 
     if state.doFog and not state.doLights:
         state.doFog = False

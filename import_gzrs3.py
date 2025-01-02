@@ -159,7 +159,10 @@ def importRS3(self, context):
                 if resourcepath not in elupaths:
                     elupaths.add(resourcepath)
 
-                    readElu(self, resourcepath, state)
+                    with open(resourcepath, 'rb') as file:
+                        if readElu(self, file, resourcepath, state):
+                            return { 'CANCELLED' }
+
                     # TODO: readElu needs to fail properly if the elu version is unsupported
 
                     for ext in XML_EXTENSIONS:

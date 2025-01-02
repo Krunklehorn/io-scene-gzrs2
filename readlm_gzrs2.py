@@ -15,8 +15,7 @@ from .classes_gzrs2 import *
 from .io_gzrs2 import *
 from .lib_gzrs2 import *
 
-def readLm(self, path, state):
-    file = io.open(path, 'rb')
+def readLm(self, file, path, state):
     file.seek(0, os.SEEK_END)
     fileSize = file.tell()
     file.seek(0, os.SEEK_SET)
@@ -40,13 +39,11 @@ def readLm(self, path, state):
 
     if id != LM_ID or version not in (LM_VERSION, LM_VERSION_EXT):
         self.report({ 'ERROR' }, f"GZRS2: LM header invalid! { hex(id) }, { hex(version) }")
-        file.close()
         return { 'CANCELLED' }
 
     if state.rsCPolygonCount is not None or state.rsONodeCount is not None:
         if lmCPolygonCount != state.rsCPolygonCount or lmONodeCount != state.rsONodeCount:
             self.report({ 'ERROR' }, f"GZRS2: LM topology does not match! { lmCPolygonCount }, { state.rsCPolygonCount }, { lmONodeCount }, { state.rsONodeCount }")
-            file.close()
             return { 'CANCELLED' }
 
     for i in range(imageCount):
@@ -60,7 +57,6 @@ def readLm(self, path, state):
 
             if bmpHeaderSize != 40:
                 self.report({ 'ERROR' }, f"GZRS2: Lm BMP header is not supported yet! Lightmap will not load properly! Please submit to Krunk#6051 for testing! { bmpHeaderSize }")
-                file.close()
                 return { 'CANCELLED' }
 
             width = readInt(file)
@@ -68,12 +64,10 @@ def readLm(self, path, state):
 
             if width != height:
                 self.report({ 'ERROR' }, f"GZRS2: Lm BMP dimensions are not equal! Lightmap will not load properly! Please submit to Krunk#6051 for testing! { width }, { height }")
-                file.close()
                 return { 'CANCELLED' }
 
             if not math.log2(width).is_integer():
                 self.report({ 'ERROR' }, f"GZRS2: Lm BMP dimensions are not a power of two! Lightmap will not load properly! Please submit to Krunk#6051 for testing! { width }, { height }")
-                file.close()
                 return { 'CANCELLED' }
 
             skipBytes(file, 2 * 2 + 4 * 6) # skip color plane count, bit depth and compression info
@@ -105,12 +99,10 @@ def readLm(self, path, state):
 
             if ddspfFlags & (1 << DDPF_FOURCC):
                 self.report({ 'ERROR' }, f"GZRS2: Lm DDS unsupported pixel format! Currently, FourCC is the only supported format. { ddspfFlags }")
-                file.close()
                 return { 'CANCELLED' }
 
             if ddspfFourCC != 'DXT1':
                 self.report({ 'ERROR' }, f"GZRS2: Lm DDS unsupported compression type! Currently, DXT1 is the only supported type. { ddspfFourCC }")
-                file.close()
                 return { 'CANCELLED' }
 
             ddsCaps = readUInt(file)
@@ -182,7 +174,6 @@ def readLm(self, path, state):
             state.lmImages.append(LmImage(width, tuple(pixels)))
         else:
             self.report({ 'ERROR' }, f"GZRS2: Lm data type is not supported yet! Lightmap will not load properly! Please submit to Krunk#6051 for testing! { type }")
-            file.close()
             return { 'CANCELLED' }
 
     state.lmPolygonOrder = readUIntArray(file, state.rsOPolygonCount)
@@ -203,5 +194,3 @@ def readLm(self, path, state):
 
         print(f"Bytes Remaining:    { bytesRemaining }")
         print()
-
-    file.close()

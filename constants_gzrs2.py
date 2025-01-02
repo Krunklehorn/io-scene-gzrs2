@@ -249,7 +249,19 @@ MATERIAL_SOUND_DATA = (
     ('WOD',     'Wood',             "")
 )
 
-MATERIAL_SOUND_TAGS = [data[0] for data in MATERIAL_SOUND_DATA]
+SPAWN_TYPE_TAGS             = [data[0] for data in SPAWN_TYPE_DATA]
+SPAWN_ENEMY_TYPE_TAGS       = [data[0] for data in SPAWN_ENEMY_TYPE_DATA]
+SPAWN_BLITZ_TYPE_TAGS       = [data[0] for data in SPAWN_BLITZ_TYPE_DATA]
+SOUND_SPACE_TAGS            = [data[0] for data in SOUND_SPACE_DATA]
+SOUND_SHAPE_TAGS            = [data[0] for data in SOUND_SHAPE_DATA]
+ITEM_GAME_ID_TAGS           = [data[0] for data in ITEM_GAME_ID_DATA]
+ITEM_TYPE_TAGS              = [data[0] for data in ITEM_TYPE_DATA]
+SMOKE_TYPE_TAGS             = [data[0] for data in SMOKE_TYPE_DATA]
+FLAG_WINDTYPE_TAGS          = [data[0] for data in FLAG_WINDTYPE_DATA]
+FLAG_LIMIT_AXIS_TAGS        = [data[0] for data in FLAG_LIMIT_AXIS_DATA]
+FLAG_LIMIT_COMPARE_TAGS     = [data[0] for data in FLAG_LIMIT_COMPARE_DATA]
+MATERIAL_SOUND_TAGS         = [data[0] for data in MATERIAL_SOUND_DATA]
+
 
 RE_ESCAPE_GZD = re.compile(re.escape('gzd_'), re.IGNORECASE)
 RE_ESCAPE_MAP = re.compile(re.escape('map_'), re.IGNORECASE)

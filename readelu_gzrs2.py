@@ -39,8 +39,7 @@ from .classes_gzrs2 import *
 from .io_gzrs2 import *
 from .lib_gzrs2 import *
 
-def readElu(self, path, state):
-    file = io.open(path, 'rb')
+def readElu(self, file, path, state):
     file.seek(0, os.SEEK_END)
     fileSize = file.tell()
     file.seek(0, os.SEEK_SET)
@@ -64,12 +63,10 @@ def readElu(self, path, state):
 
     if id != ELU_ID or version not in ELU_VERSIONS:
         self.report({ 'ERROR' }, f"GZRS2: ELU header invalid! { hex(id) }, { hex(version) }")
-        file.close()
         return { 'CANCELLED' }
 
     if version not in ELU_IMPORT_VERSIONS:
         self.report({ 'ERROR' }, f"GZRS2: Importing this ELU version is not supported yet! Model will not load properly! { path }, { hex(version) }")
-        file.close()
         return { 'CANCELLED' }
 
     result = None
@@ -92,8 +89,6 @@ def readElu(self, path, state):
 
         print(f"Bytes Remaining:    { bytesRemaining }")
         print()
-
-    file.close()
 
     return result
 

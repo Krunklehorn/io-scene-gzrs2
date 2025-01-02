@@ -97,8 +97,9 @@ def importElu(self, context):
             state.xmlEluMats[elupath] = parseEluXML(self, minidom.parseString(eluxmlstring), state)
             break
 
-    if readElu(self, elupath, state):
-        return { 'CANCELLED' }
+    with open(elupath, 'rb') as file:
+        if readElu(self, file, elupath, state):
+            return { 'CANCELLED' }
 
     bpy.ops.ed.undo_push()
     collections = bpy.data.collections

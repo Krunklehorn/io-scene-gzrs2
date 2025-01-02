@@ -54,8 +54,7 @@ def readVisData(file, version, state):
 
     return visKeyCount, visValues, visTicks
 
-def readAni(self, path, state):
-    file = io.open(path, 'rb')
+def readAni(self, file, path, state):
     file.seek(0, os.SEEK_END)
     fileSize = file.tell()
     file.seek(0, os.SEEK_SET)
@@ -93,7 +92,6 @@ def readAni(self, path, state):
     if aniType < 0:                 self.report({ 'ERROR' }, f"GZRS2: ANI file with negative type! { hex(version) }, { aniType }"); error = True
 
     if error:
-        file.close()
         return { 'CANCELLED' }
 
     maxKeyCount = 0
@@ -338,5 +336,3 @@ def readAni(self, path, state):
 
         print(f"Bytes Remaining:    { bytesRemaining }")
         print()
-
-    file.close()

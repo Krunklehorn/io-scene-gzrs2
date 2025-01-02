@@ -14,8 +14,7 @@ from .classes_gzrs2 import *
 from .io_gzrs2 import *
 from .lib_gzrs2 import *
 
-def readNav(self, path, state):
-    file = io.open(path, 'rb')
+def readNav(self, file, path, state):
     file.seek(0, os.SEEK_END)
     fileSize = file.tell()
     file.seek(0, os.SEEK_SET)
@@ -35,7 +34,6 @@ def readNav(self, path, state):
 
     if id != NAV_ID or version != NAV_VERSION:
         self.report({ 'ERROR' }, f"GZRS2: NAV header invalid! { hex(id) }, { hex(version) }")
-        file.close()
         return { 'CANCELLED' }
 
     vertexCount = readInt(file)
@@ -66,7 +64,6 @@ def readNav(self, path, state):
 
     if invalidCount > 0:
         self.report({ 'ERROR' }, f"GZRS2: NAV import contained { invalidCount } invalid face indices! { path }")
-        file.close()
         return { 'CANCELLED' }
 
     linkIndices = readIntArray(file, faceCount * 3)
@@ -80,7 +77,6 @@ def readNav(self, path, state):
 
     if invalidCount > 0:
         self.report({ 'ERROR' }, f"GZRS2: NAV import contained { invalidCount } negative link indices! { path }")
-        file.close()
         return { 'CANCELLED' }
 
     state.navLinks = tuple(tuple(linkIndices[f * 3 + i] for i in range(3)) for f in range(faceCount))
@@ -93,5 +89,3 @@ def readNav(self, path, state):
 
         print(f"Bytes Remaining:    { bytesRemaining }")
         print()
-
-    file.close()

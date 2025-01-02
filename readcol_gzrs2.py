@@ -38,8 +38,7 @@ from .constants_gzrs2 import *
 from .classes_gzrs2 import *
 from .io_gzrs2 import *
 
-def readCol(self, path, state):
-    file = io.open(path, 'rb')
+def readCol(self, file, path, state):
     file.seek(0, os.SEEK_END)
     fileSize = file.tell()
     file.seek(0, os.SEEK_SET)
@@ -59,7 +58,6 @@ def readCol(self, path, state):
 
     if (id != COL1_ID and id != COL2_ID) or (version != COL1_VERSION and version != COL2_VERSION):
         self.report({ 'ERROR' }, f"GZRS2: Col header invalid! { hex(id) }, { hex(version) }")
-        file.close()
         return { 'CANCELLED' }
 
     trisRead = 0
@@ -183,5 +181,3 @@ def readCol(self, path, state):
 
         print(f"Bytes Remaining:    { bytesRemaining }")
         print()
-
-    file.close()

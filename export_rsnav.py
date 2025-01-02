@@ -7,7 +7,7 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import os, io, shutil
+import os, io
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
@@ -103,17 +103,14 @@ def exportNav(self, context):
 
     createBackupFile(navpath)
 
-    file = io.open(navpath, 'wb')
+    with open(navpath, 'wb') as file:
+        writeUInt(file, id)
+        writeUInt(file, version)
 
-    writeUInt(file, id)
-    writeUInt(file, version)
-
-    writeInt(file, vertexCount)
-    writeCoordinateArray(file, vertices, state.convertUnits, True)
-    writeInt(file, faceCount)
-    writeShortArray(file, indices)
-    writeIntArray(file, linkIndices)
-
-    file.close()
+        writeInt(file, vertexCount)
+        writeCoordinateArray(file, vertices, state.convertUnits, True)
+        writeInt(file, faceCount)
+        writeShortArray(file, indices)
+        writeIntArray(file, linkIndices)
 
     return { 'FINISHED' }

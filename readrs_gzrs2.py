@@ -34,8 +34,7 @@ from .constants_gzrs2 import *
 from .classes_gzrs2 import *
 from .io_gzrs2 import *
 
-def readRs(self, path, state):
-    file = io.open(path, 'rb')
+def readRs(self, file, path, state):
     file.seek(0, os.SEEK_END)
     fileSize = file.tell()
     file.seek(0, os.SEEK_SET)
@@ -55,7 +54,6 @@ def readRs(self, path, state):
 
     if not (id == RS2_ID or id == RS3_ID) or version < RS3_VERSION1:
         self.report({ 'ERROR' }, f"GZRS2: RS header invalid! { hex(id) }, { hex(version) }")
-        file.close()
         return { 'CANCELLED' }
 
     if id == RS2_ID and version == RS2_VERSION:
@@ -63,7 +61,6 @@ def readRs(self, path, state):
 
         if matCount != len(state.xmlRsMats):
             self.report({ 'ERROR' }, f"GZRS2: RS material count did not match the XML parse! { matCount }, { len(state.xmlRsMats) }")
-            file.close()
             return { 'CANCELLED' }
 
         for _ in range(matCount): # skip packed material strings
@@ -181,7 +178,6 @@ def readRs(self, path, state):
 
                 if convexID < 0 or convexID >= state.rsCPolygonCount:
                     self.report({ 'ERROR' }, f"GZRS2: Convex ID out of bounds! Please submit to Krunk#6051 for testing!")
-                    file.close()
                     return { 'CANCELLED' }
                 # TODO: Improve performance of convex id matching
                 '''
@@ -241,7 +237,6 @@ def readRs(self, path, state):
 
                 if len(octreeMatches) == 0:
                     self.report({ 'ERROR' }, f"GZRS2: RS vertex match failed! Please submit to Krunk#6051 for testing!")
-                    file.close()
                     return { 'CANCELLED' }
 
                 octreeMatch = sorted(octreeMatches, key = lambda x : x[1])[0]
@@ -269,7 +264,6 @@ def readRs(self, path, state):
     elif id == RS3_ID and version >= RS3_VERSION1:
         if version not in RS_SUPPORTED_VERSIONS:
             self.report({ 'ERROR' }, f"GZRS2: RS3 version is not supported yet! Model will not load properly! Please submit to Krunk#6051 for testing! { path }, { hex(version) }")
-            file.close()
             return { 'CANCELLED' }
 
         for p in range(readUInt(file)):
@@ -411,5 +405,3 @@ def readRs(self, path, state):
 
         print(f"Bytes Remaining:    { bytesRemaining }")
         print()
-
-    file.close()

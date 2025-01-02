@@ -18,8 +18,7 @@ from .classes_gzrs2 import *
 from .io_gzrs2 import *
 from .lib_gzrs2 import *
 
-def readBsp(self, path, state):
-    file = io.open(path, 'rb')
+def readBsp(self, file, path, state):
     file.seek(0, os.SEEK_END)
     fileSize = file.tell()
     file.seek(0, os.SEEK_SET)
@@ -39,7 +38,6 @@ def readBsp(self, path, state):
 
     if id != BSP_ID or version != BSP_VERSION:
         self.report({ 'ERROR' }, f"GZRS2: BSP header invalid! { hex(id) }, { hex(version) }")
-        file.close()
         return { 'CANCELLED' }
 
     state.bspNodeCount = readUInt(file)
@@ -65,8 +63,6 @@ def readBsp(self, path, state):
             output += f" { state.bspVertexCount },"     + f" { state.rsBVertexCount }"
 
             self.report({ 'ERROR' }, output)
-            file.close()
-
             return { 'CANCELLED' }
 
     # readrs_gzrs2.py
@@ -111,7 +107,6 @@ def readBsp(self, path, state):
             if state.rsCPolygonCount is not None:
                 if convexID < 0 or convexID >= state.rsCPolygonCount:
                     self.report({ 'ERROR' }, f"GZRS2: Convex ID out of bounds! Please submit to Krunk#6051 for testing!")
-                    file.close()
                     return { 'CANCELLED' }
 
             if not (0 <= matID < len(state.xmlRsMats)): # TODO: Perhaps we should wait and assign the error material instead...
@@ -155,5 +150,3 @@ def readBsp(self, path, state):
 
         print(f"Bytes Remaining:    { bytesRemaining }")
         print()
-
-    file.close()
