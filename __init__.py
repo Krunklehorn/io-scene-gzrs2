@@ -1765,7 +1765,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     dummyTypeEnumItems = (
         ('NONE',        'None',         "Not a Realspace object. Will not be exported"),
         ('SPAWN',       'Spawn',        "Spawn location for characters"),
-        ('SUN',         'Sun',          "Sun spot location. Not an actual light source"),
+        ('FLARE',       'Flare',        "Lens flare location. Not an actual light source"),
         ('SOUND',       'Sound',        "Ambient sound, based on proximity to a sphere or axis-aligned bounding box center"),
         ('ITEM',        'Item',         "Health, armor, ammo etc"),
         ('SMOKE',       'Smoke',        "Smoke particle generator")
@@ -2220,7 +2220,7 @@ class GZRS2_PT_Realspace_Mesh(Panel):
 
 class GZRS2CameraProperties(PropertyGroup):
     cameraIndex: IntProperty(
-        name = 'Spawn Index',
+        name = 'Index',
         default = 1,
         min = 1,
         max = 999,

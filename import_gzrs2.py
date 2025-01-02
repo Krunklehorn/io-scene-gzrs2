@@ -706,7 +706,7 @@ def importRS2(self, context):
 
                 state.blSmokePairs.append((nameLower, blObj))
             elif nameLower.startswith('sun_'):
-                props.dummyType = 'SUN'
+                props.dummyType = 'FLARE'
 
             state.blDummyObjs.append(blObj)
             rootDummies.objects.link(blObj)
