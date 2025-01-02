@@ -37,8 +37,9 @@ def importNav(self, context):
     state.filename = splitname[0]
     extension = splitname[-1].lower()
 
-    if readNav(self, navpath, state):
-        return { 'CANCELLED' }
+    with open(navpath, 'rb') as file:
+        if readNav(self, file, navpath, state):
+            return { 'CANCELLED' }
 
     blNavFacesObj, blNavLinksObj = setupNavMesh(state)
     context.collection.objects.link(blNavFacesObj)

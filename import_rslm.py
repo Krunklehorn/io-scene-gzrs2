@@ -32,8 +32,9 @@ def importLm(self, context):
     state.directory = os.path.dirname(lmpath)
     state.filename = os.path.basename(lmpath).split(os.extsep)[0]
 
-    if readLm(self, lmpath, state):
-        return { 'CANCELLED' }
+    with open(lmpath, 'rb') as file:
+        if readLm(self, file, lmpath, state):
+            return { 'CANCELLED' }
 
     unpackLmImages(state)
 
