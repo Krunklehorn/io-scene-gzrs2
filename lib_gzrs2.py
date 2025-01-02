@@ -1,4 +1,4 @@
-import bpy, os, math, ctypes
+import bpy, os, math, ctypes, shutil
 
 from ctypes import *
 
