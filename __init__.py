@@ -1771,52 +1771,14 @@ class GZRS2ObjectProperties(PropertyGroup):
         ('SMOKE',       'Smoke',        "Smoke particle generator")
     )
 
-    spawnTypeEnumItems = (
-        ('SOLO',        'Solo',         "Free-for-all and Quest spawn for players"),
-        ('TEAM',        'Team',         "Team oriented spawn for players"),
-        ('NPC',         'Enemy',        "Quest spawn for enemies"),
-        ('BLITZ',       'Blitzkrieg',   "Spawns for the blitzkrieg gametype")
-    )
-
-    spawnEnemyTypeEnumItems = (
-        ('MELEE',       'Melee',        "Spawn for melee enemies"),
-        ('RANGED',      'Ranged',       "Spawn for ranged enemies"),
-        ('BOSS',        'Boss',         "Spawn for a boss enemy")
-    )
-
-    spawnBlitzTypeEnumItems = (
-        ('BARRICADE',   'Barricade',    "Spawn for barricades"),
-        ('GUARDIAN',    'Guardian',     "Spawn for guardians"),
-        ('RADAR',       'Radar',        "Spawn for radars"),
-        ('TREASURE',    'Treasure',     "Spawn for treasures")
-    )
-
-    soundSpaceEnumItems = (
-        ('2D',          '2D',           "Two-dimensional, no stereo image. Good for reverberant, omnidirectional ambience"),
-        ('3D',          '3D',           "Three-dimensional, stereo enabled. Good for directional sounds with a clear source")
-    )
-
-    soundShapeEnumItems = (
-        ('AABB',        'AABB',         "Proximity through an axis-aligned bounding box toward it's center"),
-        ('SPHERE',      'Sphere',       "Proximity through a sphere toward it's center")
-    )
-
-    itemGameIDEnumItems = (
-        ('SOLO',        'Solo',         "Free-for-all gametypes"),
-        ('TEAM',        'Team',         "Team oriented gametypes")
-    )
-
-    itemTypeEnumItems = (
-        ('HP',          'Health',       "Refills a portion of the player's health"),
-        ('AP',          'Armor',        "Refills a portion of the player's armor"),
-        ('BULLET',      'Bullet',       "Grants some ammunition for the player's gun")
-    )
-
-    smokeTypeEnumItems = (
-        ('SS',          'Smoke',        "Standard smoke, think Factory"),
-        ('ST',          'Train Steam',  "Train steam"),
-        ('TS',          'Train Smoke',  "Train smoke (unused)")
-    )
+    spawnTypeEnumItems = SPAWN_TYPE_DATA
+    spawnEnemyTypeEnumItems = SPAWN_ENEMY_TYPE_DATA
+    spawnBlitzTypeEnumItems = SPAWN_BLITZ_TYPE_DATA
+    soundSpaceEnumItems = SOUND_SPACE_DATA
+    soundShapeEnumItems = SOUND_SHAPE_DATA
+    itemGameIDEnumItems = ITEM_GAME_ID_DATA
+    itemTypeEnumItems = ITEM_TYPE_DATA
+    smokeTypeEnumItems = SMOKE_TYPE_DATA
 
     def onGetDummyType(self):           self.ensureAll(); return enumTagToIndex(self, self['dummyType'],        self.dummyTypeEnumItems)
     def onGetSpawnType(self):           self.ensureAll(); return enumTagToIndex(self, self['spawnType'],        self.spawnTypeEnumItems)

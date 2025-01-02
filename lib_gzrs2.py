@@ -1464,8 +1464,10 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     state.blEluMeshObjs.append(blMeshObj)
 
     if eluMesh.drawFlags & RM_FLAG_HIDE:
-        blMeshObj.hide_viewport = True
         blMeshObj.hide_render = True
+
+        for viewLayer in context.scene.view_layers:
+            blMeshObj.hide_set(True, view_layer = viewLayer)
 
     state.blObjPairs.append((eluMesh, blMeshObj))
 

@@ -158,6 +158,53 @@ RS_SOUND_THRESHOLD =            0.000001
 ELU_VALUE_THRESHOLD =           0.01
 ANI_VERTEX_THRESHOLD =          0.0001
 
+SPAWN_TYPE_DATA = (
+    ('SOLO',        'Solo',         "Free-for-all and Quest spawn for players"),
+    ('TEAM',        'Team',         "Team oriented spawn for players"),
+    ('NPC',         'Enemy',        "Quest spawn for enemies"),
+    ('BLITZ',       'Blitzkrieg',   "Spawns for the blitzkrieg gametype")
+)
+
+SPAWN_ENEMY_TYPE_DATA = (
+    ('MELEE',       'Melee',        "Spawn for melee enemies"),
+    ('RANGED',      'Ranged',       "Spawn for ranged enemies"),
+    ('BOSS',        'Boss',         "Spawn for a boss enemy")
+)
+
+SPAWN_BLITZ_TYPE_DATA = (
+    ('BARRICADE',   'Barricade',    "Spawn for barricades"),
+    ('GUARDIAN',    'Guardian',     "Spawn for guardians"),
+    ('RADAR',       'Radar',        "Spawn for radars"),
+    ('TREASURE',    'Treasure',     "Spawn for treasures")
+)
+
+SOUND_SPACE_DATA = (
+    ('2D',          '2D',           "Two-dimensional, no stereo image. Good for reverberant, omnidirectional ambience"),
+    ('3D',          '3D',           "Three-dimensional, stereo enabled. Good for directional sounds with a clear source")
+)
+
+SOUND_SHAPE_DATA = (
+    ('AABB',        'AABB',         "Proximity through an axis-aligned bounding box toward it's center"),
+    ('SPHERE',      'Sphere',       "Proximity through a sphere toward it's center")
+)
+
+ITEM_GAME_ID_DATA = (
+    ('SOLO',        'Solo',         "Free-for-all gametypes"),
+    ('TEAM',        'Team',         "Team oriented gametypes")
+)
+
+ITEM_TYPE_DATA = (
+    ('HP',          'Health',       "Refills a portion of the player's health"),
+    ('AP',          'Armor',        "Refills a portion of the player's armor"),
+    ('BULLET',      'Bullet',       "Grants some ammunition for the player's gun")
+)
+
+SMOKE_TYPE_DATA = (
+    ('SS',          'Smoke',        "Standard smoke, think Factory"),
+    ('ST',          'Train Steam',  "Train steam"),
+    ('TS',          'Train Smoke',  "Train smoke (unused)")
+)
+
 FLAG_WINDTYPE_DATA = (
     ('NO_WIND',                 'None',             ""),
     ('RANDOM_WIND',             'Random',           ""),

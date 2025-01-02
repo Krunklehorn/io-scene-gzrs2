@@ -528,6 +528,8 @@ def importRS2(self, context):
                 else: rootLightsSoftAmbient.objects.link(blLightObj)
 
             if lightName.lower().startswith('obj_'):
+                blLightObj.hide_render = True
+
                 for viewLayer in context.scene.view_layers:
                     blLightObj.hide_set(True, view_layer = viewLayer)
 
@@ -801,6 +803,8 @@ def importRS2(self, context):
                 props = blFlagObj.data.gzrs2
                 props.propSubtype = 'FLAG'
 
+                # TODO: Reorient
+
                 if 'DIRECTION'      in flag:            props.flagDirection     = flag['DIRECTION']
                 if 'POWER'          in flag:            props.flagPower         = flag['POWER']
 
@@ -853,6 +857,7 @@ def importRS2(self, context):
             colName = f"{ state.filename }_Collision"
             colExt = os.path.basename(colpath).split(os.extsep)[-1].lower()
             blColObj = setupColMesh(colName, rootExtras, context, colExt, state)
+            blColObj.hide_render = True
 
             for viewLayer in context.scene.view_layers:
                 blColObj.hide_set(True, view_layer = viewLayer)
@@ -861,6 +866,8 @@ def importRS2(self, context):
             blNavFacesObj, blNavLinksObj = setupNavMesh(state)
             rootExtras.objects.link(blNavFacesObj)
             rootExtras.objects.link(blNavLinksObj)
+            blNavFacesObj.hide_render = True
+            blNavLinksObj.hide_render = True
 
             for viewLayer in context.scene.view_layers:
                 blNavFacesObj.hide_set(True, view_layer = viewLayer)
@@ -901,6 +908,7 @@ def importRS2(self, context):
 
             blOccObj.data.materials.append(blOccMat)
             rootExtras.objects.link(blOccObj)
+            blOccObj.hide_render = True
 
             for viewLayer in context.scene.view_layers:
                 blOccObj.hide_set(True, view_layer = viewLayer)
