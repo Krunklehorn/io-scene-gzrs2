@@ -662,6 +662,7 @@ def exportElu(self, context):
         print(f"Weight Names:       { weightNames }")
         print()
 
+    # Write ELU
     if state.logEluHeaders or state.logEluMats or state.logEluMeshNodes:
         print("===================  Write Elu  ===================")
         print()
@@ -674,8 +675,7 @@ def exportElu(self, context):
         print(f"Mesh Count:         { meshCount }")
         print()
 
-    if os.path.isfile(elupath):
-        shutil.copy2(elupath, os.path.join(directory, filename + "_backup") + '.' + splitname[1])
+    createBackupFile(elupath)
 
     file = io.open(elupath, 'wb')
 

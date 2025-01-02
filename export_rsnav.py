@@ -90,6 +90,7 @@ def exportNav(self, context):
         print(output)
         print()
 
+    # Write NAV
     if state.logNavHeaders or state.logNavData:
         print("===================  Write Nav  ===================")
         print()
@@ -100,8 +101,7 @@ def exportNav(self, context):
         print(f"Version:            { hex(version) }")
         print()
 
-    if os.path.isfile(navpath):
-        shutil.copy2(navpath, os.path.join(directory, filename + "_backup") + '.' + splitname[1])
+    createBackupFile(navpath)
 
     file = io.open(navpath, 'wb')
 

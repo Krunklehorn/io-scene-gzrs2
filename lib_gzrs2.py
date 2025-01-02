@@ -1521,6 +1521,20 @@ def processEluHeirarchy(self, state):
         if not found:
             self.report({ 'WARNING' }, f"GZRS2: Parent not found for .elu child mesh: { child.meshName }, { child.parentName }")
 
+def createBackupFile(path):
+    if not os.path.isfile(path):
+        return
+
+    directory = os.path.dirname(path)
+    splitname = os.path.basename(path).split(os.extsep)
+    filename = splitname[0]
+    extension = '.' + splitname[1]
+
+    if len(splitname) > 1:
+        extension += '.' + splitname[2]
+
+    shutil.copy2(path, os.path.join(directory, filename + "_backup") + extension)
+
 def getStrictMaterials(self, blObjs, *, warnPlaceholder = True):
     blMats = set()
     matSets = {}

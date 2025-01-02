@@ -204,7 +204,7 @@ def exportLm(self, context):
         self.report({ 'ERROR' }, "GZRS2: No valid lightmap found! Image must be a square, power of two texture and the name must match \'<mapname>_LmImage\' or \'<mapname>_LmAtlas<# of cells>\'")
         return { 'CANCELLED' }
 
-    shutil.copy2(lmpath, os.path.join(directory, filename + "_backup") + '.' + splitname[1] + '.' + splitname[2])
+    createBackupFile(lmpath)
 
     # Read LM
     file = io.open(lmpath, 'r+b')
