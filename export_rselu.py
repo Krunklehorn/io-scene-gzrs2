@@ -549,8 +549,8 @@ def exportElu(self, context):
 
         m += 1
         eluMeshes.append(EluMeshNodeExport(boneName, parentName, worldMatrix,
-                                            apScale, rotAA, stretchAA, etcMatrix,
-                                            0, (), 0, (), 0, (), 0, 0, ()))
+                                           apScale, rotAA, stretchAA, etcMatrix,
+                                           0, (), 0, (), 0, (), 0, 0, (), ()))
 
     if m != meshCount:
         self.report({ 'ERROR' }, f"GZRS2: ELU export mesh count did not match after second pass! { m }, { meshCount }")
