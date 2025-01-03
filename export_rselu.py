@@ -143,8 +143,9 @@ def exportElu(self, context):
     eluMeshObjs = []
     eluEmptyBones = []
 
-    eluMatrices = []
-    eluInvMatrices = []
+    worldMatrices = []
+    worldInvMatrices = []
+    worldMatrixByName = {}
 
     eluBoneIDs = {}
 
@@ -152,37 +153,39 @@ def exportElu(self, context):
 
     # Non-bone meshes first
     for blObj in blObjs:
-        meshName = blObj.name
+        objName = blObj.name
 
-        if meshName in blValidBones:
+        if objName in blValidBones:
             continue
 
-        eluObjByName[meshName] = blObj
+        eluObjByName[objName] = blObj
 
         eluMeshObjs.append(blObj)
 
         matrixWorld = blObj.matrix_world
-        eluMatrices.append(matrixWorld)
-        eluInvMatrices.append(matrixWorld.inverted())
+        worldMatrices.append(matrixWorld)
+        worldInvMatrices.append(matrixWorld.inverted())
+        worldMatrixByName[objName] = matrixWorld
 
         m += 1
 
     # Bone meshes second
     for blObj in blObjs:
-        meshName = blObj.name
+        objName = blObj.name
 
-        if meshName not in blValidBones:
+        if objName not in blValidBones:
             continue
 
-        eluObjByName[meshName] = blObj
+        eluObjByName[objName] = blObj
 
         eluMeshObjs.append(blObj)
 
         matrixWorld = blObj.matrix_world
-        eluMatrices.append(matrixWorld)
-        eluInvMatrices.append(matrixWorld.inverted())
+        worldMatrices.append(matrixWorld)
+        worldInvMatrices.append(matrixWorld.inverted())
+        worldMatrixByName[objName] = matrixWorld
 
-        eluBoneIDs[meshName] = m
+        eluBoneIDs[objName] = m
 
         m += 1
 
@@ -202,8 +205,9 @@ def exportElu(self, context):
             eluEmptyBones.append(blBone)
 
             matrixWorld = blArmatureObj.matrix_world @ blBone.matrix_local @ reorientLocal
-            eluMatrices.append(matrixWorld)
-            eluInvMatrices.append(matrixWorld.inverted())
+            worldMatrices.append(matrixWorld)
+            worldInvMatrices.append(matrixWorld.inverted())
+            worldMatrixByName[boneName] = matrixWorld
 
             eluBoneIDs[boneName] = m
 
@@ -326,8 +330,8 @@ def exportElu(self, context):
         print("=========  Elu Mesh Nodes  ========")
         print()
 
-    eluMatrices = tuple(eluMatrices)
-    eluInvMatrices = tuple(eluInvMatrices)
+    worldMatrices = tuple(worldMatrices)
+    worldInvMatrices = tuple(worldInvMatrices)
 
     eluMeshes = []
 
@@ -368,9 +372,9 @@ def exportElu(self, context):
                 self.report({ 'ERROR' }, f"GZRS2: ELU export tried to parent a mesh object to itself! { meshName }")
                 return { 'CANCELLED' }
 
-        worldMatrix = eluMatrices[m]
-        transform = reorientWorld @ worldMatrix
-        apScale, rotAA, scaleAA, etcMatrix = calcEtcData(version, transform) # TODO
+        worldMatrix = reorientWorld @ worldMatrices[m]
+        parentWorld = worldMatrixByName.get(parentName) or Matrix.Identity(4)
+        apScale, rotAA, stretchAA, etcMatrix = calcEtcData(worldMatrix, parentWorld)
 
         if eluMeshObj.type == 'MESH':
             blMesh = eluMeshObj.data
@@ -490,7 +494,7 @@ def exportElu(self, context):
                     boneNames = tuple(pair[1] for pair in pairs)
                     values = tuple(pair[0] / total for pair in pairs) if total != 0.0 else tuple(pair[0] for pair in pairs)
                     meshIDs = tuple(eluBoneIDs[boneName] if boneName != '' else 0 for boneName in boneNames)
-                    offsets = tuple(eluInvMatrices[meshID] @ vertexWorld if meshID != 0 else Vector((0, 0, 0)) for meshID in meshIDs)
+                    offsets = tuple(worldInvMatrices[meshID] @ vertexWorld if meshID != 0 else Vector((0, 0, 0)) for meshID in meshIDs)
                     degree = min(ELU_PHYS_KEYS, degree)
 
                     weights.append(EluWeightExport(boneNames, values, meshIDs, degree, offsets))
@@ -518,8 +522,8 @@ def exportElu(self, context):
             weights = ()
 
         m += 1
-        eluMeshes.append(EluMeshNodeExport(meshName, parentName, transform,
-                                           apScale, rotAA, scaleAA, etcMatrix,
+        eluMeshes.append(EluMeshNodeExport(meshName, parentName, worldMatrix,
+                                           apScale, rotAA, stretchAA, etcMatrix,
                                            vertexCount, vertices, faceCount, faces,
                                            colorCount, colors, matID,
                                            weightCount, weights, slotIDs))
@@ -539,12 +543,13 @@ def exportElu(self, context):
             self.report({ 'ERROR' }, f"GZRS2: ELU export tried to parent a bone to itself! { boneName }")
             return { 'CANCELLED' }
 
-        transform = reorientWorld @ eluMatrices[m]
-        apScale, rotAA, scaleAA, etcMatrix = calcEtcData(version, transform) # TODO
+        worldMatrix = reorientWorld @ worldMatrices[m]
+        parentWorld = worldMatrixByName.get(parentName) or Matrix.Identity(4)
+        apScale, rotAA, stretchAA, etcMatrix = calcEtcData(worldMatrix, parentWorld)
 
         m += 1
-        eluMeshes.append(EluMeshNodeExport(boneName, parentName, transform,
-                                            apScale, rotAA, scaleAA, etcMatrix,
+        eluMeshes.append(EluMeshNodeExport(boneName, parentName, worldMatrix,
+                                            apScale, rotAA, stretchAA, etcMatrix,
                                             0, (), 0, (), 0, (), 0, 0, ()))
 
     if m != meshCount:
@@ -709,15 +714,15 @@ def exportElu(self, context):
             writeString(file, eluMesh.meshName, ELU_NAME_LENGTH)
             writeString(file, eluMesh.parentName, ELU_NAME_LENGTH)
 
-            writeTransform(file, eluMesh.transform, state.convertUnits, True)
+            writeTransform(file, eluMesh.transform, state.convertUnits, True) # TODO: swizzle
 
             if version >= ELU_5001:
-                writeVec3(file, eluMesh.apScale)
+                writeVec3(file, eluMesh.apScale) # TODO: swizzle
 
             if version >= ELU_5003:
-                writeVec4(file, eluMesh.rotAA) # TODO: coordinates or directions?
-                writeVec4(file, eluMesh.scaleAA) # TODO: coordinates or directions?
-                writeTransform(file, eluMesh.etcMatrix, state.convertUnits, True)
+                writeVec4(file, eluMesh.rotAA) # TODO: swizzle
+                writeVec4(file, eluMesh.stretchAA) # TODO: swizzle
+                writeTransform(file, eluMesh.etcMatrix, state.convertUnits, True) # TODO: swizzle
 
             writeUInt(file, eluMesh.vertexCount)
             writeCoordinateArray(file, eluMesh.vertices, state.convertUnits, True)

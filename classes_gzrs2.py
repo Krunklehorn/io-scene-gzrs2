@@ -475,7 +475,7 @@ class EluMeshNodeExport:
     transform:          Matrix = ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))
     apScale:            Vector = (0, 0, 0)
     rotAA:              Vector = (0, 0, 0, 0)
-    scaleAA:            Vector = (0, 0, 0, 0)
+    stretchAA:          Vector = (0, 0, 0, 0)
     etcMatrix:          Matrix = ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))
     vertexCount:        int = 0
     vertices:           tuple = field(default_factory = tuple)

@@ -1638,22 +1638,20 @@ def makeRS2DataPath(path):
 
     return makePathExtSingle(found)
 
-def calcEtcData(version, transform): # TODO
-    if version >= ELU_5001:
-        apScale = Vector((1, 1, 1))
-    else:
-        apScale = None
+# This data doesn't appear to be used for anything
+# Blender matrices don't support arbitrary scale anyways
+# It would have to be a custom mesh property, and nothing has broken without it
+def calcEtcData(worldMat, parentWorld):
+    localMat = parentWorld.inverted() @ worldMat
+    loc, rot, sca = localMat.decompose()
+    rotAxis, rotAngle = rot.to_axis_angle()
 
-    if version >= ELU_5003:
-        rotAA = Vector((0, 0, 0, 0))
-        scaleAA = Vector((0, 0, 0, 0))
-        etcMatrix = Matrix.Identity(4)
-    else:
-        rotAA = None
-        scaleAA = None
-        etcMatrix = None
+    apScale = sca
+    rotAA = Vector((rotAxis.x, rotAxis.y, rotAxis.z, rotAngle))
+    stretchAA = Vector((0, 0, 0, 0))
+    etcMatrix = worldMat @ Matrix.LocRotScale(loc, rot, None).inverted()
 
-    return apScale, rotAA, scaleAA, etcMatrix
+    return apScale, rotAA, stretchAA, etcMatrix
 
 def getFilteredObjects(context, state):
     if state.selectedOnly:
