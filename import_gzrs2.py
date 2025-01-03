@@ -495,7 +495,7 @@ def importRS2(self, context):
             blLight.color = light['COLOR']
             blLight.energy = calcLightEnergy(intensity, attEnd)
             blLight.shadow_soft_size = calcLightSoftSize(softness, attEnd)
-            blLight.cycles.cast_shadow = castshadow
+            blLight.use_shadow = castshadow
 
             props = blLight.gzrs2
             props.lightType = 'DYNAMIC' if dynamic else 'STATIC'

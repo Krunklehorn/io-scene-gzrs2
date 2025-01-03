@@ -1532,7 +1532,7 @@ def createBackupFile(path):
     filename = splitname[0]
     extension = '.' + splitname[1]
 
-    if len(splitname) > 1:
+    if len(splitname) > 2:
         extension += '.' + splitname[2]
 
     shutil.copy2(path, os.path.join(directory, filename + "_backup") + extension)
