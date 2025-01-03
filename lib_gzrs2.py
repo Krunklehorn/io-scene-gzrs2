@@ -6,6 +6,7 @@ from contextlib import redirect_stdout
 from mathutils import Vector, Matrix
 
 from .constants_gzrs2 import *
+from .classes_gzrs2 import *
 
 def getOrNone(list, i):
     try:        return list[i]
