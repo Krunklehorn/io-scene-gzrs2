@@ -297,15 +297,7 @@ def importRS2(self, context):
     rootMeshesBsp =             collections.new(f"{ state.filename }_Meshes_Bsptree")           if state.doBsptree else False
     rootMeshesOct =             collections.new(f"{ state.filename }_Meshes_Octree")
     rootMeshesUni =             collections.new(f"{ state.filename }_Meshes_Unified")           if self.meshMode == 'BAKE' else False
-
-    rootLightsMain =            collections.new(f"{ state.filename }_Lights_Main")              if state.doLights else False
-    rootLightsSoft =            collections.new(f"{ state.filename }_Lights_Soft")              if state.doLights else False
-    rootLightsHard =            collections.new(f"{ state.filename }_Lights_Hard")              if state.doLights else False
-    rootLightsSoftAmbient =     collections.new(f"{ state.filename }_Lights_SoftAmbient")       if state.doLights else False
-    rootLightsSoftCasters =     collections.new(f"{ state.filename }_Lights_SoftCasters")       if state.doLights else False
-    rootLightsHardAmbient =     collections.new(f"{ state.filename }_Lights_HardAmbient")       if state.doLights else False
-    rootLightsHardCasters =     collections.new(f"{ state.filename }_Lights_HardCasters")       if state.doLights else False
-
+    rootLights =                collections.new(f"{ state.filename }_Lights")                   if state.doLights else False
     rootProps =                 collections.new(f"{ state.filename }_Props")                    if state.doProps else False
     rootDummies =               collections.new(f"{ state.filename }_Dummies")                  if state.doDummies else False
     rootSounds =                collections.new(f"{ state.filename }_Sounds")                   if state.doSounds else False
@@ -324,15 +316,7 @@ def importRS2(self, context):
     if self.meshMode == 'BAKE':
         rootMap.children.link(rootMeshesUni)
 
-    if state.doLights:
-        rootMap.children.link(rootLightsMain)
-        rootMap.children.link(rootLightsSoft)
-        rootMap.children.link(rootLightsHard)
-        rootLightsSoft.children.link(rootLightsSoftAmbient)
-        rootLightsSoft.children.link(rootLightsSoftCasters)
-        rootLightsHard.children.link(rootLightsHardAmbient)
-        rootLightsHard.children.link(rootLightsHardCasters)
-
+    if state.doLights:      rootMap.children.link(rootLights)
     if state.doProps:       rootMap.children.link(rootProps)
     if state.doDummies:     rootMap.children.link(rootDummies)
     if state.doSounds:      rootMap.children.link(rootSounds)
@@ -495,47 +479,37 @@ def importRS2(self, context):
     if state.doLights:
         for light in state.xmlLits:
             lightName = light['name']
+            lightNameLower = lightName.lower()
+            dynamic = lightNameLower.startswith('obj_')
+
+            intensity = light['INTENSITY']
             attEnd = light['ATTENUATIONEND']
             attStart = light['ATTENUATIONSTART']
-            softness = (attEnd - attStart) / attEnd
-            hardness = 0.001 / (1 - min(softness, 0.9999))
             castshadow = light['CASTSHADOW']
 
+            softness = calcLightSoftness(attStart, attEnd)
+
             blLight = bpy.data.lights.new(lightName, 'POINT')
-            blLight.color = light['COLOR']
-            blLight.energy = light['INTENSITY'] * pow(attEnd, 2) * 2
-            blLight.shadow_soft_size = hardness * attEnd
-            blLight.cycles.cast_shadow = castshadow
-
-            # Some simple tweaks to help with contrast and shadow sharpness. The numbers were
-            # tuned for outdoor maps with sunlight like Battle Arena, Castle and Factory, but
-            # should be a decent starting point for other maps too.
-            if self.tweakLights and softness <= 0.1:
-                if castshadow:
-                    if state.doFog:
-                        blLight.energy *= 100
-                        blLight.shadow_soft_size = 0
-                    else:
-                        blLight.energy *= 10
-                else:
-                    blLight.energy /= 100
-
             blLightObj = bpy.data.objects.new(lightName, blLight)
             blLightObj.location = light['POSITION']
+
+            blLight.color = light['COLOR']
+            blLight.energy = calcLightEnergy(intensity, attEnd)
+            blLight.shadow_soft_size = calcLightSoftSize(softness, attEnd)
+            blLight.cycles.cast_shadow = castshadow
+
+            props = blLight.gzrs2
+            props.lightType = 'DYNAMIC' if dynamic else 'STATIC'
+            props.intensity = intensity
+            props.attStart = attStart
+            props.attEnd = attEnd
 
             state.blLights.append(blLight)
             state.blLightObjs.append(blLightObj)
 
-            if lightName.lower().startswith(('main_omni', 'sun_omni', 'omni_main', 'omni_sun', 'omni_def', 'omni_shadow')):
-                rootLightsMain.objects.link(blLightObj)
-            elif softness <= 0.1:
-                if castshadow: rootLightsHardCasters.objects.link(blLightObj)
-                else: rootLightsHardAmbient.objects.link(blLightObj)
-            else:
-                if castshadow: rootLightsSoftCasters.objects.link(blLightObj)
-                else: rootLightsSoftAmbient.objects.link(blLightObj)
+            rootLights.objects.link(blLightObj)
 
-            if lightName.lower().startswith('obj_'):
+            if dynamic or (softness <= 0.1 and not castshadow):
                 blLightObj.hide_render = True
 
                 for viewLayer in context.scene.view_layers:

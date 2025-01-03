@@ -262,7 +262,6 @@ FLAG_LIMIT_AXIS_TAGS        = [data[0] for data in FLAG_LIMIT_AXIS_DATA]
 FLAG_LIMIT_COMPARE_TAGS     = [data[0] for data in FLAG_LIMIT_COMPARE_DATA]
 MATERIAL_SOUND_TAGS         = [data[0] for data in MATERIAL_SOUND_DATA]
 
-
 RE_ESCAPE_GZD = re.compile(re.escape('gzd_'), re.IGNORECASE)
 RE_ESCAPE_MAP = re.compile(re.escape('map_'), re.IGNORECASE)
 

@@ -1948,6 +1948,18 @@ def setupLmMixGroup(state):
 
         state.lmMixGroup = group
 
+def calcLightSoftness(attStart, attEnd):
+    return (attEnd - min(attStart, attEnd)) / max(attEnd, 0.001)
+
+def calcLightEnergy(intensity, attEnd):
+    return intensity * pow(attEnd, 2) * 20
+
+def calcLightIntensity(energy, attEnd):
+    return energy / pow(max(attEnd, 0.001), 2) / 20
+
+def calcLightSoftSize(softness, attEnd):
+    return (1 - softness) * attEnd
+
 def compareColors(color1, color2):
     return all((math.isclose(color1[0], color2[0], rel_tol = RS_COLOR_THRESHOLD),
                 math.isclose(color1[1], color2[1], rel_tol = RS_COLOR_THRESHOLD),

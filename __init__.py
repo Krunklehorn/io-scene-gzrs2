@@ -10,6 +10,7 @@ from .lib_gzrs2 import getEluExportConstants, getMatTreeLinksNodes, getRelevantS
 from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender
 from .lib_gzrs2 import decomposeTexpath, checkIsEffectNode, checkIsAniTex, processAniTexParameters
 from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
+from .lib_gzrs2 import calcLightSoftness, calcLightEnergy, calcLightIntensity, calcLightSoftSize
 from .lib_gzrs2 import enumTagToIndex, enumIndexToTag
 
 bl_info = {
@@ -65,6 +66,86 @@ def validateRSDataDirectory(dirpath, isRS3):
                 return True
 
     return False
+
+class GZRS2_OT_Specify_Path_MRS(Operator):
+    bl_idname = 'gzrs2.specify_path_mrs'
+    bl_label = "Please specify the location of the extracted .mrs data"
+    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_description = "Specify the location of the extracted .mrs data"
+
+    dataPath: StringProperty(
+        name = 'Path',
+        default = '',
+        options = { 'ANIMATABLE', 'OUTPUT_PATH' },
+        subtype = 'DIR_PATH'
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def invoke(self, context, event):
+        self.dataPath = ''
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
+        self.dataPath = os.path.join(self.dataPath, '')
+
+        layout = self.layout
+        layout.prop(self, 'dataPath')
+
+    def execute(self, context):
+        self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
+        self.dataPath = os.path.join(self.dataPath, '')
+
+        if not validateRSDataDirectory(self.dataPath, False):
+            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory!")
+            return { 'CANCELLED' }
+
+        context.preferences.addons[__package__].preferences.rs2DataDir = self.dataPath
+
+        return { 'FINISHED' }
+
+class GZRS2_OT_Specify_Path_MRF(Operator):
+    bl_idname = 'gzrs2.specify_path_mrf'
+    bl_label = "Please specify the location of the extracted .mrf data"
+    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_description = "Specify the location of the extracted .mrf data"
+
+    dataPath: StringProperty(
+        name = 'Path',
+        default = '',
+        options = { 'ANIMATABLE', 'OUTPUT_PATH' },
+        subtype = 'DIR_PATH'
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def invoke(self, context, event):
+        self.dataPath = ''
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
+        self.dataPath = os.path.join(self.dataPath, '')
+
+        layout = self.layout
+        layout.prop(self, 'dataPath')
+
+    def execute(self, context):
+        self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
+        self.dataPath = os.path.join(self.dataPath, '')
+
+        if not validateRSDataDirectory(self.dataPath, True):
+            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory!")
+            return { 'CANCELLED' }
+
+        context.preferences.addons[__package__].preferences.rs3DataDir = self.dataPath
+
+        return { 'FINISHED' }
 
 class GZRS2_OT_Apply_Material_Preset(Operator):
     bl_idname = 'gzrs2.apply_material_preset'
@@ -164,83 +245,29 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
 
         return { 'FINISHED' }
 
-class GZRS2_OT_Specify_Path_MRS(Operator):
-    bl_idname = 'gzrs2.specify_path_mrs'
-    bl_label = "Please specify the location of the extracted .mrs data"
+class GZRS2_OT_Recalculate_Lights(Operator):
+    bl_idname = 'gzrs2.recalculate_lights'
+    bl_label = "Recalculate Lights"
     bl_options = { 'REGISTER', 'INTERNAL' }
-    bl_description = "Specify the location of the extracted .mrs data"
-
-    dataPath: StringProperty(
-        name = 'Path',
-        default = '',
-        options = { 'ANIMATABLE', 'OUTPUT_PATH' },
-        subtype = 'DIR_PATH'
-    )
+    bl_description = "Recalculate Blender lights based on associated Realspace properties"
 
     @classmethod
     def poll(cls, context):
         return True
 
-    def invoke(self, context, event):
-        self.dataPath = ''
-        return context.window_manager.invoke_props_dialog(self)
-
-    def draw(self, context):
-        self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
-        self.dataPath = os.path.join(self.dataPath, '')
-
-        layout = self.layout
-        layout.prop(self, 'dataPath')
-
     def execute(self, context):
-        self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
-        self.dataPath = os.path.join(self.dataPath, '')
+        bpy.ops.ed.undo_push()
 
-        if not validateRSDataDirectory(self.dataPath, False):
-            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory!")
-            return { 'CANCELLED' }
+        blLights = tuple(blObj.data for blObj in bpy.data.objects if blObj.type == 'LIGHT' and blObj.data.gzrs2.lightType != 'NONE')
 
-        context.preferences.addons[__package__].preferences.rs2DataDir = self.dataPath
+        for blLight in blLights:
+            props = blLight.gzrs2
 
-        return { 'FINISHED' }
+            attEnd = props.attEnd
+            softness = calcLightSoftness(props.attStart, attEnd)
 
-class GZRS2_OT_Specify_Path_MRF(Operator):
-    bl_idname = 'gzrs2.specify_path_mrf'
-    bl_label = "Please specify the location of the extracted .mrf data"
-    bl_options = { 'REGISTER', 'INTERNAL' }
-    bl_description = "Specify the location of the extracted .mrf data"
-
-    dataPath: StringProperty(
-        name = 'Path',
-        default = '',
-        options = { 'ANIMATABLE', 'OUTPUT_PATH' },
-        subtype = 'DIR_PATH'
-    )
-
-    @classmethod
-    def poll(cls, context):
-        return True
-
-    def invoke(self, context, event):
-        self.dataPath = ''
-        return context.window_manager.invoke_props_dialog(self)
-
-    def draw(self, context):
-        self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
-        self.dataPath = os.path.join(self.dataPath, '')
-
-        layout = self.layout
-        layout.prop(self, 'dataPath')
-
-    def execute(self, context):
-        self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
-        self.dataPath = os.path.join(self.dataPath, '')
-
-        if not validateRSDataDirectory(self.dataPath, True):
-            self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory!")
-            return { 'CANCELLED' }
-
-        context.preferences.addons[__package__].preferences.rs3DataDir = self.dataPath
+            blLight.energy = calcLightEnergy(props.intensity, attEnd)
+            blLight.shadow_soft_size = calcLightSoftSize(softness, attEnd)
 
         return { 'FINISHED' }
 
@@ -314,7 +341,7 @@ class ImportGZRS2(Operator, ImportHelper):
     panelDrivers: BoolProperty(
         name = 'Drivers',
         description = "Generate drivers to quickly adjust map data",
-        default = True
+        default = False
     )
 
     panelLogging: BoolProperty(
@@ -2218,6 +2245,102 @@ class GZRS2_PT_Realspace_Mesh(Panel):
                 column.prop(props, 'flagLimitOffset')
                 column.prop(props, 'flagLimitCompare')
 
+class GZRS2LightProperties(PropertyGroup):
+    lightType: EnumProperty(
+        name = 'Type',
+        items = (('NONE',       'None',         "Not a Realspace light. Will not be exported"),
+                 ('STATIC',     'Static',       "Lights world geometry during lightmap baking"),
+                 ('DYNAMIC',    'Dynamic',      "Lights props at runtime. Does not contribute to lightmaps"))
+    )
+
+    intensity: FloatProperty(
+        name = 'Intensity',
+        default = 0.0,
+        min = 0.0,
+        max = 3.402823e+38,
+        soft_min = 0.0,
+        soft_max = 3.402823e+38,
+        subtype = 'UNSIGNED'
+    )
+
+    attStart: FloatProperty(
+        name = 'Attenuation Start',
+        default = 0.0,
+        min = 0.0,
+        max = 3.402823e+38,
+        soft_min = 0.0,
+        soft_max = 3.402823e+38,
+        subtype = 'UNSIGNED'
+    )
+
+    attEnd: FloatProperty(
+        name = 'Attenuation End',
+        default = 0.0,
+        min = 10.0,
+        max = 3.402823e+38,
+        soft_min = 0.0,
+        soft_max = 3.402823e+38,
+        subtype = 'UNSIGNED'
+    )
+
+    @classmethod
+    def register(cls):
+        bpy.types.Light.gzrs2 = PointerProperty(type = cls)
+
+    @classmethod
+    def unregister(cls):
+        del bpy.types.Light.gzrs2
+
+class GZRS2_PT_Realspace_Light(Panel):
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_label = 'Realspace'
+    bl_idname = 'LIGHT_PT_realspace'
+    bl_description = "Custom properties for Realspace engine lights."
+    bl_context = 'data'
+    bl_options = { 'DEFAULT_CLOSED' }
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and context.active_object.type == 'LIGHT'
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+
+        blLight = context.active_object.data
+        props = blLight.gzrs2
+
+        attEnd = props.attEnd
+        softness = calcLightSoftness(props.attStart, attEnd)
+
+        column = layout.column()
+
+        if blLight.type != 'POINT':
+            column.label(text = "Point lights only!")
+            return
+
+        column.prop(props, 'lightType')
+
+        if props.lightType == 'NONE':
+            return
+
+        column.prop(props, 'intensity')
+        column.prop(props, 'attStart')
+        column.prop(props, 'attEnd')
+
+        box = layout.box()
+        column = box.column()
+        row = column.row()
+        row.label(text = "Softness:")
+        row.label(text = "{:>5.02f}".format(softness))
+        row = column.row()
+        row.label(text = "Intensity:")
+        row.label(text = "{:>5.02f}".format(calcLightIntensity(blLight.energy, attEnd)))
+
+        column = layout.column()
+        column.operator(GZRS2_OT_Recalculate_Lights.bl_idname, text = "Recalculate Lights")
+
 class GZRS2CameraProperties(PropertyGroup):
     cameraIndex: IntProperty(
         name = 'Index',
@@ -2527,9 +2650,10 @@ class GZRS2_PT_Realspace_Material(Panel):
         row.label(text = str(frameGap) if shaderValid and success else 'N/A')
 
 classes = (
-    GZRS2_OT_Apply_Material_Preset,
     GZRS2_OT_Specify_Path_MRS,
     GZRS2_OT_Specify_Path_MRF,
+    GZRS2_OT_Apply_Material_Preset,
+    GZRS2_OT_Recalculate_Lights,
     GZRS2Preferences,
     ImportGZRS2,
     GZRS2_PT_Import_Main,
@@ -2565,6 +2689,8 @@ classes = (
     GZRS2_PT_Realspace_Object,
     GZRS2MeshProperties,
     GZRS2_PT_Realspace_Mesh,
+    GZRS2LightProperties,
+    GZRS2_PT_Realspace_Light,
     GZRS2CameraProperties,
     GZRS2_PT_Realspace_Camera,
     GZRS2MaterialProperties,

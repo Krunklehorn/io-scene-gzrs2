@@ -230,30 +230,29 @@ def importRS3(self, context):
                 blNodeObj = bpy.data.objects.new(name, None)
                 blNodeObj.empty_display_type = 'ARROWS'
             elif node['type'] in ['DIRLIGHT', 'SPOTLIGHT', 'POINTLIGHT']:
-                if node['type'] in ['SPOTLIGHT']:
-                    # TODO: what does RENDERMINAREA do?
-                    softness = (node['ATTENUATIONEND'] - node['ATTENUATIONSTART']) / node['ATTENUATIONEND']
-                    hardness = 0.001 / (1 - min(softness, 0.9999))
-
-                    blLight = bpy.data.lights.new(name, 'SPOT')
-                    blLight.color = node['COLOR']
-                    blLight.energy = node['INTENSITY'] * pow(node['ATTENUATIONEND'], 2) * 10
-                    blLight.shadow_soft_size = hardness * node['ATTENUATIONEND']
-                    blLight.spot_size = math.radians(node['FOV'])
-                elif node['type'] in ['DIRLIGHT']:
+                if node['type'] in ['DIRLIGHT']:
                     blLight = bpy.data.lights.new(name, 'SUN')
                     blLight.color = node['DIFFUSE']
                     blLight.energy = node['POWER'] * 100
                     blLight.angle = math.radians(90 * node['SHADOWLUMINOSITY'])
-                elif node['type'] in ['POINTLIGHT']:
-                    # TODO: does AREARANGE denote an area light?
-                    softness = (node['ATTENUATIONEND'] - node['ATTENUATIONSTART']) / node['ATTENUATIONEND']
-                    hardness = 0.001 / (1 - min(softness, 0.9999))
+                elif node['type'] in ['SPOTLIGHT', 'POINTLIGHT']:
+                    intensity = node['INTENSITY']
+                    attStart = node['ATTENUATIONSTART']
+                    attEnd = node['ATTENUATIONEND']
 
-                    blLight = bpy.data.lights.new(name, 'POINT')
+                    softness = calcLightSoftness(attStart, attEnd)
+
+                    if node['type'] in ['SPOTLIGHT']:
+                        # TODO: what does RENDERMINAREA do?
+                        blLight = bpy.data.lights.new(name, 'SPOT')
+                        blLight.spot_size = math.radians(node['FOV'])
+                    if node['type'] in ['POINTLIGHT']:
+                        # TODO: does AREARANGE denote an area light?
+                        blLight = bpy.data.lights.new(name, 'POINT')
+
                     blLight.color = node['COLOR']
-                    blLight.energy = node['INTENSITY'] * pow(node['ATTENUATIONEND'], 2) * 10
-                    blLight.shadow_soft_size = hardness * node['ATTENUATIONEND']
+                    blLight.energy = calcLightEnergy(intensity, attEnd)
+                    blLight.shadow_soft_size = calcLightSoftSize(softness, attEnd)
 
                 blNodeObj = bpy.data.objects.new(name, blLight)
             elif node['type'] in ['OCCLUDER']:
