@@ -399,12 +399,6 @@ class ImportGZRS2(Operator, ImportHelper):
         default = True
     )
 
-    tweakLights: BoolProperty(
-        name = 'Tweak Lights',
-        description = "Tweaks light data to give comparable results directly in Blender",
-        default = True
-    )
-
     doProps: BoolProperty(
         name = 'Props',
         description = "Import model data",
@@ -639,11 +633,6 @@ class GZRS2_PT_Import_Main(Panel):
 
         layout.prop(operator, 'doLightmap')
         layout.prop(operator, 'doLights')
-
-        column = layout.column()
-        column.prop(operator, 'tweakLights')
-        column.enabled = operator.doLights
-
         layout.prop(operator, 'doProps')
 
         column = layout.column()

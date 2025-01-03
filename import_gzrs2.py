@@ -71,7 +71,6 @@ def importRS2(self, context):
     state.doNavigation      = self.doNavigation     and self.meshMode != 'BAKE'
     state.doLightmap        = self.doLightmap
     state.doLights          = self.doLights
-    state.tweakLights       = self.tweakLights      and self.doLights
     state.doProps           = self.doProps
     state.doDummies         = self.doDummies        and self.meshMode != 'BAKE'
     state.doOcclusion       = self.doOcclusion      and self.meshMode != 'BAKE'
