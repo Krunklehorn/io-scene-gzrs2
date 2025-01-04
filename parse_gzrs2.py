@@ -20,17 +20,17 @@ def parseDistance(data, convertUnits):
 
 def parseVec3(data, nodeName, convertUnits, flipY):
     vec = Vector((float(s) for s in data.split(' ')))
-    if nodeName in ['POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT'] and convertUnits: vec *= 0.01
-    if flipY and nodeName in ['POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT']: vec.y = -vec.y
-    if nodeName in ['DIRECTION', 'UP']: vec.normalize()
+    if nodeName in ('POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT') and convertUnits: vec *= 0.01
+    if flipY and nodeName in ('POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT'): vec.y = -vec.y
+    if nodeName in ('DIRECTION', 'UP'): vec.normalize()
 
     return vec
 
 def parseXYZ(node, nodeName, convertUnits, flipY):
     vec = Vector((float(node.getAttribute('x')), float(node.getAttribute('y')), float(node.getAttribute('z'))))
-    if nodeName in ['POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT'] and convertUnits: vec *= 0.01
-    if flipY and nodeName in ['POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT']: vec.y = -vec.y
-    if nodeName in ['DIRECTION', 'UP']: vec.normalize()
+    if nodeName in ('POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT') and convertUnits: vec *= 0.01
+    if flipY and nodeName in ('POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT'): vec.y = -vec.y
+    if nodeName in ('DIRECTION', 'UP'): vec.normalize()
 
     return vec
 
@@ -64,7 +64,7 @@ def parseRsXML(self, xmlRs, tagName, state):
             break
 
         for node, nodeName, data in filterNodes(element.childNodes):
-            if nodeName in ['DIFFUSEMAP']:
+            if nodeName == 'DIFFUSEMAP':
                 if data is not None:
                     data = data.strip()
 
@@ -72,18 +72,18 @@ def parseRsXML(self, xmlRs, tagName, state):
                         data = os.path.normpath(data)
 
                 nodeEntry[nodeName] = data
-            elif nodeName in ['R', 'G', 'B']:
+            elif nodeName in ('R', 'G', 'B'):
                 nodeEntry[nodeName] = int(data)
-            elif nodeName in ['INTENSITY']:
+            elif nodeName == 'INTENSITY':
                 nodeEntry[nodeName] = float(data)
-            elif nodeName in ['ATTENUATIONSTART', 'ATTENUATIONEND', 'RADIUS']:
+            elif nodeName in ('ATTENUATIONSTART', 'ATTENUATIONEND', 'RADIUS'):
                 nodeEntry[nodeName] = parseDistance(data, state.convertUnits)
-            elif nodeName in ['DIFFUSE', 'AMBIENT', 'SPECULAR', 'COLOR']: # Haven.RS
+            elif nodeName in ('DIFFUSE', 'AMBIENT', 'SPECULAR', 'COLOR'): # Haven.RS
                 try:
                     nodeEntry[nodeName] = tuple(float(s) for s in data.split(' '))
                 except ValueError:
                     nodeEntry[nodeName] = bool(data)
-            elif nodeName in ['POSITION', 'DIRECTION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION']:
+            elif nodeName in ('POSITION', 'DIRECTION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION'):
                 vec = parseVec3(data, nodeName, state.convertUnits, True)
 
                 if tagName == 'OCCLUSION':
@@ -115,7 +115,7 @@ def parseSpawnXML(self, xmlSpawn, state):
             spawnEntry['timesec'] = int(spawn.getAttribute('timesec'))
 
             for node, nodeName, data in filterNodes(spawn.childNodes):
-                if nodeName in ['POSITION']:
+                if nodeName == 'POSITION':
                     spawnEntry[nodeName] = parseVec3(data, nodeName, state.convertUnits, True)
                 else:
                     spawnEntry[nodeName] = parseUnknown(self, data, nodeName, 'spawn.xml', 'SPAWN')
@@ -210,24 +210,24 @@ def parseSceneXML(self, xmlScene, xmlName, state):
         instanceEntry = { 'type': 'SCENEINSTANCE', 'name': None, 'resourcename': None }
 
         for node, nodeName, data in filterNodes(instance.childNodes):
-            if nodeName in ['COMMON']:
+            if nodeName == 'COMMON':
                 instanceEntry['name'] = node.getAttribute('name')
 
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['POSITION', 'DIRECTION', 'UP', 'SCALE']:
+                    if childName in ('POSITION', 'DIRECTION', 'UP', 'SCALE'):
                         instanceEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
                     else:
                         instanceEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SCENEINSTANCE')
-            elif nodeName in ['PROPERTY']:
+            elif nodeName == 'PROPERTY':
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['FILENAME']:
+                    if childName == 'FILENAME':
                         if data is not None:
                             data = data.strip()
 
                         instanceEntry['resourcename'] = data
-                    elif childName not in ['UMBRAID', 'USESELECTUPDATE_HAVEVISIBLE', 'USESELECTUPDATE_HAVEANI']:
+                    elif childName not in ('UMBRAID', 'USESELECTUPDATE_HAVEVISIBLE', 'USESELECTUPDATE_HAVEANI'):
                         instanceEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SCENEINSTANCE')
-            elif nodeName not in ['SCENE', 'USER_PROPERTY']:
+            elif nodeName not in ('SCENE', 'USER_PROPERTY'):
                 instanceEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'SCENEINSTANCE')
 
         if state.logSceneNodes:
@@ -238,7 +238,7 @@ def parseSceneXML(self, xmlScene, xmlName, state):
             print("         Up:                 ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*instanceEntry['UP']))
             print("         Scale:              ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*instanceEntry['SCALE']))
             for k, v in instanceEntry.items():
-                if k not in ['type', 'name', 'resourcename', 'POSITION', 'DIRECTION', 'UP', 'SCALE']:
+                if k not in ('type', 'name', 'resourcename', 'POSITION', 'DIRECTION', 'UP', 'SCALE'):
                     print(f"        { k }: { v }")
             print()
 
@@ -248,11 +248,11 @@ def parseSceneXML(self, xmlScene, xmlName, state):
         actorEntry = { 'type': 'ACTOR', 'name': None, 'resourcename': None }
 
         for node, nodeName, data in filterNodes(actor.childNodes):
-            if nodeName in ['COMMON']:
+            if nodeName == 'COMMON':
                 actorEntry['name'] = node.getAttribute('name')
-            elif nodeName in ['PROPERTY']:
+            elif nodeName == 'PROPERTY':
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['FILENAME']:
+                    if childName == 'FILENAME':
                         if data is not None:
                             data = data.strip()
 
@@ -269,17 +269,17 @@ def parseSceneXML(self, xmlScene, xmlName, state):
         dirlightEntry = { 'type': 'DIRLIGHT', 'name': state.rs3DirLightCount }
 
         for node, nodeName, data in filterNodes(dirlight.childNodes):
-            if nodeName in ['COMMON']:
+            if nodeName == 'COMMON':
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['POSITION', 'DIRECTION', 'UP', 'SCALE']:
+                    if childName in ('POSITION', 'DIRECTION', 'UP', 'SCALE'):
                         dirlightEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
                     else:
                         dirlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'DIRLIGHT')
-            elif nodeName in ['PROPERTY']:
+            elif nodeName == 'PROPERTY':
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['SHADOWLUMINOSITY', 'POWER', 'SKYSPECULAR']:
+                    if childName in ('SHADOWLUMINOSITY', 'POWER', 'SKYSPECULAR'):
                         dirlightEntry[childName] = float(data)
-                    elif childName in ['AMBIENT', 'DIFFUSE', 'SPECULAR']:
+                    elif childName in ('AMBIENT', 'DIFFUSE', 'SPECULAR'):
                         dirlightEntry[childName] = tuple(float(s) for s in data.split(' '))
                     else:
                         dirlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'DIRLIGHT')
@@ -293,21 +293,21 @@ def parseSceneXML(self, xmlScene, xmlName, state):
         spotlightEntry = { 'type': 'SPOTLIGHT', 'name': state.rs3SpotLightCount }
 
         for node, nodeName, data in filterNodes(spotlight.childNodes):
-            if nodeName in ['COMMON']:
+            if nodeName == 'COMMON':
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['POSITION', 'DIRECTION', 'UP', 'SCALE']:
+                    if childName in ('POSITION', 'DIRECTION', 'UP', 'SCALE'):
                         spotlightEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
                     else:
                         spotlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SPOTLIGHT')
-            elif nodeName in ['PROPERTY']:
+            elif nodeName == 'PROPERTY':
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['USERENDERMINAREA']:
+                    if childName == 'USERENDERMINAREA':
                         spotlightEntry[childName] = bool(data)
-                    elif childName in ['FOV']:
+                    elif childName == 'FOV':
                         spotlightEntry[childName] = float(data)
-                    elif childName in ['ATTENUATIONEND', 'ATTENUATIONSTART', 'INTENSITY', 'RENDERMINAREA']:
+                    elif childName in ('ATTENUATIONEND', 'ATTENUATIONSTART', 'INTENSITY', 'RENDERMINAREA'):
                         spotlightEntry[childName] = parseDistance(data, state.convertUnits)
-                    elif childName in ['COLOR']:
+                    elif childName == 'COLOR':
                         spotlightEntry[childName] = tuple(float(s) for s in data.split(' '))
                     else:
                         spotlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SPOTLIGHT')
@@ -321,21 +321,21 @@ def parseSceneXML(self, xmlScene, xmlName, state):
         pointlightEntry = { 'type': 'POINTLIGHT', 'name': state.rs3PointLightCount }
 
         for node, nodeName, data in filterNodes(pointlight.childNodes):
-            if nodeName in ['COMMON']:
+            if nodeName == 'COMMON':
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['POSITION', 'SCALE']:
+                    if childName in ('POSITION', 'SCALE'):
                         pointlightEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
-                    elif childName not in ['DIRECTION', 'UP']:
+                    elif childName not in ('DIRECTION', 'UP'):
                         pointlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'POINTLIGHT')
-            elif nodeName in ['PROPERTY']:
+            elif nodeName == 'PROPERTY':
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['INTENSITY']:
+                    if childName == 'INTENSITY':
                         pointlightEntry[childName] = float(data)
-                    elif childName in ['ATTENUATIONEND', 'ATTENUATIONSTART']:
+                    elif childName in ('ATTENUATIONEND', 'ATTENUATIONSTART'):
                         pointlightEntry[childName] = parseDistance(data, state.convertUnits)
-                    elif childName in ['COLOR', 'AREARANGE']:
+                    elif childName in ('COLOR', 'AREARANGE'):
                         pointlightEntry[childName] = tuple(float(s) for s in data.split(' '))
-                    elif childName not in ['FOV']:
+                    elif childName != 'FOV':
                         pointlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'POINTLIGHT')
             else:
                 pointlightEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'POINTLIGHT')
@@ -347,24 +347,24 @@ def parseSceneXML(self, xmlScene, xmlName, state):
         effectEntry = { 'type': 'EFFECTINSTANCE', 'name': state.rs3EffectCount }
 
         for node, nodeName, data in filterNodes(effect.childNodes):
-            if nodeName in ['COMMON']:
+            if nodeName == 'COMMON':
                 effectEntry['name'] = node.getAttribute('name')
 
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['POSITION', 'DIRECTION', 'UP', 'SCALE']:
+                    if childName in ('POSITION', 'DIRECTION', 'UP', 'SCALE'):
                         effectEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
                     else:
                         effectEntry[childName] = parseUnknown(self, data, childName, xmlName, 'EFFECTINSTANCE')
-            elif nodeName in ['PROPERTY']:
+            elif nodeName == 'PROPERTY':
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['FILENAME']:
+                    if childName == 'FILENAME':
                         if data is not None:
                             data = data.strip()
 
                         effectEntry['resourcename'] = data
                     else:
                         effectEntry[childName] = parseUnknown(self, data, childName, xmlName, 'EFFECTINSTANCE')
-            elif nodeName not in ['SCENE', 'USER_PROPERTY']:
+            elif nodeName not in ('SCENE', 'USER_PROPERTY'):
                 effectEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'EFFECTINSTANCE')
 
         nodeEntries.append(effectEntry)
@@ -374,21 +374,21 @@ def parseSceneXML(self, xmlScene, xmlName, state):
         occluderEntry = { 'type': 'OCCLUDER', 'name': state.rs3OccluderCount }
 
         for node, nodeName, data in filterNodes(effect.childNodes):
-            if nodeName in ['COMMON']:
+            if nodeName == 'COMMON':
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['POSITION', 'SCALE']:
+                    if childName in ('POSITION', 'SCALE'):
                         occluderEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
                     else:
                         occluderEntry[childName] = parseUnknown(self, data, childName, xmlName, 'OCCLUDER')
-            elif nodeName in ['PROPERTY']:
+            elif nodeName == 'PROPERTY':
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['LOCALSCALE']:
+                    if childName == 'LOCALSCALE':
                         occluderEntry[childName] = parseVec3(data, childName, state.convertUnits, False)
-                    elif childName in ['OCCLUDERPOINT']:
+                    elif childName == 'OCCLUDERPOINT':
                         occluderEntry[childName] = []
 
                         for _, dataType, data in filterNodes(child.childNodes):
-                            if dataType in ['P']:
+                            if dataType == 'P':
                                 occluderEntry[childName].append(parseVec3(data, childName, state.convertUnits, False))
                     else:
                         occluderEntry[childName] = parseUnknown(self, data, childName, xmlName, 'OCCLUDER')
@@ -412,26 +412,26 @@ def parsePropXML(self, xmlProp, xmlName, state):
         objectEntry = { 'type': 'SCENEOBJECT', 'name': None, 'resourcename': None }
 
         for node, nodeName, data in filterNodes(object.childNodes):
-            if nodeName in ['COMMON']:
+            if nodeName == 'COMMON':
                 objectEntry['id'] = node.getAttribute('id')
 
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['POSITION', 'DIRECTION', 'UP']:
+                    if childName in ('POSITION', 'DIRECTION', 'UP'):
                         if child.hasAttribute('x') and child.hasAttribute('y') and child.hasAttribute('z'):
                             objectEntry[childName] = parseXYZ(child, childName, state.convertUnits, False)
                     else:
                         objectEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SCENEOBJECT')
-            elif nodeName in ['PROPERTY']:
+            elif nodeName == 'PROPERTY':
                 for child, childName, data in filterNodes(node.childNodes):
-                    if childName in ['NAME', 'SceneFileName']:
+                    if childName in ('NAME', 'SceneFileName'):
                         if data is not None:
                             data = data.strip()
 
-                        if childName in ['NAME']: objectEntry['name'] = data
+                        if childName == 'NAME': objectEntry['name'] = data
                         else: objectEntry['resourcename'] = data
-                    elif childName not in ['Show', 'PartsColor', 'CameraCollision', 'UMBRAID']:
+                    elif childName not in ('Show', 'PartsColor', 'CameraCollision', 'UMBRAID'):
                         objectEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SCENEOBJECT')
-            elif nodeName not in ['TOOL']:
+            elif nodeName != 'TOOL':
                 objectEntry[nodeName] = parseUnknown(self, data, nodeName, xmlName, 'SCENEOBJECT')
 
         if state.logSceneNodes:
@@ -441,7 +441,7 @@ def parsePropXML(self, xmlProp, xmlName, state):
             print("         Direction:          ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*objectEntry['DIRECTION']))
             print("         Up:                 ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*objectEntry['UP']))
             for k, v in objectEntry.items():
-                if k not in ['type', 'id', 'name', 'resourcename', 'POSITION', 'DIRECTION', 'UP']:
+                if k not in ('type', 'id', 'name', 'resourcename', 'POSITION', 'DIRECTION', 'UP'):
                     print(f"        { k }: { v }")
             print()
 
@@ -473,11 +473,11 @@ def parseEluXML(self, xmlElu, state):
         }
 
         for node, nodeName, data in filterNodes(material.childNodes):
-            if nodeName in ['SPECULAR_LEVEL', 'GLOSSINESS', 'SELFILLUSIONSCALE']:
+            if nodeName in ('SPECULAR_LEVEL', 'GLOSSINESS', 'SELFILLUSIONSCALE'):
                 materialEntry[nodeName] = float(data)
-            elif nodeName in ['DIFFUSE', 'AMBIENT', 'SPECULAR']:
+            elif nodeName in ('DIFFUSE', 'AMBIENT', 'SPECULAR'):
                 materialEntry[nodeName] = tuple(float(s) for s in data.split(' '))
-            elif nodeName in ['TEXTURELIST']:
+            elif nodeName == 'TEXTURELIST':
                 for layer, _, __ in filterNodes(node.childNodes):
                     for _, dataType, data in filterNodes(layer.childNodes):
                         if dataType in XMLELU_TEXTYPES:
@@ -490,7 +490,7 @@ def parseEluXML(self, xmlElu, state):
                                 data = ''
 
                             materialEntry['textures'].append({ 'type': dataType, 'name': data })
-            elif nodeName in ['USEALPHATEST']:
+            elif nodeName == 'USEALPHATEST':
                 materialEntry[nodeName] = True
 
                 for value in node.childNodes:
@@ -519,7 +519,7 @@ def parseEluXML(self, xmlElu, state):
                 print(f"        ALPHATESTVALUE: { materialEntry['ALPHATESTVALUE'] }")
 
             for k, v in materialEntry.items():
-                if k not in ['type', 'name', 'textures', 'DIFFUSE', 'AMBIENT', 'SPECULAR', 'SPECULAR_LEVEL', 'GLOSSINESS', 'SELFILLUSIONSCALE', 'ALPHATESTVALUE']:
+                if k not in ('type', 'name', 'textures', 'DIFFUSE', 'AMBIENT', 'SPECULAR', 'SPECULAR_LEVEL', 'GLOSSINESS', 'SELFILLUSIONSCALE', 'ALPHATESTVALUE'):
                     print(f"        { k }: { v }")
             print()
 

@@ -121,13 +121,15 @@ def importRS3(self, context):
     elupaths = set()
 
     def openRS3Node(node):
-        if node['type'] in ['SCENEINSTANCE', 'SCENEOBJECT', 'ACTOR']:
+        nodeType = node['type']
+
+        if nodeType in ('SCENEINSTANCE', 'SCENEOBJECT', 'ACTOR'):
             resourcename = node['resourcename']
 
             resourcepath = resourceSearch(self, resourcename, state)
             if resourcepath is None: return
 
-            if node['type'] in ['SCENEINSTANCE', 'SCENEOBJECT']:
+            if nodeType in ('SCENEINSTANCE', 'SCENEOBJECT'):
                 if resourcepath.endswith('.elu'):
                     resourcebase = os.path.basename(resourcepath)
 
@@ -152,7 +154,7 @@ def importRS3(self, context):
                         childnode['parent'] = node
 
                         openRS3Node(childnode)
-            elif node['type'] in ['ACTOR']:
+            elif nodeType in ('ACTOR'):
                 # TODO: this should not be guaranteed here, see below
                 node['elupath'] = resourcepath
 
@@ -223,30 +225,32 @@ def importRS3(self, context):
     processEluHeirarchy(self, state)
 
     def processRS3Node(node):
-        if node['type'] in ['SCENEINSTANCE', 'SCENEOBJECT', 'EFFECTINSTANCE', 'DIRLIGHT', 'SPOTLIGHT', 'POINTLIGHT', 'OCCLUDER']:
-            name = f"{ node.get('name', node.get('resourcename', 'Node')) }_{ node['type'] }"
+        nodeType = node['type']
 
-            if node['type'] in ['SCENEINSTANCE', 'SCENEOBJECT', 'EFFECTINSTANCE']:
+        if nodeType in ('SCENEINSTANCE', 'SCENEOBJECT', 'EFFECTINSTANCE', 'DIRLIGHT', 'SPOTLIGHT', 'POINTLIGHT', 'OCCLUDER'):
+            name = f"{ node.get('name', node.get('resourcename', 'Node')) }_{ nodeType }"
+
+            if nodeType in ('SCENEINSTANCE', 'SCENEOBJECT', 'EFFECTINSTANCE'):
                 blNodeObj = bpy.data.objects.new(name, None)
                 blNodeObj.empty_display_type = 'ARROWS'
-            elif node['type'] in ['DIRLIGHT', 'SPOTLIGHT', 'POINTLIGHT']:
-                if node['type'] in ['DIRLIGHT']:
+            elif nodeType in ('DIRLIGHT', 'SPOTLIGHT', 'POINTLIGHT'):
+                if nodeType == 'DIRLIGHT':
                     blLight = bpy.data.lights.new(name, 'SUN')
                     blLight.color = node['DIFFUSE']
                     blLight.energy = node['POWER'] * 100
                     blLight.angle = math.radians(90 * node['SHADOWLUMINOSITY'])
-                elif node['type'] in ['SPOTLIGHT', 'POINTLIGHT']:
+                elif nodeType in ('SPOTLIGHT', 'POINTLIGHT'):
                     intensity = node['INTENSITY']
                     attStart = node['ATTENUATIONSTART']
                     attEnd = node['ATTENUATIONEND']
 
                     softness = calcLightSoftness(attStart, attEnd)
 
-                    if node['type'] in ['SPOTLIGHT']:
+                    if nodeType in ('SPOTLIGHT'):
                         # TODO: what does RENDERMINAREA do?
                         blLight = bpy.data.lights.new(name, 'SPOT')
                         blLight.spot_size = math.radians(node['FOV'])
-                    if node['type'] in ['POINTLIGHT']:
+                    if nodeType in ('POINTLIGHT'):
                         # TODO: does AREARANGE denote an area light?
                         blLight = bpy.data.lights.new(name, 'POINT')
 
@@ -255,13 +259,13 @@ def importRS3(self, context):
                     blLight.shadow_soft_size = calcLightSoftSize(softness, attEnd)
 
                 blNodeObj = bpy.data.objects.new(name, blLight)
-            elif node['type'] in ['OCCLUDER']:
+            elif nodeType in ('OCCLUDER'):
                 # TODO: create mesh
                 blNodeObj = bpy.data.objects.new(name, None)
 
             blNodeObj.location = node['POSITION']
 
-            if node['type'] in ['SCENEINSTANCE', 'SCENEOBJECT', 'EFFECTINSTANCE', 'DIRLIGHT', 'SPOTLIGHT']:
+            if nodeType in ('SCENEINSTANCE', 'SCENEOBJECT', 'EFFECTINSTANCE', 'DIRLIGHT', 'SPOTLIGHT'):
                 dir = node['DIRECTION']
                 up = node['UP']
 
@@ -271,7 +275,7 @@ def importRS3(self, context):
 
                 blNodeObj.rotation_euler = rot
 
-            if node['type'] in ['SCENEINSTANCE', 'EFFECTINSTANCE']:
+            if nodeType in ('SCENEINSTANCE', 'EFFECTINSTANCE'):
                 blNodeObj.scale = node['SCALE']
 
             if 'parent' in node:
@@ -281,9 +285,9 @@ def importRS3(self, context):
 
             rootNodes.objects.link(blNodeObj)
 
-            if node['type'] in ['DIRLIGHT', 'SPOTLIGHT', 'POINTLIGHT']:
+            if nodeType in ('DIRLIGHT', 'SPOTLIGHT', 'POINTLIGHT'):
                 state.blLights.append(blLight)
-            # elif node['type'] in ['OCCLUDER']:
+            # elif nodeType in ('OCCLUDER'):
                 # state.blSceneMeshes.append(blSceneMesh)
 
             state.blNodeObjs.append(blNodeObj)
@@ -291,7 +295,7 @@ def importRS3(self, context):
             if 'children' in node:
                 for childnode in node['children']:
                     processRS3Node(childnode)
-        elif node['type'] in ['ACTOR']:
+        elif nodeType in ('ACTOR'):
             if 'parent' in node:
                 blNodeObj = node['parent']['blNodeObj']
                 blNodeObj.instance_type = 'COLLECTION'

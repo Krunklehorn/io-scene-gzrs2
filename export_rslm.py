@@ -80,16 +80,16 @@ def exportLm(self, context):
         blMeshObj = context.active_object if context.active_object in context.selected_objects else None
 
         if blMeshObj is None or blMeshObj.type != 'MESH' or not blMeshObj.select_get():
-            self.report({ 'ERROR' }, "GZRS2: Lightmap UV export requires an active mesh object with valid UVs in channel 3!")
+            self.report({ 'ERROR' }, "GZRS2: Lightmap UV export requires an active mesh object with valid UVs in channel 2!")
             return { 'CANCELLED' }
 
         blMesh = blMeshObj.data
 
-        if len(blMesh.uv_layers) < 3:
-            self.report({ 'ERROR' }, "GZRS2: Lightmap UV export requires an active mesh object with valid UVs in channel 3!")
+        if len(blMesh.uv_layers) < 2:
+            self.report({ 'ERROR' }, "GZRS2: Lightmap UV export requires an active mesh object with valid UVs in channel 2!")
             return { 'CANCELLED' }
 
-        uvLayer3 = blMesh.uv_layers[2]
+        uvLayer2 = blMesh.uv_layers[1]
 
         # Read RS
         rspath = pathExists(os.path.splitext(lmpath)[0])
@@ -276,10 +276,10 @@ def exportLm(self, context):
                 newIndexInts[p] = 0 # Never atlas, we increase the lightmap resolution instead
 
             for v in range(state.rsOVertexCount):
-                uv3 = uvLayer3.data[v].uv
+                uv2 = uvLayer2.data[v].uv
 
-                newUVFloats[v * 2 + 0] = uv3.x
-                newUVFloats[v * 2 + 1] = 1 - uv3.y
+                newUVFloats[v * 2 + 0] = uv2.x
+                newUVFloats[v * 2 + 1] = 1 - uv2.y
 
             # newPolyIDInts.release()
             newIndexInts.release()

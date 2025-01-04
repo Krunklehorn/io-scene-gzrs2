@@ -8,7 +8,7 @@ from . import export_rselu, export_rsnav, export_rslm
 from .constants_gzrs2 import *
 from .lib_gzrs2 import getEluExportConstants, getMatTreeLinksNodes, getRelevantShaderNodes, checkShaderNodeValidity
 from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender
-from .lib_gzrs2 import decomposeTexpath, checkIsEffectNode, checkIsAniTex, processAniTexParameters
+from .lib_gzrs2 import decomposeTexpath, checkIsAniTex, processAniTexParameters
 from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
 from .lib_gzrs2 import calcLightSoftness, calcLightEnergy, calcLightIntensity, calcLightSoftSize
 from .lib_gzrs2 import enumTagToIndex, enumIndexToTag
@@ -198,7 +198,6 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
         texBase, texName, _, _ = decomposeTexpath(texpath)
-        isEffect = checkIsEffectNode(blObj.name)
         isAniTex = checkIsAniTex(texBase)
         # success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
 
@@ -239,9 +238,9 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         elif self.materialPreset == 'ADDITIVE':
             additive = True
 
-            add = setupMatNodesAdditive(blMat, tree, links, nodes, additive or isEffect, texture, shader, transparent, mix, add = add)
+            add = setupMatNodesAdditive(blMat, tree, links, nodes, additive, texture, shader, transparent, mix, add = add)
 
-        setMatFlagsTransparency(blMat, usealphatest or useopacity or additive or isEffect, twosided = twosided)
+        setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
 
         return { 'FINISHED' }
 
@@ -1660,7 +1659,7 @@ class ExportRSLM(Operator, ExportHelper):
 
     doUVs: BoolProperty(
         name = 'UV Data',
-        description = "Export UV data, requires an active mesh object with valid UVs in channel 3 as well as a GunZ 1 .rs file for the same map in the same directory",
+        description = "Export UV data, requires an active mesh object with valid UVs in channel 2 as well as a GunZ 1 .rs file for the same map in the same directory",
         default = True
     )
 
@@ -2537,7 +2536,6 @@ class GZRS2_PT_Realspace_Material(Panel):
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
             texBase, texName, texExt, texDir = decomposeTexpath(texpath)
-            isEffect = checkIsEffectNode(blObj.name)
             isAniTex = checkIsAniTex(texBase)
             success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
 
@@ -2622,9 +2620,6 @@ class GZRS2_PT_Realspace_Material(Panel):
 
         box = layout.box()
         column = box.column()
-        row = column.row()
-        row.label(text = "Is Effect:")
-        row.label(text = str(isEffect) if shaderValid else 'N/A')
         row = column.row()
         row.label(text = "Is Animated:")
         row.label(text = str(isAniTex) if shaderValid else 'N/A')

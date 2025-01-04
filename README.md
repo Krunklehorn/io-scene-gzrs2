@@ -156,7 +156,7 @@ Advanced users can still use the Maiet Character Viewer (MCV) to modify material
 * overwrite only
 * supports image data as well as UVs
   * requires a GunZ 1 .rs file for the same map in the same directory
-  * UV export requires an active mesh object with valid UVs in channel 3
+  * UV export requires an active mesh object with valid UVs in channel 2
 * includes experimental "version 4" for bugfixes and DXT1 support (thanks to DeffJay)
   * version 4 lightmaps take less space and load faster, resolutions up to 8k are now viable
   * for private servers only, v4 lightmaps do not work with vanilla GunZ
@@ -181,10 +181,7 @@ Advanced users can still use the Maiet Character Viewer (MCV) to modify material
 # Known Issues
 
 * GunZ 1: handful of .elus with improper bone weights (woman-parts_eola)
-* GunZ 1: all polygons in UV channel 2 come out garbled (import the lightmap and use channel 3 for now)
-* GunZ 1: some polygons in UV channel 3 come out garbled on maps with multiple lightmaps (Citadel)
 * GunZ 1: some elus with reversed winding-order/flipped normals (woman-parts27, woman-parts_sum08, woman-parts_santa, etc.)
-* GunZ 1: some .elu map materials with incorrect flags that should be overridden by their .rs.xml counterparts
 * GunZ 1: some maps with a ton of skipped dummies (Halloween Town)
 
 <!-- -->

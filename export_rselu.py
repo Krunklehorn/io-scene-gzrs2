@@ -97,7 +97,7 @@ def exportElu(self, context):
         if object is None:
             continue
 
-        if object.type in ['EMPTY', 'MESH']:
+        if object.type in ('EMPTY', 'MESH'):
             foundValid = True
 
             if object.type == 'MESH':
@@ -112,7 +112,7 @@ def exportElu(self, context):
                     for blBone in blArmature.bones:
                         blBoneName = blBone.name
 
-                        if not blBoneName.startswith(('Bip01', 'Bone', 'Dummy')):
+                        if not blBoneName.startswith(('Bip', 'Bone', 'Dummy')):
                             continue
 
                         if blBoneName not in blValidBones:
@@ -215,6 +215,12 @@ def exportElu(self, context):
 
     meshCount = m
 
+    eluMeshObjs = tuple(eluMeshObjs)
+    eluEmptyBones = tuple(eluEmptyBones)
+
+    worldMatrices = tuple(worldMatrices)
+    worldInvMatrices = tuple(worldInvMatrices)
+
     blMats = getStrictMaterials(self, eluMeshObjs)
     matCount = len(blMats)
 
@@ -270,7 +276,6 @@ def exportElu(self, context):
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
             texBase, texName, texExt, texDir = decomposeTexpath(texpath)
-            isEffect = checkIsEffectFile(filename)
             isAniTex = checkIsAniTex(texBase)
             success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName)
 
@@ -303,15 +308,14 @@ def exportElu(self, context):
                 print(f"Extension:          { texExt }")
                 print(f"Directory:          { texDir }")
                 print()
-                print(f"Is Effect:          { isEffect }")
                 print(f"Is Animated:        { isAniTex }")
-                print()
 
                 if isAniTex:
                     print(f"Frame Count:        { frameCount }")
                     print(f"Frame Speed:        { frameSpeed }")
                     print(f"Frame Gap:          { frameGap }")
-                    print()
+
+                print()
 
         eluMats.append(EluMaterialExport(matID, subMatID,
                                          ambient, diffuse, specular, exponent,
@@ -329,9 +333,6 @@ def exportElu(self, context):
         print()
         print("=========  Elu Mesh Nodes  ========")
         print()
-
-    worldMatrices = tuple(worldMatrices)
-    worldInvMatrices = tuple(worldInvMatrices)
 
     eluMeshes = []
 

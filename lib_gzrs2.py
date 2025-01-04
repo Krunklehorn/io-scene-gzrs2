@@ -264,7 +264,7 @@ def resourceSearch(self, resourcename, state):
 
     splitname = resourcename.split(os.extsep)
 
-    if splitname[-1].lower() in ['xml'] and splitname[-2].lower() in ['scene', 'prop']:
+    if splitname[-1].lower() == 'xml' and splitname[-2].lower() in ('scene', 'prop'):
         eluname = f"{ splitname[0] }.elu"
 
         result = state.rs3DataDict.get(eluname.lower())
@@ -502,12 +502,6 @@ def decomposeTexpath(texpath):
 
     return texBase, texName, texExt, texDir
 
-def checkIsEffectFile(filename):
-    return False if filename is None else ('_ef' in filename or 'ef_' in filename)
-
-def checkIsEffectNode(nodename):
-    return False if nodename is None else '_ef' in nodename
-
 def checkIsAniTex(texBase):
     return False if texBase is None else texBase.lower().startswith('txa')
 
@@ -656,7 +650,7 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
         group = nodes.new('ShaderNodeGroup')
 
         lightmap.image = state.blLmImage
-        uvmap.uv_map = 'UVMap.002'
+        uvmap.uv_map = 'UVMap.001'
         group.node_tree = state.lmMixGroup
 
         lightmap.location = (-440, -20)
@@ -682,7 +676,6 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
     twosided = xmlRsMat['TWOSIDED']
 
     texBase, texName, _, _ = decomposeTexpath(texpath)
-    # Pretty sure isEffect is not checked for in .xml.rs materials
     isAniTex = checkIsAniTex(texBase)
 
     source = group if state.doLightmap else texture
@@ -1104,7 +1097,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
 
 # TODO: Improve performance of convex id matching
 '''
-def setupRsConvexMesh(self, _, blMesh, state):
+def setupRsConvexMesh(self, _, blMesh, state, *, allowLightmapUVs = True):
     meshVerts = []
     meshNorms = []
     meshFaces = []
@@ -1114,7 +1107,7 @@ def setupRsConvexMesh(self, _, blMesh, state):
 
     # The convex polygons will never support atlased lightmaps because the lightmap ID can differ across an octree split
     # It's another reason why atlasing should be phased out, we can just increase lightmap resolution
-    meshUV3 = [] if state.doLightmap else None
+    fromLightmap = state.doLightmap and allowLightmapUVs
 
     offset = 0
 
@@ -1123,12 +1116,14 @@ def setupRsConvexMesh(self, _, blMesh, state):
             meshVerts.append(state.rsConvexVerts[v].pos)
             meshNorms.append(state.rsConvexVerts[v].nor)
             meshUV1.append(state.rsConvexVerts[v].uv1)
-            meshUV2.append(state.rsConvexVerts[v].uv2)
 
-            if meshUV3 is not None:
-                uv3 = state.lmUVs[state.rsConvexVerts[v].oid].copy()
-                uv3.y += 1.0
-                meshUV3.append(uv3)
+            if fromLightmap:
+                uv2 = state.lmUVs[state.rsConvexVerts[v].oid].copy()
+                uv2.y += 1.0
+
+                meshUV2.append(uv2)
+            else:
+                meshUV2.append(state.rsConvexVerts[v].uv2)
 
         meshFaces.append(tuple(range(offset, offset + polygon.vertexCount)))
         offset += polygon.vertexCount
@@ -1144,10 +1139,6 @@ def setupRsConvexMesh(self, _, blMesh, state):
     uvLayer2 = blMesh.uv_layers.new()
     for c, uv in enumerate(meshUV2): uvLayer2.data[c].uv = uv
 
-    if meshUV3 is not None:
-        uvLayer3 = blMesh.uv_layers.new()
-        for c, uv in enumerate(meshUV3): uvLayer3.data[c].uv = uv
-
     blMesh.validate()
     blMesh.update()
 
@@ -1161,10 +1152,10 @@ def setupRsTreeMesh(self, m, blMesh, treePolygons, treeVerts, state, *, allowLig
     meshMatIDs = []
     meshUV1 = []
     meshUV2 = []
-    meshUV3 = None
 
-    if state.doLightmap and allowLightmapUVs:
-        meshUV3 = []
+    fromLightmap = state.doLightmap and allowLightmapUVs
+
+    if fromLightmap:
         numCells = len(state.lmImages)
         cellSpan = int(math.sqrt(nextSquare(numCells)))
 
@@ -1177,7 +1168,7 @@ def setupRsTreeMesh(self, m, blMesh, treePolygons, treeVerts, state, *, allowLig
 
         found = True
 
-        if meshUV3 is not None and numCells > 1:
+        if fromLightmap and numCells > 1:
             c = state.lmLightmapIDs[p]
             cx = c % cellSpan
             cy = c // cellSpan
@@ -1186,18 +1177,19 @@ def setupRsTreeMesh(self, m, blMesh, treePolygons, treeVerts, state, *, allowLig
             meshVerts.append(treeVerts[v].pos)
             meshNorms.append(treeVerts[v].nor)
             meshUV1.append(treeVerts[v].uv1)
-            meshUV2.append(treeVerts[v].uv2)
 
-            if meshUV3 is not None:
-                uv3 = state.lmUVs[v].copy()
+            if fromLightmap:
+                uv2 = state.lmUVs[v].copy()
 
                 if numCells > 1:
-                    uv3.x += cx
-                    uv3.y -= cy
-                    uv3 /= cellSpan
+                    uv2.x += cx
+                    uv2.y -= cy
+                    uv2 /= cellSpan
 
-                uv3.y += 1.0
-                meshUV3.append(uv3)
+                uv2.y += 1.0
+                meshUV2.append(uv2)
+            else:
+                meshUV2.append(treeVerts[v].uv2)
 
         meshFaces.append(tuple(range(offset, offset + polygon.vertexCount)))
         offset += polygon.vertexCount
@@ -1217,10 +1209,6 @@ def setupRsTreeMesh(self, m, blMesh, treePolygons, treeVerts, state, *, allowLig
 
     uvLayer2 = blMesh.uv_layers.new()
     for c, uv in enumerate(meshUV2): uvLayer2.data[c].uv = uv
-
-    if meshUV3 is not None:
-        uvLayer3 = blMesh.uv_layers.new()
-        for c, uv in enumerate(meshUV3): uvLayer3.data[c].uv = uv
 
     blMesh.validate()
     blMesh.update()
@@ -1472,35 +1460,6 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
 
     state.blObjPairs.append((eluMesh, blMeshObj))
 
-def processEluIsEffect(state):
-    for eluMesh, blMeshObj in state.blObjPairs:
-        if eluMesh.isDummy or eluMesh.meshName in state.gzrsValidBones:
-            continue
-
-        if not eluMesh.isEffect:
-            continue
-
-        # We assume the user's data is consistent with the vanilla assets
-        # Per-object material properties are difficult to handle in Blender, so we just apply to every linked material instead
-        for slot in blMeshObj.material_slots:
-            blMat = slot.material
-
-            if blMat is None:
-                continue
-
-            tree, links, nodes = getMatTreeLinksNodes(blMat)
-
-            shader, output, info, transparent, mix, clip, add = getRelevantShaderNodes(nodes)
-            _, _, _, _, clipValid, _ = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links)
-
-            texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid, validOnly = False)
-            texture = texture or emission or alpha or getShaderNodeByID(nodes, 'ShaderNodeTexImage') # Reuse existing image texture nodes
-
-            twosided = not blMat.use_backface_culling
-
-            setupMatNodesAdditive(blMat, tree, links, nodes, True, texture, shader, transparent, mix, add = add)
-            setMatFlagsTransparency(blMat, True, twosided = twosided)
-
 def processEluHeirarchy(self, state):
     for child, childObj in state.blObjPairs:
         if child.parentName == '':
@@ -1649,7 +1608,7 @@ def calcEtcData(worldMat, parentWorld):
 
     apScale = sca
     rotAA = Vector((rotAxis.x, rotAxis.y, rotAxis.z, rotAngle))
-    stretchAA = Vector((0, 0, 0, 0))
+    stretchAA = Vector((0, 1, 0, 0))
     etcMatrix = worldMat @ Matrix.LocRotScale(loc, rot, None).inverted()
 
     return apScale, rotAA, stretchAA, etcMatrix

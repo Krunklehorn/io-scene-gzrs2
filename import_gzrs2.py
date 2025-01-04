@@ -540,7 +540,7 @@ def importRS2(self, context):
             print()
 
         for eluMesh in state.eluMeshes:
-            if eluMesh.meshName.startswith(('Bip01', 'Bone', 'Dummy')):
+            if eluMesh.meshName.startswith(('Bip', 'Bone', 'Dummy')):
                 state.gzrsValidBones.add(eluMesh.meshName)
 
             if eluMesh.isDummy:
@@ -549,7 +549,6 @@ def importRS2(self, context):
 
             setupElu(self, eluMesh, True, rootProps, context, state)
 
-    processEluIsEffect(state)
     processEluHeirarchy(self, state)
 
     if len(state.gzrsValidBones) > 0:
@@ -688,7 +687,7 @@ def importRS2(self, context):
 
     if state.doSounds:
         for s, sound in enumerate(state.xmlAmbs):
-            if not all(tuple(key in sound for key in ['ObjName', 'type', 'filename'])):
+            if not all(tuple(key in sound for key in ('ObjName', 'type', 'filename'))):
                 skippedSounds.append(s)
                 continue
 
@@ -739,7 +738,7 @@ def importRS2(self, context):
             gameID = gametype['id'].upper()
 
             # TODO: Custom value support for game IDs
-            if gameID not in ['SOLO', 'TEAM']:
+            if gameID not in ('SOLO', 'TEAM'):
                 self.report({ 'WARNING' }, f"GZRS2: Skipped game id of unsupported type: { gameID }")
                 continue
 

@@ -365,11 +365,9 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
             print(output)
 
         isDummy = len(vertices) == 0 or len(faces) == 0
-        isEffect = checkIsEffectFile(path) or checkIsEffectNode(meshName)
 
         if state.logEluMeshNodes:
             if isDummy: usesDummies = True
-            if isEffect: usesEffects = True
             print(f"Is Dummy:           { isDummy }")
             print()
 
@@ -463,7 +461,7 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
         state.eluMeshes.append(EluMeshNode(path, version, meshName, parentName, 0, worldMatrix,
                                            vertices, tuple(normals), tuple(uv1s), (),
                                            colors, tuple(faces), tuple(weights), (),
-                                           slotIDs, isDummy, isEffect, matID))
+                                           slotIDs, isDummy, matID))
 
     if state.logEluMeshNodes:
         print("===== Mesh Summary =====")
