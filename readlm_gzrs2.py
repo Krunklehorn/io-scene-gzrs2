@@ -176,6 +176,9 @@ def readLm(self, file, path, state):
             self.report({ 'ERROR' }, f"GZRS2: Lm data type is not supported yet! Lightmap will not load properly! Please submit to Krunk#6051 for testing! { type }")
             return { 'CANCELLED' }
 
+    if not state.rsOPolygonCount:
+        return
+
     state.lmPolygonOrder = readUIntArray(file, state.rsOPolygonCount)
     lightmapIDs = readUIntArray(file, state.rsOPolygonCount)
     sortedIDs = [0 for p in range(state.rsOPolygonCount)]

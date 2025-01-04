@@ -2688,12 +2688,12 @@ def menu_func_import(self, context):
     self.layout.operator(ImportRSANI.bl_idname, text = 'GunZ ANI (.ani)')
     self.layout.operator(ImportRSCOL.bl_idname, text = 'GunZ COL (.col/.cl2)')
     self.layout.operator(ImportRSNAV.bl_idname, text = 'GunZ NAV (.nav)')
-    self.layout.operator(ImportRSLM.bl_idname, text = 'GunZ LM (.lm)')
+    self.layout.operator(ImportRSLM.bl_idname, text = 'GunZ LM Image (.lm)')
 
 def menu_func_export(self, context):
     self.layout.operator(ExportRSELU.bl_idname, text = 'GunZ ELU (.elu)')
     self.layout.operator(ExportRSNAV.bl_idname, text = 'GunZ NAV (.nav)')
-    self.layout.operator(ExportRSLM.bl_idname, text = 'GunZ LM (.lm)')
+    self.layout.operator(ExportRSLM.bl_idname, text = 'GunZ LM Overwrite (.lm)')
 
 def register():
     for cls in classes:
