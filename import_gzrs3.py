@@ -237,14 +237,12 @@ def importRS3(self, context):
                 if nodeType == 'DIRLIGHT':
                     blLight = bpy.data.lights.new(name, 'SUN')
                     blLight.color = node['DIFFUSE']
-                    blLight.energy = node['POWER'] * 100
-                    blLight.angle = math.radians(90 * node['SHADOWLUMINOSITY'])
+                    blLight.energy = calcLightEnergy('SUN', node['POWER'], None)
+                    # blLight.angle = math.radians(90 * node['SHADOWLUMINOSITY']) # TODO: Huh? What should be the sun angle?
                 elif nodeType in ('SPOTLIGHT', 'POINTLIGHT'):
                     intensity = node['INTENSITY']
                     attStart = node['ATTENUATIONSTART']
-                    attEnd = node['ATTENUATIONEND']
-
-                    softness = calcLightSoftness(attStart, attEnd)
+                    attEnd = clampLightAttEnd(node['ATTENUATIONEND'], attStart)
 
                     if nodeType in ('SPOTLIGHT'):
                         # TODO: what does RENDERMINAREA do?
@@ -255,8 +253,8 @@ def importRS3(self, context):
                         blLight = bpy.data.lights.new(name, 'POINT')
 
                     blLight.color = node['COLOR']
-                    blLight.energy = calcLightEnergy(intensity, attEnd)
-                    blLight.shadow_soft_size = calcLightSoftSize(softness, attEnd)
+                    blLight.energy = calcLightEnergy('POINT', intensity, attEnd)
+                    blLight.shadow_soft_size = calcLightSoftSize(attStart, attEnd)
 
                 blNodeObj = bpy.data.objects.new(name, blLight)
             elif nodeType in ('OCCLUDER'):

@@ -10,7 +10,7 @@ from .lib_gzrs2 import getEluExportConstants, getMatTreeLinksNodes, getRelevantS
 from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender
 from .lib_gzrs2 import decomposeTexpath, checkIsAniTex, processAniTexParameters
 from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
-from .lib_gzrs2 import calcLightSoftness, calcLightEnergy, calcLightIntensity, calcLightSoftSize
+from .lib_gzrs2 import clampLightAttEnd, calcLightSoftness, calcLightTag, calcLightEnergy, calcLightSoftSize, calcLightRender
 from .lib_gzrs2 import enumTagToIndex, enumIndexToTag
 
 bl_info = {
@@ -255,18 +255,21 @@ class GZRS2_OT_Recalculate_Lights(Operator):
         return True
 
     def execute(self, context):
-        bpy.ops.ed.undo_push()
+        blLights = tuple((blObj.data, blObj) for blObj in bpy.data.objects if blObj.type == 'LIGHT' and blObj.data.gzrs2.lightType != 'NONE')
 
-        blLights = tuple(blObj.data for blObj in bpy.data.objects if blObj.type == 'LIGHT' and blObj.data.gzrs2.lightType != 'NONE')
-
-        for blLight in blLights:
+        for blLight, blLightObj in blLights:
             props = blLight.gzrs2
 
-            attEnd = props.attEnd
-            softness = calcLightSoftness(props.attStart, attEnd)
+            intensity = props.intensity
+            attStart = props.attStart
+            attEnd = clampLightAttEnd(props.attEnd, attStart)
 
-            blLight.energy = calcLightEnergy(props.intensity, attEnd)
-            blLight.shadow_soft_size = calcLightSoftSize(softness, attEnd)
+            calcLightTag(blLightObj)
+
+            blLight.energy = calcLightEnergy(blLightObj.data.type, intensity, attEnd)
+            blLight.shadow_soft_size = calcLightSoftSize(attStart, attEnd)
+
+            blLightObj.hide_render = calcLightRender(blLightObj, context)
 
         return { 'FINISHED' }
 
@@ -2264,7 +2267,7 @@ class GZRS2LightProperties(PropertyGroup):
     attEnd: FloatProperty(
         name = 'Attenuation End',
         default = 0.0,
-        min = 10.0,
+        min = 0.0,
         max = 3.402823e+38,
         soft_min = 0.0,
         soft_max = 3.402823e+38,
@@ -2299,14 +2302,10 @@ class GZRS2_PT_Realspace_Light(Panel):
         blLight = context.active_object.data
         props = blLight.gzrs2
 
-        attEnd = props.attEnd
-        softness = calcLightSoftness(props.attStart, attEnd)
+        attStart = props.attStart
+        attEnd = clampLightAttEnd(props.attEnd, attStart)
 
         column = layout.column()
-
-        if blLight.type != 'POINT':
-            column.label(text = "Point lights only!")
-            return
 
         column.prop(props, 'lightType')
 
@@ -2321,10 +2320,7 @@ class GZRS2_PT_Realspace_Light(Panel):
         column = box.column()
         row = column.row()
         row.label(text = "Softness:")
-        row.label(text = "{:>5.02f}".format(softness))
-        row = column.row()
-        row.label(text = "Intensity:")
-        row.label(text = "{:>5.02f}".format(calcLightIntensity(blLight.energy, attEnd)))
+        row.label(text = "{:>5.02f}".format(calcLightSoftness(attStart, attEnd)))
 
         column = layout.column()
         column.operator(GZRS2_OT_Recalculate_Lights.bl_idname, text = "Recalculate Lights")

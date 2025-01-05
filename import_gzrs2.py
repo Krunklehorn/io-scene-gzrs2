@@ -481,20 +481,22 @@ def importRS2(self, context):
             lightNameLower = lightName.lower()
             dynamic = lightNameLower.startswith('obj_')
 
+            position = light['POSITION']
             intensity = light['INTENSITY']
-            attEnd = light['ATTENUATIONEND']
             attStart = light['ATTENUATIONSTART']
+            attEnd = clampLightAttEnd(light['ATTENUATIONEND'], attStart)
             castshadow = light['CASTSHADOW']
-
             softness = calcLightSoftness(attStart, attEnd)
 
             blLight = bpy.data.lights.new(lightName, 'POINT')
             blLightObj = bpy.data.objects.new(lightName, blLight)
             blLightObj.location = light['POSITION']
 
+            calcLightTag(blLightObj)
+
             blLight.color = light['COLOR']
-            blLight.energy = calcLightEnergy(intensity, attEnd)
-            blLight.shadow_soft_size = calcLightSoftSize(softness, attEnd)
+            blLight.energy = calcLightEnergy(blLightObj.data.type, intensity, attEnd)
+            blLight.shadow_soft_size = calcLightSoftSize(attStart, attEnd)
             blLight.use_shadow = castshadow
 
             props = blLight.gzrs2
@@ -508,11 +510,12 @@ def importRS2(self, context):
 
             rootLights.objects.link(blLightObj)
 
-            if dynamic or (softness <= 0.1 and not castshadow):
-                blLightObj.hide_render = True
+            render = calcLightRender(blLightObj, context)
 
-                for viewLayer in context.scene.view_layers:
-                    blLightObj.hide_set(True, view_layer = viewLayer)
+            blLightObj.hide_render = render
+
+            for viewLayer in context.scene.view_layers:
+                blLightObj.hide_set(render, view_layer = viewLayer)
 
     if state.doDummies:
         propDums = []

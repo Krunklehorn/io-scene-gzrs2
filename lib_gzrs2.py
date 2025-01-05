@@ -3,7 +3,7 @@ import bpy, os, math, ctypes, shutil
 from ctypes import *
 
 from contextlib import redirect_stdout
-from mathutils import Vector, Matrix
+from mathutils import Vector, Matrix, Euler
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
@@ -1906,17 +1906,44 @@ def setupLmMixGroup(state):
 
         state.lmMixGroup = group
 
+def clampLightAttEnd(attEnd, attStart):
+    return max(attEnd, attStart + 0.001)
+
 def calcLightSoftness(attStart, attEnd):
-    return (attEnd - min(attStart, attEnd)) / max(attEnd, 0.001)
+    return (attEnd - attStart) / attEnd
 
-def calcLightEnergy(intensity, attEnd):
-    return intensity * pow(attEnd, 2) * 20
+def calcLightTag(blLightObj):
+    nameLower = blLightObj.name.lower()
 
-def calcLightIntensity(energy, attEnd):
-    return energy / pow(max(attEnd, 0.001), 2) / 20
+    if 'sun_' in nameLower or '_sun' in nameLower:
+        target = Vector((0, 0, 0)) # TODO: Support for light targets using an object field property
+        dir = target - blLightObj.location
 
-def calcLightSoftSize(softness, attEnd):
-    return (1 - softness) * attEnd
+        blLightObj.data.type = 'SUN'
+        blLightObj.rotation_euler = dir.to_track_quat('-Z', 'Z').to_euler()
+    else:
+        blLightObj.data.type = 'POINT'
+        blLightObj.rotation_euler = Euler((0, 0, 0))
+
+def calcLightEnergy(dataType, intensity, attEnd):
+    if dataType == 'SUN':
+        return intensity * 1
+
+    return intensity * pow(attEnd, 2) * 2
+
+def calcLightSoftSize(attStart, attEnd):
+    return (1 - calcLightSoftness(attStart, attEnd)) * pow(attEnd / 1000, 0.5) * 2.5
+
+def calcLightRender(blLightObj, context):
+    blLight = blLightObj.data
+    props = blLight.gzrs2
+
+    dynamic = props.lightType == 'DYNAMIC'
+    softness = calcLightSoftness(props.attStart, props.attEnd)
+    castshadow = blLight.use_shadow
+    hide = dynamic or (softness <= 0.1 and not castshadow)
+
+    return hide
 
 def compareColors(color1, color2):
     return all((math.isclose(color1[0], color2[0], rel_tol = RS_COLOR_THRESHOLD),
