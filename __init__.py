@@ -266,8 +266,8 @@ class GZRS2_OT_Recalculate_Lights(Operator):
 
             calcLightTag(blLightObj)
 
-            blLight.energy = calcLightEnergy(blLightObj.data.type, intensity, attEnd)
-            blLight.shadow_soft_size = calcLightSoftSize(attStart, attEnd)
+            blLight.energy = calcLightEnergy(blLightObj.data.type, intensity, attEnd, context)
+            blLight.shadow_soft_size = calcLightSoftSize(attStart, attEnd, context)
 
             blLightObj.hide_render = calcLightRender(blLightObj, context)
 
@@ -1738,6 +1738,45 @@ class RSLM_PT_Export_Logging(Panel):
 
         layout.prop(operator, 'logLmHeaders')
 
+class GZRS2SceneProperties(PropertyGroup):
+    lightIntensity: FloatProperty(
+        name = 'Light Intensity',
+        default = 1.0,
+        min = 0.0,
+        max = 100.0,
+        soft_min = 0.0,
+        soft_max = 100.0,
+        subtype = 'UNSIGNED'
+    )
+
+    sunIntensity: FloatProperty(
+        name = 'Sun Intensity',
+        default = 1.0,
+        min = 0.0,
+        max = 100.0,
+        soft_min = 0.0,
+        soft_max = 100.0,
+        subtype = 'UNSIGNED'
+    )
+
+    lightSoftSize: FloatProperty(
+        name = 'Light Soft Size',
+        default = 1.0,
+        min = 0.0,
+        max = 100.0,
+        soft_min = 0.0,
+        soft_max = 100.0,
+        subtype = 'UNSIGNED'
+    )
+
+    @classmethod
+    def register(cls):
+        bpy.types.Scene.gzrs2 = PointerProperty(type = cls)
+
+    @classmethod
+    def unregister(cls):
+        del bpy.types.Scene.gzrs2
+
 class GZRS2ObjectProperties(PropertyGroup):
     def ensureAll(self):
         if 'dummyType'          not in self: self['dummyType']          = 'NONE'
@@ -2316,11 +2355,14 @@ class GZRS2_PT_Realspace_Light(Panel):
         column.prop(props, 'attStart')
         column.prop(props, 'attEnd')
 
+        sceneProps = context.scene.gzrs2
+
         box = layout.box()
         column = box.column()
-        row = column.row()
-        row.label(text = "Softness:")
-        row.label(text = "{:>5.02f}".format(calcLightSoftness(attStart, attEnd)))
+        column.label(text = "Scene Modifiers")
+        column.prop(sceneProps, 'lightIntensity')
+        column.prop(sceneProps, 'sunIntensity')
+        column.prop(sceneProps, 'lightSoftSize')
 
         column = layout.column()
         column.operator(GZRS2_OT_Recalculate_Lights.bl_idname, text = "Recalculate Lights")
@@ -2665,6 +2707,7 @@ classes = (
     ExportRSLM,
     RSLM_PT_Export_Main,
     RSLM_PT_Export_Logging,
+    GZRS2SceneProperties,
     GZRS2ObjectProperties,
     GZRS2_PT_Realspace_Object,
     GZRS2MeshProperties,

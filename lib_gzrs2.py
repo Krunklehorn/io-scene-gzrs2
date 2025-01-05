@@ -1925,14 +1925,27 @@ def calcLightTag(blLightObj):
         blLightObj.data.type = 'POINT'
         blLightObj.rotation_euler = Euler((0, 0, 0))
 
-def calcLightEnergy(dataType, intensity, attEnd):
+def calcLightEnergy(dataType, intensity, attEnd, context):
+    sceneProps = context.scene.gzrs2
+
     if dataType == 'SUN':
-        return intensity * 1
+        intensity *= sceneProps.sunIntensity
+    else:
+        intensity *= pow(attEnd, 2)
+        intensity *= sceneProps.lightIntensity
 
-    return intensity * pow(attEnd, 2) * 2
+    intensity *= 2
 
-def calcLightSoftSize(attStart, attEnd):
-    return (1 - calcLightSoftness(attStart, attEnd)) * pow(attEnd / 1000, 0.5) * 2.5
+    return intensity
+
+def calcLightSoftSize(attStart, attEnd, context):
+    sceneProps = context.scene.gzrs2
+
+    softSize = 1 - calcLightSoftness(attStart, attEnd)
+    softSize *= pow(attEnd / 1000, 0.5)
+    softSize *= 2
+
+    return softSize * sceneProps.lightSoftSize
 
 def calcLightRender(blLightObj, context):
     blLight = blLightObj.data
