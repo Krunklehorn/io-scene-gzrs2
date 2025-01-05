@@ -2106,7 +2106,6 @@ class GZRS2_PT_Realspace_Object(Panel):
     bl_idname = 'OBJECT_PT_realspace'
     bl_description = "Custom properties for Realspace engine objects."
     bl_context = 'data'
-    bl_options = { 'DEFAULT_CLOSED' }
 
     @classmethod
     def poll(cls, context):
@@ -2246,7 +2245,6 @@ class GZRS2_PT_Realspace_Mesh(Panel):
     bl_idname = 'MESH_PT_realspace'
     bl_description = "Custom properties for Realspace engine meshes."
     bl_context = 'data'
-    bl_options = { 'DEFAULT_CLOSED' }
 
     @classmethod
     def poll(cls, context):
@@ -2328,7 +2326,6 @@ class GZRS2_PT_Realspace_Light(Panel):
     bl_idname = 'LIGHT_PT_realspace'
     bl_description = "Custom properties for Realspace engine lights."
     bl_context = 'data'
-    bl_options = { 'DEFAULT_CLOSED' }
 
     @classmethod
     def poll(cls, context):
@@ -2399,7 +2396,6 @@ class GZRS2_PT_Realspace_Camera(Panel):
     bl_idname = 'CAMERA_PT_realspace'
     bl_description = "Custom properties for Realspace engine cameras."
     bl_context = 'data'
-    bl_options = { 'DEFAULT_CLOSED' }
 
     @classmethod
     def poll(cls, context):
@@ -2547,7 +2543,6 @@ class GZRS2_PT_Realspace_Material(Panel):
     bl_idname = 'MATERIAL_PT_realspace'
     bl_description = "Custom properties for Realspace engine materials."
     bl_context = 'material'
-    bl_options = { 'DEFAULT_CLOSED' }
 
     @classmethod
     def poll(cls, context):
