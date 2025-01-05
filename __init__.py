@@ -266,8 +266,8 @@ class GZRS2_OT_Recalculate_Lights(Operator):
 
             calcLightTag(blLightObj)
 
-            blLight.energy = calcLightEnergy(blLightObj.data.type, intensity, attEnd, context)
-            blLight.shadow_soft_size = calcLightSoftSize(attStart, attEnd, context)
+            blLight.energy = calcLightEnergy(blLightObj, context)
+            blLight.shadow_soft_size = calcLightSoftSize(blLightObj, context)
 
             blLightObj.hide_render = calcLightRender(blLightObj, context)
 

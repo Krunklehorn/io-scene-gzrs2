@@ -1910,6 +1910,7 @@ def clampLightAttEnd(attEnd, attStart):
     return max(attEnd, attStart + 0.001)
 
 def calcLightSoftness(attStart, attEnd):
+    attEnd = clampLightAttEnd(attEnd, attStart)
     return (attEnd - attStart) / attEnd
 
 def calcLightTag(blLightObj):
@@ -1925,27 +1926,35 @@ def calcLightTag(blLightObj):
         blLightObj.data.type = 'POINT'
         blLightObj.rotation_euler = Euler((0, 0, 0))
 
-def calcLightEnergy(dataType, intensity, attEnd, context):
+def calcLightEnergy(blLightObj, context):
+    blLight = blLightObj.data
+    props = blLight.gzrs2
     sceneProps = context.scene.gzrs2
 
-    if dataType == 'SUN':
-        intensity *= sceneProps.sunIntensity
-    else:
-        intensity *= pow(attEnd, 2)
-        intensity *= sceneProps.lightIntensity
+    intensity = props.intensity
+    attEnd = clampLightAttEnd(props.attEnd, props.attStart)
+
+    if blLight.type == 'SUN':   intensity *= sceneProps.sunIntensity
+    else:                       intensity *= sceneProps.lightIntensity * pow(attEnd, 2)
 
     intensity *= 2
 
     return intensity
 
-def calcLightSoftSize(attStart, attEnd, context):
+def calcLightSoftSize(blLightObj, context):
+    blLight = blLightObj.data
+    props = blLight.gzrs2
     sceneProps = context.scene.gzrs2
 
+    attStart = props.attStart
+    attEnd = clampLightAttEnd(props.attEnd, attStart)
+
     softSize = 1 - calcLightSoftness(attStart, attEnd)
+    softSize *= sceneProps.lightSoftSize
     softSize *= pow(attEnd / 1000, 0.5)
     softSize *= 2
 
-    return softSize * sceneProps.lightSoftSize
+    return softSize
 
 def calcLightRender(blLightObj, context):
     blLight = blLightObj.data

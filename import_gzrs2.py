@@ -495,8 +495,8 @@ def importRS2(self, context):
             calcLightTag(blLightObj)
 
             blLight.color = light['COLOR']
-            blLight.energy = calcLightEnergy(blLightObj.data.type, intensity, attEnd, context)
-            blLight.shadow_soft_size = calcLightSoftSize(attStart, attEnd, context)
+            blLight.energy = calcLightEnergy(blLightObj, context)
+            blLight.shadow_soft_size = calcLightSoftSize(blLightObj, context)
             blLight.use_shadow = castshadow
 
             props = blLight.gzrs2

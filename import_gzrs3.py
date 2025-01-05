@@ -237,7 +237,7 @@ def importRS3(self, context):
                 if nodeType == 'DIRLIGHT':
                     blLight = bpy.data.lights.new(name, 'SUN')
                     blLight.color = node['DIFFUSE']
-                    blLight.energy = calcLightEnergy('SUN', node['POWER'], None, context)
+                    blLight.energy = node['POWER'] * 2 # calcLightEnergy()
                     # blLight.angle = math.radians(90 * node['SHADOWLUMINOSITY']) # TODO: Huh? What should be the sun angle?
                 elif nodeType in ('SPOTLIGHT', 'POINTLIGHT'):
                     intensity = node['INTENSITY']
@@ -253,8 +253,8 @@ def importRS3(self, context):
                         blLight = bpy.data.lights.new(name, 'POINT')
 
                     blLight.color = node['COLOR']
-                    blLight.energy = calcLightEnergy('POINT', intensity, attEnd, context)
-                    blLight.shadow_soft_size = calcLightSoftSize(attStart, attEnd, context)
+                    blLight.energy = intensity * pow(attEnd, 2) * 2 # calcLightEnergy()
+                    blLight.shadow_soft_size = (1 - calcLightSoftness(attStart, attEnd)) * pow(attEnd / 1000, 0.5) * 2 # calcLightSoftSize()
 
                 blNodeObj = bpy.data.objects.new(name, blLight)
             elif nodeType in ('OCCLUDER'):
