@@ -932,8 +932,6 @@ def importRS2(self, context):
             worldProps.fogMin = fog['min']
             worldProps.fogMax = fog['max']
 
-            bpy.ops.gzrs2.recalculate_lights_fog()
-
             state.blFogShader = shader
 
         if len(state.xmlGlbs) == 1:
@@ -986,5 +984,7 @@ def importRS2(self, context):
 
     bpy.ops.object.select_all(action = 'DESELECT')
     deleteInfoReports(1, context)
+
+    bpy.ops.gzrs2.recalculate_lights_fog()
 
     return { 'FINISHED' }
