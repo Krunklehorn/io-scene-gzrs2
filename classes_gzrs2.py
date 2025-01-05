@@ -75,6 +75,7 @@ class GZRS2State:
 
     xmlRsMats:          list = field(default_factory = list)
     xmlEluMats:         dict = field(default_factory = dict)
+    xmlGlbs:            list = field(default_factory = list)
     xmlLits:            list = field(default_factory = list)
     xmlObjs:            list = field(default_factory = list)
     xmlDums:            list = field(default_factory = list)
@@ -181,10 +182,7 @@ class GZRS2State:
     blArmature:         Armature    = None
     blArmatureObj:      Object      = None
 
-    blFogMat:           Material    = None
     blFogShader:        ShaderNode  = None
-    blFog:              Mesh        = None
-    blFogObj:           Object      = None
 
     blDrivers:          list = field(default_factory = list)
     blDriverObj:        Object      = None

@@ -32,6 +32,18 @@ def enumTagToIndex(self, tag, items):
 def enumIndexToTag(index, items):
     return items[index][0]
 
+def ensureWorld(context):
+    scene = context.scene
+    world = scene.world
+
+    if world is None:
+        if len(bpy.data.worlds) > 0:    bpy.data.worlds[0]
+        else:                           bpy.data.worlds.new()
+
+        scene.world = world
+
+    return world
+
 def vecArrayMinMax(vectors, size):
     minLen2 = float('inf')
     maxLen2 = float('-inf')
@@ -1913,10 +1925,12 @@ def calcLightSoftness(attStart, attEnd):
     attEnd = clampLightAttEnd(attEnd, attStart)
     return (attEnd - attStart) / attEnd
 
+# TODO: Find a way to get sun lights to work properly with fog
 def calcLightTag(blLightObj):
+    '''
     nameLower = blLightObj.name.lower()
 
-    if 'sun_' in nameLower or '_sun' in nameLower:
+    if 'sun_' in nameLower or '_sun' in nameLower or nameLower == 'omni_shadow': # Castle
         target = Vector((0, 0, 0)) # TODO: Support for light targets using an object field property
         dir = target - blLightObj.location
 
@@ -1925,17 +1939,24 @@ def calcLightTag(blLightObj):
     else:
         blLightObj.data.type = 'POINT'
         blLightObj.rotation_euler = Euler((0, 0, 0))
+    '''
 
 def calcLightEnergy(blLightObj, context):
+    nameLower = blLightObj.name.lower()
     blLight = blLightObj.data
     props = blLight.gzrs2
-    sceneProps = context.scene.gzrs2
+    worldProps = ensureWorld(context).gzrs2
 
     intensity = props.intensity
     attEnd = clampLightAttEnd(props.attEnd, props.attStart)
 
-    if blLight.type == 'SUN':   intensity *= sceneProps.sunIntensity
-    else:                       intensity *= sceneProps.lightIntensity * pow(attEnd, 2)
+    # TODO: Find a way to get sun lights to work properly with fog
+    # if blLight.type == 'SUN':
+    if 'sun_' in nameLower or '_sun' in nameLower or nameLower == 'omni_shadow': # Castle
+        # intensity *= worldProps.sunIntensity
+        intensity *= pow(worldProps.sunIntensity, 2) * pow(attEnd, 2) * 10
+    else:
+        intensity *= pow(worldProps.lightIntensity, 2) * pow(attEnd, 2)
 
     intensity *= 2
 
@@ -1944,13 +1965,13 @@ def calcLightEnergy(blLightObj, context):
 def calcLightSoftSize(blLightObj, context):
     blLight = blLightObj.data
     props = blLight.gzrs2
-    sceneProps = context.scene.gzrs2
+    worldProps = ensureWorld(context).gzrs2
 
     attStart = props.attStart
     attEnd = clampLightAttEnd(props.attEnd, attStart)
 
     softSize = 1 - calcLightSoftness(attStart, attEnd)
-    softSize *= sceneProps.lightSoftSize
+    softSize *= worldProps.lightSoftSize
     softSize *= pow(attEnd / 1000, 0.5)
     softSize *= 2
 

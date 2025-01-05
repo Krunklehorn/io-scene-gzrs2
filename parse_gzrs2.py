@@ -59,7 +59,7 @@ def parseRsXML(self, xmlRs, tagName, state):
         elif element.hasAttribute('min') or element.hasAttribute('max'):
             nodeEntry['min'] = int(element.getAttribute('min'))
             nodeEntry['max'] = int(element.getAttribute('max'))
-        else:
+        elif tagName != 'GLOBAL':
             self.report({ 'ERROR' }, f"GZRS2: No rule for .rs.xml element: { element }")
             break
 
@@ -72,17 +72,20 @@ def parseRsXML(self, xmlRs, tagName, state):
                         data = os.path.normpath(data)
 
                 nodeEntry[nodeName] = data
+            elif nodeName == 'fog_enable':
+                nodeEntry[nodeName] = data.strip().lower() == 'true'
             elif nodeName in ('R', 'G', 'B'):
                 nodeEntry[nodeName] = int(data)
-            elif nodeName == 'INTENSITY':
+            elif nodeName in ('INTENSITY', 'fog_min', 'fog_max', 'far_z'):
                 nodeEntry[nodeName] = float(data)
             elif nodeName in ('ATTENUATIONSTART', 'ATTENUATIONEND', 'RADIUS'):
                 nodeEntry[nodeName] = parseDistance(data, state.convertUnits)
-            elif nodeName in ('DIFFUSE', 'AMBIENT', 'SPECULAR', 'COLOR'): # Haven.RS
-                try:
-                    nodeEntry[nodeName] = tuple(float(s) for s in data.split(' '))
-                except ValueError:
-                    nodeEntry[nodeName] = bool(data)
+            elif nodeName in ('DIFFUSE', 'AMBIENT', 'SPECULAR', 'COLOR'):
+                try:                nodeEntry[nodeName] = tuple(float(s) for s in data.split(' '))
+                except ValueError:  nodeEntry[nodeName] = bool(data)
+            elif nodeName == 'fog_color':
+                try:                nodeEntry[nodeName] = tuple(float(s) for s in data.split(','))
+                except ValueError:  nodeEntry[nodeName] = bool(data)
             elif nodeName in ('POSITION', 'DIRECTION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION'):
                 vec = parseVec3(data, nodeName, state.convertUnits, True)
 
@@ -302,7 +305,7 @@ def parseSceneXML(self, xmlScene, xmlName, state):
             elif nodeName == 'PROPERTY':
                 for child, childName, data in filterNodes(node.childNodes):
                     if childName == 'USERENDERMINAREA':
-                        spotlightEntry[childName] = bool(data)
+                        spotlightEntry[childName] = data.strip().lower() == 'true'
                     elif childName == 'FOV':
                         spotlightEntry[childName] = float(data)
                     elif childName in ('ATTENUATIONEND', 'ATTENUATIONSTART', 'INTENSITY', 'RENDERMINAREA'):

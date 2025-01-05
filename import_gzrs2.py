@@ -135,7 +135,7 @@ def importRS2(self, context):
         state.doOcclusion = False
         state.doFog = False
         state.doSounds = False
-        self.report({ 'ERROR' }, "GZRS2: Map xml not found, no materials or objects to generate!")
+        self.report({ 'WARNING' }, "GZRS2: Map xml not found, no materials or objects to generate!")
 
     xmlSpawn = False
     xmlFlag = False
@@ -175,7 +175,9 @@ def importRS2(self, context):
         if not smokexmlpath:    self.report({ 'INFO' }, "GZRS2: Smoke requested but smoke.xml not found, no smoke to generate.")
 
     if xmlRs:
-        state.xmlRsMats = parseRsXML(self, xmlRs, 'MATERIAL', state)
+        state.xmlRsMats =                       parseRsXML(self, xmlRs, 'MATERIAL', state)
+        state.xmlGlbs =                         parseRsXML(self, xmlRs, 'GLOBAL', state)
+
         if state.doLights:      state.xmlLits = parseRsXML(self, xmlRs, 'LIGHT', state)
         if state.doProps:       state.xmlObjs = parseRsXML(self, xmlRs, 'OBJECT', state)
         if state.doDummies:     state.xmlDums = parseRsXML(self, xmlRs, 'DUMMY', state)
@@ -279,10 +281,6 @@ def importRS2(self, context):
             with open(elupath, 'rb') as file:
                 if readElu(self, file, elupath, state):
                     return { 'CANCELLED' }
-
-    if state.doFog and not state.doLights:
-        state.doFog = False
-        self.report({ 'INFO' }, "GZRS2: Fog data but no lights, fog volume will not be generated.")
 
     state.doLightDrivers =   state.doLightDrivers and state.doLights
     state.doFogDriver =      state.doFogDriver and state.doFog
@@ -920,66 +918,30 @@ def importRS2(self, context):
                 createBBoxEmpty(f"{ state.filename }_OctBBox{ b }", state.blOctBBoxObjs, rootBoundsOct)
 
         if state.doFog:
+            if len(state.xmlFogs) > 1:
+                self.report({ 'WARNING' }, f"GZRS2: Multiple sets of FOG tags were read! Only the first will be considered!")
+
             fog = state.xmlFogs[0]
+            fogR = fog.get('R', 255) / 255
+            fogG = fog.get('G', 255) / 255
+            fogB = fog.get('B', 255) / 255
 
-            color = (fog['R'] / 255.0, fog['G'] / 255.0, fog['B'] / 255.0, 1.0)
-            p1 = Vector((math.inf, math.inf, math.inf))
-            p2 = Vector((-math.inf, -math.inf, -math.inf))
+            world = ensureWorld(context)
+            worldProps = world.gzrs2
+            worldProps.fogColor = (fogR, fogG, fogB)
+            worldProps.fogMin = fog['min']
+            worldProps.fogMax = fog['max']
 
-            for blLightObj in state.blLightObjs:
-                p1.x = min(p1.x, blLightObj.location.x)
-                p1.y = min(p1.y, blLightObj.location.y)
-                p1.z = min(p1.z, blLightObj.location.z)
-                p2.x = max(p2.x, blLightObj.location.x)
-                p2.y = max(p2.y, blLightObj.location.y)
-                p2.z = max(p2.z, blLightObj.location.z)
+            bpy.ops.gzrs2.recalculate_lights_fog()
 
-            hdims = (p2 - p1) / 2
-            center = p1 + hdims
-
-            fogName = f"{ state.filename }_Fog"
-
-            blFogMat = bpy.data.materials.new(fogName)
-            blFogMat.use_nodes = True
-
-            tree, links, nodes = getMatTreeLinksNodes(blFogMat)
-
-            nodes.remove(getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled'))
-            output = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
-            output.select = False
-
-            if min(color[:3]) > 0.5:
-                shader = nodes.new('ShaderNodeVolumeScatter')
-                shader.inputs[0].default_value = color
-                shader.inputs[1].default_value = 0.0001
-            else:
-                shader = nodes.new('ShaderNodeVolumeAbsorption')
-                shader.inputs[0].default_value = color
-                shader.inputs[1].default_value = 0.1
-
-            shader.location = (120, 300)
-            shader.select = False
-
-            links.new(shader.outputs[0], output.inputs[1])
-
-            bpy.ops.mesh.primitive_cube_add(location = center, scale = hdims)
-            deleteInfoReports(1, context)
-
-            blFogObj = context.active_object
-            blFogMesh = blFogObj.data
-            blFogObj.name = blFogMesh.name = fogName
-            blFogObj.display_type = 'WIRE'
-
-            state.blFogMat = blFogMat
             state.blFogShader = shader
-            state.blFogMesh = blFogMesh
-            state.blFogObj = blFogObj
 
-            blFogObj.data.materials.append(blFogMat)
-
-            for collection in blFogObj.users_collection:
-                collection.objects.unlink(blFogObj)
-            rootExtras.objects.link(blFogObj)
+        if len(state.xmlGlbs) == 1:
+            globalData = state.xmlGlbs[0]
+            if globalData['fog_enable']:    worldProps.fogEnable    = True
+            if globalData['far_z']:         worldProps.farClip      = globalData['far_z']
+        elif len(state.xmlGlbs) > 1:
+            self.report({ 'WARNING' }, f"GZRS2: Multiple sets of GLOBAL tags were read! Only the first will be considered!")
 
         if doDrivers:
             driverObj = bpy.data.objects.new(f"{ state.filename }_Drivers", None)

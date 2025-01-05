@@ -11,7 +11,7 @@ from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNode
 from .lib_gzrs2 import decomposeTexpath, checkIsAniTex, processAniTexParameters
 from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
 from .lib_gzrs2 import clampLightAttEnd, calcLightSoftness, calcLightTag, calcLightEnergy, calcLightSoftSize, calcLightRender
-from .lib_gzrs2 import enumTagToIndex, enumIndexToTag
+from .lib_gzrs2 import enumTagToIndex, enumIndexToTag, ensureWorld
 
 bl_info = {
     'name': 'GZRS2/3 Format',
@@ -244,17 +244,43 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
 
         return { 'FINISHED' }
 
-class GZRS2_OT_Recalculate_Lights(Operator):
-    bl_idname = 'gzrs2.recalculate_lights'
-    bl_label = "Recalculate Lights"
+class GZRS2_OT_Recalculate_Lights_Fog(Operator):
+    bl_idname = 'gzrs2.recalculate_lights_fog'
+    bl_label = "Recalculate Lights & Fog"
     bl_options = { 'REGISTER', 'INTERNAL' }
-    bl_description = "Recalculate Blender lights based on associated Realspace properties"
+    bl_description = "Recalculate Blender lights and fog volume based on associated Realspace properties"
 
     @classmethod
     def poll(cls, context):
         return True
 
     def execute(self, context):
+        world = ensureWorld(context)
+        worldProps = world.gzrs2
+        fogColor = worldProps.fogColor
+
+        tree = world.node_tree
+        links = tree.links
+        nodes = tree.nodes
+
+        output = getShaderNodeByID(nodes, 'ShaderNodeOutputWorld')
+
+        if sum(fogColor[:3]) / 3 > 0.5:
+            shader = getShaderNodeByID(nodes, 'ShaderNodeVolumeScatter') or nodes.new('ShaderNodeVolumeScatter')
+            shader.inputs[1].default_value = pow(worldProps.fogDensity, 2 / 3) * 0.001
+        else:
+            shader = getShaderNodeByID(nodes, 'ShaderNodeVolumeAbsorption') or nodes.new('ShaderNodeVolumeAbsorption')
+            shader.inputs[1].default_value = pow(worldProps.fogDensity, 2 / 3) * 0.1
+
+        shader.inputs[0].default_value = (fogColor.r, fogColor.g, fogColor.b, 1)
+
+        for link in links:
+            if link.to_node == output and link.to_socket == output.inputs[1]:
+                links.remove(link)
+
+        if worldProps.fogEnable:
+            links.new(shader.outputs[0], output.inputs[1])
+
         blLights = tuple((blObj.data, blObj) for blObj in bpy.data.objects if blObj.type == 'LIGHT' and blObj.data.gzrs2.lightType != 'NONE')
 
         for blLight, blLightObj in blLights:
@@ -1738,7 +1764,7 @@ class RSLM_PT_Export_Logging(Panel):
 
         layout.prop(operator, 'logLmHeaders')
 
-class GZRS2SceneProperties(PropertyGroup):
+class GZRS2WorldProperties(PropertyGroup):
     lightIntensity: FloatProperty(
         name = 'Light Intensity',
         default = 1.0,
@@ -1769,13 +1795,114 @@ class GZRS2SceneProperties(PropertyGroup):
         subtype = 'UNSIGNED'
     )
 
+    fogEnable: BoolProperty(
+        name = 'Enable',
+        default = False
+    )
+
+    fogColor: FloatVectorProperty(
+        name = 'Color',
+        default = (1.0, 1.0, 1.0),
+        min = 0.0,
+        max = 1.0,
+        soft_min = 0.0,
+        soft_max = 1.0,
+        subtype = 'COLOR',
+        size = 3
+    )
+
+    fogDensity: FloatProperty(
+        name = 'Render Density',
+        default = 1.0,
+        min = 0.0,
+        max = 100.0,
+        soft_min = 0.0,
+        soft_max = 100.0,
+        subtype = 'UNSIGNED'
+    )
+
+    fogMin: FloatProperty(
+        name = 'Start',
+        default = 1000.0,
+        min = 0.0,
+        max = 3.402823e+38,
+        soft_min = 0.0,
+        soft_max = 3.402823e+38,
+        subtype = 'UNSIGNED'
+    )
+
+    fogMax: FloatProperty(
+        name = 'End',
+        default = 10000.0,
+        min = 0.0,
+        max = 3.402823e+38,
+        soft_min = 0.0,
+        soft_max = 3.402823e+38,
+        subtype = 'UNSIGNED'
+    )
+
+    farClip: FloatProperty(
+        name = 'Far Clip',
+        default = 10000.0,
+        min = 0.0,
+        max = 3.402823e+38,
+        soft_min = 0.0,
+        soft_max = 3.402823e+38,
+        subtype = 'UNSIGNED'
+    )
+
     @classmethod
     def register(cls):
-        bpy.types.Scene.gzrs2 = PointerProperty(type = cls)
+        bpy.types.World.gzrs2 = PointerProperty(type = cls)
 
     @classmethod
     def unregister(cls):
-        del bpy.types.Scene.gzrs2
+        del bpy.types.World.gzrs2
+
+class GZRS2_PT_Realspace_World(Panel):
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_label = 'Realspace'
+    bl_idname = 'WORLD_PT_realspace'
+    bl_description = "Custom properties for Realspace engine maps."
+    bl_context = 'world'
+
+    @classmethod
+    def poll(cls, context):
+        return context.scene.world is not None
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+
+        worldProps = ensureWorld(context).gzrs2
+
+        box = layout.box()
+        column = box.column()
+        column.label(text = "Render")
+        column.prop(worldProps, 'lightIntensity')
+        column.prop(worldProps, 'sunIntensity')
+        column.prop(worldProps, 'lightSoftSize')
+
+        box = layout.box()
+        column = box.column()
+        column.label(text = "Fog")
+        column.prop(worldProps, 'fogEnable')
+
+        column = column.column()
+        column.prop(worldProps, 'fogColor')
+        column.prop(worldProps, 'fogDensity')
+        column.prop(worldProps, 'fogMin')
+        column.prop(worldProps, 'fogMax')
+        column.enabled = worldProps.fogEnable
+
+        column = layout.column()
+        column.operator(GZRS2_OT_Recalculate_Lights_Fog.bl_idname, text = "Recalculate Lights & Fog")
+
+        box = layout.box()
+        column = box.column()
+        column.label(text = "Other")
+        column.prop(worldProps, 'farClip')
 
 class GZRS2ObjectProperties(PropertyGroup):
     def ensureAll(self):
@@ -2352,17 +2479,17 @@ class GZRS2_PT_Realspace_Light(Panel):
         column.prop(props, 'attStart')
         column.prop(props, 'attEnd')
 
-        sceneProps = context.scene.gzrs2
+        worldProps = ensureWorld(context).gzrs2
 
         box = layout.box()
         column = box.column()
-        column.label(text = "Scene Modifiers")
-        column.prop(sceneProps, 'lightIntensity')
-        column.prop(sceneProps, 'sunIntensity')
-        column.prop(sceneProps, 'lightSoftSize')
+        column.label(text = "Render")
+        column.prop(worldProps, 'lightIntensity')
+        column.prop(worldProps, 'sunIntensity')
+        column.prop(worldProps, 'lightSoftSize')
 
         column = layout.column()
-        column.operator(GZRS2_OT_Recalculate_Lights.bl_idname, text = "Recalculate Lights")
+        column.operator(GZRS2_OT_Recalculate_Lights_Fog.bl_idname, text = "Recalculate Lights & Fog")
 
 class GZRS2CameraProperties(PropertyGroup):
     cameraIndex: IntProperty(
@@ -2670,7 +2797,7 @@ classes = (
     GZRS2_OT_Specify_Path_MRS,
     GZRS2_OT_Specify_Path_MRF,
     GZRS2_OT_Apply_Material_Preset,
-    GZRS2_OT_Recalculate_Lights,
+    GZRS2_OT_Recalculate_Lights_Fog,
     GZRS2Preferences,
     ImportGZRS2,
     GZRS2_PT_Import_Main,
@@ -2702,7 +2829,8 @@ classes = (
     ExportRSLM,
     RSLM_PT_Export_Main,
     RSLM_PT_Export_Logging,
-    GZRS2SceneProperties,
+    GZRS2WorldProperties,
+    GZRS2_PT_Realspace_World,
     GZRS2ObjectProperties,
     GZRS2_PT_Realspace_Object,
     GZRS2MeshProperties,
