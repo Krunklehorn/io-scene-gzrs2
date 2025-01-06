@@ -1858,7 +1858,7 @@ class GZRS2WorldProperties(PropertyGroup):
     )
 
     fogDensity: FloatProperty(
-        name = 'Render Density',
+        name = 'Fog Density',
         default = 1.0,
         min = 0.0,
         max = 100.0,
@@ -1867,33 +1867,33 @@ class GZRS2WorldProperties(PropertyGroup):
         subtype = 'UNSIGNED'
     )
 
-    fogMin: FloatProperty(
+    fogMin: IntProperty(
         name = 'Start',
-        default = 1000.0,
-        min = 0.0,
-        max = 3.402823e+38,
-        soft_min = 0.0,
-        soft_max = 3.402823e+38,
+        default = 1000,
+        min = 0,
+        max = 2**31 - 1,
+        soft_min = 0,
+        soft_max = 2**31 - 1,
         subtype = 'UNSIGNED'
     )
 
-    fogMax: FloatProperty(
+    fogMax: IntProperty(
         name = 'End',
-        default = 10000.0,
-        min = 0.0,
-        max = 3.402823e+38,
-        soft_min = 0.0,
-        soft_max = 3.402823e+38,
+        default = 10000,
+        min = 0,
+        max = 2**31 - 1,
+        soft_min = 0,
+        soft_max = 2**31 - 1,
         subtype = 'UNSIGNED'
     )
 
-    farClip: FloatProperty(
+    farClip: IntProperty(
         name = 'Far Clip',
-        default = 10000.0,
-        min = 0.0,
-        max = 3.402823e+38,
-        soft_min = 0.0,
-        soft_max = 3.402823e+38,
+        default = 10000,
+        min = 0,
+        max = 2**31 - 1,
+        soft_min = 0,
+        soft_max = 2**31 - 1,
         subtype = 'UNSIGNED'
     )
 
@@ -1929,6 +1929,7 @@ class GZRS2_PT_Realspace_World(Panel):
         column.prop(worldProps, 'lightIntensity')
         column.prop(worldProps, 'sunIntensity')
         column.prop(worldProps, 'lightSoftSize')
+        column.prop(worldProps, 'fogDensity')
 
         box = layout.box()
         column = box.column()
@@ -1937,7 +1938,6 @@ class GZRS2_PT_Realspace_World(Panel):
 
         column = column.column()
         column.prop(worldProps, 'fogColor')
-        column.prop(worldProps, 'fogDensity')
         column.prop(worldProps, 'fogMin')
         column.prop(worldProps, 'fogMax')
         column.enabled = worldProps.fogEnable
@@ -2558,6 +2558,7 @@ class GZRS2_PT_Realspace_Light(Panel):
         column.prop(worldProps, 'lightIntensity')
         column.prop(worldProps, 'sunIntensity')
         column.prop(worldProps, 'lightSoftSize')
+        column.prop(worldProps, 'fogDensity')
 
         column = layout.column()
         row = column.row()

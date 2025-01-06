@@ -74,9 +74,9 @@ def parseRsXML(self, xmlRs, tagName, state):
                 nodeEntry[nodeName] = data
             elif nodeName == 'fog_enable':
                 nodeEntry[nodeName] = data.strip().lower() == 'true'
-            elif nodeName in ('R', 'G', 'B'):
+            elif nodeName in ('R', 'G', 'B', 'fog_min', 'fog_max', 'far_z'):
                 nodeEntry[nodeName] = int(data)
-            elif nodeName in ('INTENSITY', 'fog_min', 'fog_max', 'far_z'):
+            elif nodeName == 'INTENSITY':
                 nodeEntry[nodeName] = float(data)
             elif nodeName in ('ATTENUATIONSTART', 'ATTENUATIONEND', 'RADIUS'):
                 nodeEntry[nodeName] = parseDistance(data, state.convertUnits)
