@@ -173,7 +173,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
         self.report({ 'ERROR' }, f"GZRS2: Texture search attempted with an invalid texture name: { texBase }")
         return
 
-    ddsBase = f"{ texBase }.dds".replace('.dds.dds', '.dds')
+    ddsBase = f"{ texBase }{ os.extsep }dds".replace(os.extsep + 'dds' + os.extsep + 'dds', os.extsep + 'dds')
 
     if isRS3:
         ensureRS3DataDict(self, state)
@@ -277,7 +277,7 @@ def resourceSearch(self, resourcename, state):
     splitname = resourcename.split(os.extsep)
 
     if splitname[-1].lower() == 'xml' and splitname[-2].lower() in ('scene', 'prop'):
-        eluname = f"{ splitname[0] }.elu"
+        eluname = f"{ splitname[0] }{ os.extsep }elu"
 
         result = state.rs3DataDict.get(eluname.lower())
         if result:
@@ -504,18 +504,25 @@ def getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha):
 
     return twosided, additive, alphatest, usealphatest, useopacity
 
-def decomposeTexpath(texpath):
-    if not texpath:
+def decomposePath(path):
+    if not path:
         return None, None, None, None
 
-    texBase = os.path.basename(texpath)
-    texName, texExt = os.path.splitext(texBase)
-    texDir = os.path.dirname(texpath)
+    basename = os.path.basename(path)
+    filename, extension = os.path.splitext(basename)
+    directory = os.path.dirname(path)
 
-    return texBase, texName, texExt, texDir
+    return basename, filename, extension, directory
 
 def checkIsAniTex(texBase):
     return False if texBase is None else texBase.lower().startswith('txa')
+
+def isChildProp(blPropObj):
+    if      blPropObj.parent is None:                           return False
+    elif    blPropObj.parent.data is None:                      return False
+    elif    blPropObj.parent.data.gzrs2.meshType == 'PROP':     return True
+
+    return isChildProp(blParentObj)
 
 def processAniTexParameters(isAniTex, texName, *, silent = False):
     if not isAniTex:
@@ -643,7 +650,7 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
         self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with empty texture path: { blMat.name }")
         return
 
-    texBase, texName, texExt, texDir = decomposeTexpath(texpath)
+    texBase, texName, texExt, texDir = decomposePath(texpath)
 
     if not isValidTextureName(texBase):
         self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with invalid texture name: { blMat.name }, { texBase }")
@@ -687,7 +694,7 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
     additive = xmlRsMat['ADDITIVE']
     twosided = xmlRsMat['TWOSIDED']
 
-    texBase, texName, _, _ = decomposeTexpath(texpath)
+    texBase, texName, _, _ = decomposePath(texpath)
     isAniTex = checkIsAniTex(texBase)
 
     source = group if state.doLightmap else texture
@@ -1040,7 +1047,7 @@ def setupEluMat(self, m, eluMat, state):
         links.new(texture.outputs[0], shader.inputs[0]) # Base Color
         usealphatest = alphatest > 0
 
-        texBase, texName, _, _ = decomposeTexpath(texpath)
+        texBase, texName, _, _ = decomposePath(texpath)
         isAniTex = checkIsAniTex(texBase)
 
         setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest, useopacity, texture, shader)
@@ -1260,6 +1267,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     meshName = eluMesh.meshName
     meshNameLower = meshName.lower()
     meshVersion = eluMesh.version
+    _, propFilename, _, _ = decomposePath(eluMesh.elupath)
 
     doNorms = len(eluMesh.normals) > 0
     doUV1 = len(eluMesh.uv1s) > 0
@@ -1283,6 +1291,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
 
     props = blMesh.gzrs2
     props.meshType = 'PROP'
+    props.propFilename = propFilename
 
     if meshVersion <= ELU_5007:
         if 'sky_' in meshNameLower or '_sky' in meshNameLower:

@@ -275,7 +275,7 @@ def exportElu(self, context):
 
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
-            texBase, texName, texExt, texDir = decomposeTexpath(texpath)
+            texBase, texName, texExt, texDir = decomposePath(texpath)
             isAniTex = checkIsAniTex(texBase)
             success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName)
 

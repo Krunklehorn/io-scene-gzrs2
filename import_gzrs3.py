@@ -95,12 +95,12 @@ def importRS3(self, context):
         scenexmlpath = xmlpath
 
         for ext in XML_EXTENSIONS:
-            propxmlpath = pathExists(f"{ state.directory }\\{ state.filename }.prop.{ ext }")
+            propxmlpath = pathExists(f"{ state.directory }\\{ state.filename }{ os.extsep }prop{ os.extsep }{ ext }")
     elif xmltype == 'prop':
         propxmlpath = xmlpath
 
         for ext in XML_EXTENSIONS:
-            scenexmlpath = pathExists(f"{ state.directory }\\{ state.filename }.scene.{ ext }")
+            scenexmlpath = pathExists(f"{ state.directory }\\{ state.filename }{ os.extsep }scene{ os.extsep }{ ext }")
 
     if scenexmlpath:
         with open(scenexmlpath, encoding = 'utf-8') as file:
@@ -168,7 +168,7 @@ def importRS3(self, context):
                     # TODO: readElu needs to fail properly if the elu version is unsupported
 
                     for ext in XML_EXTENSIONS:
-                        eluxmlpath = pathExists(f"{ resourcepath }.{ ext }")
+                        eluxmlpath = pathExists(f"{ resourcepath }{ os.extsep }{ ext }")
 
                         if eluxmlpath:
                             state.xmlEluMats[resourcepath] = parseEluXML(self, minidom.parse(eluxmlpath), state)

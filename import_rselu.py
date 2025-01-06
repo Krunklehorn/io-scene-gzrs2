@@ -86,7 +86,7 @@ def importElu(self, context):
     state.filename = os.path.basename(elupath).split(os.extsep)[0]
 
     for ext in XML_EXTENSIONS:
-        eluxmlpath = pathExists(f"{ elupath }.{ ext }")
+        eluxmlpath = pathExists(f"{ elupath }{ os.extsep }{ ext }")
 
         if eluxmlpath:
             with open(eluxmlpath, encoding = 'utf-8') as file:

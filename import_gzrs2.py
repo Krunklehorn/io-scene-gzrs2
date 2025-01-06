@@ -121,7 +121,7 @@ def importRS2(self, context):
 
     xmlRs = False
     for ext in XML_EXTENSIONS:
-        rsxmlpath = pathExists(f"{ rspath }.{ ext }")
+        rsxmlpath = pathExists(f"{ rspath }{ os.extsep }{ ext }")
 
         if rsxmlpath:
             with open(rsxmlpath, encoding = 'utf-8') as file:
@@ -204,7 +204,7 @@ def importRS2(self, context):
 
     if state.doBsptree:
         for ext in BSP_EXTENSIONS:
-            bsppath = pathExists(f"{ rspath }.{ ext }")
+            bsppath = pathExists(f"{ rspath }{ os.extsep }{ ext }")
 
             if bsppath:
                 with open(bsppath, 'rb') as file:
@@ -218,7 +218,7 @@ def importRS2(self, context):
 
     if state.doCollision:
         for ext in COL_EXTENSIONS:
-            colpath = pathExists(f"{ rspath }.{ ext }")
+            colpath = pathExists(f"{ rspath }{ os.extsep }{ ext }")
 
             if colpath:
                 with open(colpath, 'rb') as file:
@@ -232,7 +232,7 @@ def importRS2(self, context):
 
     if state.doNavigation:
         for ext in NAV_EXTENSIONS:
-            navpath = pathExists(f"{ rspath }.{ ext }")
+            navpath = pathExists(f"{ rspath }{ os.extsep }{ ext }")
 
             if navpath:
                 with open(navpath, 'rb') as file:
@@ -246,7 +246,7 @@ def importRS2(self, context):
 
     if state.doLightmap:
         for ext in LM_EXTENSIONS:
-            lmpath = pathExists(f"{ rspath }.{ ext }")
+            lmpath = pathExists(f"{ rspath }{ os.extsep }{ ext }")
 
             if lmpath:
                 with open(lmpath, 'rb') as file:
@@ -266,7 +266,7 @@ def importRS2(self, context):
             elupath = os.path.join(state.directory, propName)
 
             for ext in XML_EXTENSIONS:
-                eluxmlpath = pathExists(f"{ elupath }.{ ext }")
+                eluxmlpath = pathExists(f"{ elupath }{ os.extsep }{ ext }")
 
                 if eluxmlpath:
                     with open(eluxmlpath, encoding = 'utf-8') as file:

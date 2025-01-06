@@ -8,7 +8,7 @@ from . import export_rselu, export_rsnav, export_rslm
 from .constants_gzrs2 import *
 from .lib_gzrs2 import getEluExportConstants, getMatTreeLinksNodes, getRelevantShaderNodes, checkShaderNodeValidity
 from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender
-from .lib_gzrs2 import decomposeTexpath, checkIsAniTex, processAniTexParameters
+from .lib_gzrs2 import decomposePath, checkIsAniTex, isChildProp, processAniTexParameters
 from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency, ensureLmMixGroup
 from .lib_gzrs2 import clampLightAttEnd, calcLightSoftness, calcLightEnergy, calcLightSoftSize, calcLightRender
 from .lib_gzrs2 import enumTagToIndex, enumIndexToTag, ensureWorld
@@ -197,7 +197,7 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
 
         twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
-        texBase, texName, _, _ = decomposeTexpath(texpath)
+        texBase, texName, _, _ = decomposePath(texpath)
         isAniTex = checkIsAniTex(texBase)
         # success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
 
@@ -2334,7 +2334,7 @@ class GZRS2MeshProperties(PropertyGroup):
         if self.id_data is None:
             return
 
-        blMeshObjs = tuple(blObj for blObj in context.scene.objects if blObj.data.gzrs2 == self)
+        blMeshObjs = tuple(blObj for blObj in context.scene.objects if blObj.data is not None and blObj.data.gzrs2 == self)
 
         for blMeshObj in blMeshObjs:
             if self.meshType == 'PROP' and self.propSubtype == 'SKY':
@@ -2365,6 +2365,12 @@ class GZRS2MeshProperties(PropertyGroup):
                  ('SKY',             'Sky',          "Mesh is assumed to be large and surrounding the entire map"),
                  ('FLAG',            'Flag',         "Mesh is affected by wind forces")),
         update = onUpdate
+    )
+
+    propFilename: StringProperty(
+        name = 'Filename',
+        default = '',
+        subtype = 'FILE_NAME'
     )
 
     flagDirection: IntProperty(
@@ -2445,7 +2451,10 @@ class GZRS2_PT_Realspace_Mesh(Panel):
         layout = self.layout
         layout.use_property_split = True
 
-        props = context.active_object.data.gzrs2
+        blMeshObj = context.active_object
+        meshName = blMeshObj.name
+
+        props = blMeshObj.data.gzrs2
 
         column = layout.column()
         column.prop(props, 'meshType')
@@ -2454,8 +2463,26 @@ class GZRS2_PT_Realspace_Mesh(Panel):
 
         if props.meshType == 'PROP':
             column.prop(props, 'propSubtype')
+            column.prop(props, 'propFilename')
+
+            if not isChildProp(blMeshObj):
+
+                propFilename = props.propFilename
+                splitname = propFilename.split(meshName) if meshName in propFilename else ("N/A", "N/A")
+
+                box = layout.box()
+                column = box.column()
+
+                row = column.row()
+                row.label(text = "Prefix:")
+                row.label(text = splitname[0])
+
+                row = column.row()
+                row.label(text = "Suffix:")
+                row.label(text = splitname[1])
 
             if props.propSubtype == 'FLAG':
+                column = layout.column()
                 column.prop(props, 'flagDirection')
                 column.prop(props, 'flagPower')
                 column.prop(props, 'flagWindType')
@@ -2780,7 +2807,7 @@ class GZRS2_PT_Realspace_Material(Panel):
 
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
-            texBase, texName, texExt, texDir = decomposeTexpath(texpath)
+            texBase, texName, texExt, texDir = decomposePath(texpath)
             isAniTex = checkIsAniTex(texBase)
             success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
 
