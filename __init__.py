@@ -246,7 +246,7 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
 
 class GZRS2_OT_Toggle_Lightmap_Mix(Operator):
     bl_idname = 'gzrs2.toggle_lightmap_mix'
-    bl_label = "Lightmap Mix"
+    bl_label = "Toggle Lightmap Mix"
     bl_options = { 'REGISTER', 'INTERNAL' }
     bl_description = "Toggle the shader node controlling the mixing of lightmaps"
 
@@ -269,7 +269,7 @@ class GZRS2_OT_Toggle_Lightmap_Mix(Operator):
 
 class GZRS2_OT_Toggle_Lightmap_Mod4(Operator):
     bl_idname = 'gzrs2.toggle_lightmap_mod4'
-    bl_label = "Lightmap Mod4"
+    bl_label = "Toggle Lightmap Mod4"
     bl_options = { 'REGISTER', 'INTERNAL' }
     bl_description = "Toggle the shader node controlling the lightmap mod4 fix"
 
@@ -2328,26 +2328,41 @@ class GZRS2_PT_Realspace_Object(Panel):
                 column.prop(props, 'smokeToggleMinTime')
 
 class GZRS2MeshProperties(PropertyGroup):
+    def onUpdate(self, context):
+        if self.id_data is None:
+            return
+
+        blMeshObjs = tuple(blObj for blObj in context.scene.objects if blObj.data.gzrs2 == self)
+
+        for blMeshObj in blMeshObjs:
+            if self.meshType == 'PROP' and self.propSubtype == 'SKY':
+                blMeshObj.visible_volume_scatter = False
+                blMeshObj.visible_transmission = False
+                blMeshObj.visible_shadow = False
+            else:
+                blMeshObj.visible_volume_scatter = True
+                blMeshObj.visible_transmission = True
+                blMeshObj.visible_shadow = True
+
     # TODO: Custom sprite gizmos
     meshType: EnumProperty(
         name = 'Type',
-        items = (
-            ('NONE',            'None',         "Not a Realspace mesh. Will not be exported"),
-            ('RAW',             'Raw',          "Freshly imported, may need modification. Will not be exported"),
-            ('WORLD',           'World',        "World mesh, lit statically, necessary for graphics, must be fully sealed with no leaks"),
-            ('PROP',            'Prop',         "Prop mesh, lit dynamically, does not contribute to bsptree or octree data. Recorded in .rs.xml, exports to .elu"),
-            ('COLLISION',       'Collision',    "Collision mesh, not visible, necessary for gameplay, must be fully sealed with no leaks"),
-            ('NAVIGATION',      'Navigation',   "Navigation mesh, not visible, only necessary for Quest mode"),
-            ('OCCLUSION',       'Occlusion',    "Occlusion planes, not visible, used to improve performance by skipping world and detail geometry")
-        )
+        items = (('NONE',            'None',         "Not a Realspace mesh. Will not be exported"),
+                 ('RAW',             'Raw',          "Freshly imported, may need modification. Will not be exported"),
+                 ('WORLD',           'World',        "World mesh, lit statically, necessary for graphics, must be fully sealed with no leaks"),
+                 ('PROP',            'Prop',         "Prop mesh, lit dynamically, does not contribute to bsptree or octree data. Recorded in .rs.xml, exports to .elu"),
+                 ('COLLISION',       'Collision',    "Collision mesh, not visible, necessary for gameplay, must be fully sealed with no leaks"),
+                 ('NAVIGATION',      'Navigation',   "Navigation mesh, not visible, only necessary for Quest mode"),
+                 ('OCCLUSION',       'Occlusion',    "Occlusion planes, not visible, used to improve performance by skipping world and detail geometry")),
+        update = onUpdate
     )
 
     propSubtype: EnumProperty(
         name = 'Subtype',
-        items = (
-            ('NONE',            'None',         "Mesh has no special properties"),
-            ('FLAG',            'Flag',         "Mesh is affected by wind forces")
-        )
+        items = (('NONE',            'None',         "Mesh has no special properties"),
+                 ('SKY',             'Sky',          "Mesh is assumed to be large and surrounding the entire map"),
+                 ('FLAG',            'Flag',         "Mesh is affected by wind forces")),
+        update = onUpdate
     )
 
     flagDirection: IntProperty(

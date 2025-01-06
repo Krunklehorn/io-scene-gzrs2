@@ -1258,11 +1258,13 @@ def deleteInfoReports(num, context):
 
 def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     meshName = eluMesh.meshName
+    meshNameLower = meshName.lower()
+    meshVersion = eluMesh.version
 
     doNorms = len(eluMesh.normals) > 0
     doUV1 = len(eluMesh.uv1s) > 0
     doUV2 = len(eluMesh.uv2s) > 0
-    doSlots = len(eluMesh.slotIDs) > 0 # and not eluMesh.drawFlags & RM_FLAG_HIDE
+    doSlots = len(eluMesh.slotIDs) > 0
     doColors = len(eluMesh.colors) > 0
     doWeights = len(eluMesh.weights) > 0
 
@@ -1279,13 +1281,22 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     blMesh = bpy.data.meshes.new(meshName)
     blMeshObj = bpy.data.objects.new(meshName, blMesh)
 
-    blMesh.gzrs2.meshType = 'PROP'
+    props = blMesh.gzrs2
+    props.meshType = 'PROP'
+
+    if meshVersion <= ELU_5007:
+        if 'sky_' in meshNameLower or '_sky' in meshNameLower:
+            props.propSubtype = 'SKY'
+
+            blMeshObj.visible_volume_scatter = False
+            blMeshObj.visible_transmission = False
+            blMeshObj.visible_shadow = False
 
     for face in eluMesh.faces:
         degree = face.degree
 
         # Reverses the winding order for GunZ 1 elus
-        for v in range(degree - 1, -1, -1) if eluMesh.version <= ELU_5007 else range(degree):
+        for v in range(degree - 1, -1, -1) if meshVersion <= ELU_5007 else range(degree):
             meshVerts.append(eluMesh.vertices[face.ipos[v]])
             if doNorms: meshNorms.append(eluMesh.normals[face.inor[v]])
             if doUV1: meshUV1.append(eluMesh.uv1s[face.iuv1[v]])
@@ -1321,15 +1332,9 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     blMesh.validate()
     blMesh.update()
 
-    if oneOfMany and eluMesh.version <= ELU_5007:
+    if oneOfMany and meshVersion <= ELU_5007:
         # Rotate GunZ 1 elus to face forward when loading from a map
         blMeshObj.matrix_world = Matrix.Rotation(math.radians(-180.0), 4, 'Z') @ eluMesh.transform
-
-        # Prevent skyboxes from catching rays
-        if meshName.lower().startswith(('obj_sky_', 'obj_ef_sky')):
-            blMeshObj.visible_volume_scatter = False
-            blMeshObj.visible_transmission = False
-            blMeshObj.visible_shadow = False
     else:
         blMeshObj.matrix_world = eluMesh.transform
 
@@ -1346,11 +1351,11 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
             degree = face.degree
 
             # Reverses the winding order for GunZ 1 elus
-            for v in range(degree - 1, -1, -1) if eluMesh.version <= ELU_5007 else range(degree):
+            for v in range(degree - 1, -1, -1) if meshVersion <= ELU_5007 else range(degree):
                 weight = eluMesh.weights[face.ipos[v]]
 
                 for d in range(weight.degree):
-                    if eluMesh.version <= ELU_5007: boneName = weight.meshNames[d]
+                    if meshVersion <= ELU_5007: boneName = weight.meshNames[d]
                     else:                           boneName = state.eluMeshes[weight.meshIDs[d]].meshName
 
                     if boneName in eluMeshNames:    state.gzrsValidBones.add(boneName)
@@ -1372,7 +1377,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
 
     slotCount = max(1, max(slotIDs) + 1) if doSlots else 1
 
-    if eluMesh.version <= ELU_5007:
+    if meshVersion <= ELU_5007:
         baseMat = None
 
         if elupath in state.blEluMats:
