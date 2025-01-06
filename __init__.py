@@ -9,7 +9,7 @@ from .constants_gzrs2 import *
 from .lib_gzrs2 import getEluExportConstants, getMatTreeLinksNodes, getRelevantShaderNodes, checkShaderNodeValidity
 from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender
 from .lib_gzrs2 import decomposeTexpath, checkIsAniTex, processAniTexParameters
-from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
+from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency, ensureLmMixGroup
 from .lib_gzrs2 import clampLightAttEnd, calcLightSoftness, calcLightEnergy, calcLightSoftSize, calcLightRender
 from .lib_gzrs2 import enumTagToIndex, enumIndexToTag, ensureWorld
 
@@ -243,6 +243,52 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
 
         return { 'FINISHED' }
+
+class GZRS2_OT_Toggle_Lightmap_Mix(Operator):
+    bl_idname = 'gzrs2.toggle_lightmap_mix'
+    bl_label = "Lightmap Mix"
+    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_description = "Toggle the shader node controlling the mixing of lightmaps"
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        group = ensureLmMixGroup()
+        nodes = group.nodes
+
+        for node in nodes:
+            if node.type == 'MIX_RGB' and node.label.lower() == 'lightmap':
+                if node.inputs[0].default_value > 0.5:  node.inputs[0].default_value = 0.0
+                else:                                   node.inputs[0].default_value = 1.0
+
+                return { 'FINISHED' }
+        else:
+            return { 'CANCELLED' }
+
+class GZRS2_OT_Toggle_Lightmap_Mod4(Operator):
+    bl_idname = 'gzrs2.toggle_lightmap_mod4'
+    bl_label = "Lightmap Mod4"
+    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_description = "Toggle the shader node controlling the lightmap mod4 fix"
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        group = ensureLmMixGroup()
+        nodes = group.nodes
+
+        for node in nodes:
+            if node.type == 'MIX_RGB' and node.label.lower() == 'mod4':
+                if node.inputs[0].default_value > 0.5:  node.inputs[0].default_value = 0.0
+                else:                                   node.inputs[0].default_value = 1.0
+
+                return { 'FINISHED' }
+        else:
+            return { 'CANCELLED' }
 
 class GZRS2_OT_Recalculate_Lights_Fog(Operator):
     bl_idname = 'gzrs2.recalculate_lights_fog'
@@ -1895,6 +1941,9 @@ class GZRS2_PT_Realspace_World(Panel):
         column.enabled = worldProps.fogEnable
 
         column = layout.column()
+        row = column.row()
+        row.operator(GZRS2_OT_Toggle_Lightmap_Mix.bl_idname, text = "Lightmap Mix")
+        row.operator(GZRS2_OT_Toggle_Lightmap_Mod4.bl_idname, text = "Lightmap Mod4")
         column.operator(GZRS2_OT_Recalculate_Lights_Fog.bl_idname, text = "Recalculate Lights & Fog")
 
         box = layout.box()
@@ -2494,6 +2543,9 @@ class GZRS2_PT_Realspace_Light(Panel):
         column.prop(worldProps, 'lightSoftSize')
 
         column = layout.column()
+        row = column.row()
+        row.operator(GZRS2_OT_Toggle_Lightmap_Mix.bl_idname, text = "Lightmap Mix")
+        row.operator(GZRS2_OT_Toggle_Lightmap_Mod4.bl_idname, text = "Lightmap Mod4")
         column.operator(GZRS2_OT_Recalculate_Lights_Fog.bl_idname, text = "Recalculate Lights & Fog")
 
 class GZRS2CameraProperties(PropertyGroup):
@@ -2802,6 +2854,8 @@ classes = (
     GZRS2_OT_Specify_Path_MRS,
     GZRS2_OT_Specify_Path_MRF,
     GZRS2_OT_Apply_Material_Preset,
+    GZRS2_OT_Toggle_Lightmap_Mix,
+    GZRS2_OT_Toggle_Lightmap_Mod4,
     GZRS2_OT_Recalculate_Lights_Fog,
     GZRS2Preferences,
     ImportGZRS2,

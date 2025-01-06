@@ -259,7 +259,6 @@ def importRS2(self, context):
             self.report({ 'INFO' }, "GZRS2: Lightmaps requested but .lm file not found, no lightmaps to generate.")
         else:
             unpackLmImages(state)
-            setupLmMixGroup(state)
 
     if state.doProps:
         for p, prop in enumerate(state.xmlObjs):
@@ -495,7 +494,7 @@ def importRS2(self, context):
             blLight.use_shadow = castshadow
 
             props = blLight.gzrs2
-            props.lightType = 'DYNAMIC' if lightNameLower.startswith('obj_') else 'STATIC'
+            props.lightType = 'DYNAMIC' if 'obj_' in lightNameLower or '_obj' in lightNameLower else 'STATIC'
             props.lightSubtype = 'SUN' if 'sun_' in lightNameLower or '_sun' in lightNameLower or lightNameLower == 'omni_shadow' else 'NONE' # Castle
             props.intensity = intensity
             props.attStart = attStart

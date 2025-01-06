@@ -663,7 +663,7 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
 
         lightmap.image = state.blLmImage
         uvmap.uv_map = 'UVMap.001'
-        group.node_tree = state.lmMixGroup
+        group.node_tree = ensureLmMixGroup()
 
         lightmap.location = (-440, -20)
         uvmap.location = (-640, -20)
@@ -1861,10 +1861,10 @@ def rgb565ToVector(rgb):
 
     return Vector((r, g, b))
 
-def setupLmMixGroup(state):
-    if 'Lightmap Mix' in bpy.data.node_groups:
-        state.lmMixGroup = bpy.data.node_groups['Lightmap Mix']
-    else:
+def ensureLmMixGroup():
+    group = bpy.data.node_groups.get('Lightmap Mix')
+
+    if group is None:
         group = bpy.data.node_groups.new('Lightmap Mix',  'ShaderNodeTree')
         groupA = group.interface.new_socket(name = 'A', in_out = 'INPUT', socket_type = 'NodeSocketColor')
         groupB = group.interface.new_socket(name = 'B', in_out = 'INPUT', socket_type = 'NodeSocketColor')
@@ -1880,6 +1880,9 @@ def setupLmMixGroup(state):
         groupMod4x = group.nodes.new('ShaderNodeMixRGB')
         groupTosRGB = group.nodes.new('ShaderNodeGamma')
         groupMix = group.nodes.new('ShaderNodeMixRGB')
+
+        groupMod4x.label = 'Mod4'
+        groupMix.label = 'Lightmap'
 
         groupMod4x.blend_type = 'MULTIPLY'
         groupMix.blend_type = 'MULTIPLY'
@@ -1916,7 +1919,7 @@ def setupLmMixGroup(state):
         groupTosRGB.select = False
         groupMix.select = False
 
-        state.lmMixGroup = group
+    return group
 
 def clampLightAttEnd(attEnd, attStart):
     return max(attEnd, attStart + 0.001)
@@ -1951,7 +1954,6 @@ def calcLightEnergy(blLightObj, context):
     attEnd = clampLightAttEnd(props.attEnd, props.attStart)
 
     # TODO: Add a quick way to toggle 'sky_' props to additive and tweak their emissive intensity
-    # TODO: Add a quick lightmap toggle and MOD4 toggle
 
     if props.lightSubtype == 'NONE':
         intensity *= pow(worldProps.lightIntensity, 2) * pow(attEnd, 2)

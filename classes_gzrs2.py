@@ -120,7 +120,6 @@ class GZRS2State:
     lmPolygonOrder:     tuple = field(default_factory = tuple)
     lmLightmapIDs:      tuple = field(default_factory = tuple)
     lmUVs:              tuple = field(default_factory = tuple)
-    lmMixGroup:         Object      = None
 
     blErrorMat:         Material    = None
     blXmlRsMats:        list = field(default_factory = list)
