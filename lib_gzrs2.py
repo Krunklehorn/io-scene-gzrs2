@@ -1958,8 +1958,6 @@ def calcLightEnergy(blLightObj, context):
     intensity = props.intensity
     attEnd = clampLightAttEnd(props.attEnd, props.attStart)
 
-    # TODO: Add a quick way to toggle 'sky_' props to additive and tweak their emissive intensity
-
     if props.lightSubtype == 'NONE':
         intensity *= pow(worldProps.lightIntensity, 2) * pow(attEnd, 2)
     else:

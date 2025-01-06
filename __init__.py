@@ -242,6 +242,8 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
 
         setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
 
+        blMat.gzrs2.fakeEmission = 0.0
+
         return { 'FINISHED' }
 
 class GZRS2_OT_Toggle_Lightmap_Mix(Operator):
@@ -2727,6 +2729,16 @@ class GZRS2MaterialProperties(PropertyGroup):
         items = MATERIAL_SOUND_DATA
     )
 
+    fakeEmission: FloatProperty(
+        name = 'Exponent',
+        default = 0.0,
+        min = 0.0,
+        max = 3.402823e+38,
+        soft_min = 0.0,
+        soft_max = 3.402823e+38,
+        subtype = 'UNSIGNED'
+    )
+
     @classmethod
     def register(cls):
         bpy.types.Material.gzrs2 = PointerProperty(type = cls)
@@ -2797,6 +2809,8 @@ class GZRS2_PT_Realspace_Material(Panel):
         column.prop(props, 'diffuse')
         column.prop(props, 'specular')
         column.prop(props, 'exponent')
+        if shaderValid and addValid:    column.prop(shader.inputs[27], 'default_value', text = "Emission") # Emission Strength
+        else:                           column.prop(props, 'fakeEmission', text = "Emission")
 
         column = layout.column()
         column.prop(props, 'sound')
