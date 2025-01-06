@@ -10,7 +10,7 @@ from .lib_gzrs2 import getEluExportConstants, getMatTreeLinksNodes, getRelevantS
 from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender
 from .lib_gzrs2 import decomposeTexpath, checkIsAniTex, processAniTexParameters
 from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
-from .lib_gzrs2 import clampLightAttEnd, calcLightSoftness, calcLightTag, calcLightEnergy, calcLightSoftSize, calcLightRender
+from .lib_gzrs2 import clampLightAttEnd, calcLightSoftness, calcLightEnergy, calcLightSoftSize, calcLightRender
 from .lib_gzrs2 import enumTagToIndex, enumIndexToTag, ensureWorld
 
 bl_info = {
@@ -289,8 +289,6 @@ class GZRS2_OT_Recalculate_Lights_Fog(Operator):
             intensity = props.intensity
             attStart = props.attStart
             attEnd = clampLightAttEnd(props.attEnd, attStart)
-
-            calcLightTag(blLightObj)
 
             blLight.energy = calcLightEnergy(blLightObj, context)
             blLight.shadow_soft_size = calcLightSoftSize(blLightObj, context)
@@ -2408,6 +2406,12 @@ class GZRS2LightProperties(PropertyGroup):
                  ('DYNAMIC',    'Dynamic',      "Lights props at runtime. Does not contribute to lightmaps"))
     )
 
+    lightSubtype: EnumProperty(
+        name = 'Type',
+        items = (('NONE',       'None',         "Light has no special properties"),
+                 ('SUN',        'Sun',          "Light is assumed to be far away and high above the map"))
+    )
+
     intensity: FloatProperty(
         name = 'Intensity',
         default = 0.0,
@@ -2475,6 +2479,7 @@ class GZRS2_PT_Realspace_Light(Panel):
         if props.lightType == 'NONE':
             return
 
+        column.prop(props, 'lightSubtype')
         column.prop(props, 'intensity')
         column.prop(props, 'attStart')
         column.prop(props, 'attEnd')

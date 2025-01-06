@@ -477,7 +477,6 @@ def importRS2(self, context):
         for light in state.xmlLits:
             lightName = light['name']
             lightNameLower = lightName.lower()
-            dynamic = lightNameLower.startswith('obj_')
 
             position = light['POSITION']
             intensity = light['INTENSITY']
@@ -490,15 +489,14 @@ def importRS2(self, context):
             blLightObj = bpy.data.objects.new(lightName, blLight)
             blLightObj.location = light['POSITION']
 
-            calcLightTag(blLightObj)
-
             blLight.color = light['COLOR']
             blLight.energy = calcLightEnergy(blLightObj, context)
             blLight.shadow_soft_size = calcLightSoftSize(blLightObj, context)
             blLight.use_shadow = castshadow
 
             props = blLight.gzrs2
-            props.lightType = 'DYNAMIC' if dynamic else 'STATIC'
+            props.lightType = 'DYNAMIC' if lightNameLower.startswith('obj_') else 'STATIC'
+            props.lightSubtype = 'SUN' if 'sun_' in lightNameLower or '_sun' in lightNameLower or lightNameLower == 'omni_shadow' else 'NONE' # Castle
             props.intensity = intensity
             props.attStart = attStart
             props.attEnd = attEnd

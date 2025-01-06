@@ -1926,23 +1926,23 @@ def calcLightSoftness(attStart, attEnd):
     return (attEnd - attStart) / attEnd
 
 # TODO: Find a way to get sun lights to work properly with fog
-def calcLightTag(blLightObj):
-    '''
-    nameLower = blLightObj.name.lower()
+'''
+def updateLightSubtype(blLightObj):
+    blLight = blLightObj.data
+    props = blLight.gzrs2
 
-    if 'sun_' in nameLower or '_sun' in nameLower or nameLower == 'omni_shadow': # Castle
+    if props.lightSubtype == 'NONE':
+        blLightObj.data.type = 'POINT'
+        blLightObj.rotation_euler = Euler((0, 0, 0))
+    else:
         target = Vector((0, 0, 0)) # TODO: Support for light targets using an object field property
         dir = target - blLightObj.location
 
         blLightObj.data.type = 'SUN'
         blLightObj.rotation_euler = dir.to_track_quat('-Z', 'Z').to_euler()
-    else:
-        blLightObj.data.type = 'POINT'
-        blLightObj.rotation_euler = Euler((0, 0, 0))
-    '''
+'''
 
 def calcLightEnergy(blLightObj, context):
-    nameLower = blLightObj.name.lower()
     blLight = blLightObj.data
     props = blLight.gzrs2
     worldProps = ensureWorld(context).gzrs2
@@ -1950,13 +1950,15 @@ def calcLightEnergy(blLightObj, context):
     intensity = props.intensity
     attEnd = clampLightAttEnd(props.attEnd, props.attStart)
 
-    # TODO: Find a way to get sun lights to work properly with fog
-    # if blLight.type == 'SUN':
-    if 'sun_' in nameLower or '_sun' in nameLower or nameLower == 'omni_shadow': # Castle
+    # TODO: Add a quick way to toggle 'sky_' props to additive and tweak their emissive intensity
+    # TODO: Add a quick lightmap toggle and MOD4 toggle
+
+    if props.lightSubtype == 'NONE':
+        intensity *= pow(worldProps.lightIntensity, 2) * pow(attEnd, 2)
+    else:
+        # TODO: Find a way to get sun lights to work properly with fog
         # intensity *= worldProps.sunIntensity
         intensity *= pow(worldProps.sunIntensity, 2) * pow(attEnd, 2) * 10
-    else:
-        intensity *= pow(worldProps.lightIntensity, 2) * pow(attEnd, 2)
 
     intensity *= 2
 
