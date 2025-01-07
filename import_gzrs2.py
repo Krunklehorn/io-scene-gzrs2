@@ -558,6 +558,7 @@ def importRS2(self, context):
         sp = 1
         ca = 1
         sm = 1
+        fl = 1
 
         for d, dummy in enumerate(state.xmlDums):
             if d in propDums:
@@ -602,6 +603,9 @@ def importRS2(self, context):
             elif nameLower.startswith(('smk_')):
                 objName = f"{ state.filename }_Smoke{ sm }"
                 sm += 1
+            elif nameLower.startswith('sun_dummy'):
+                objName = f"{ state.filename }_Flare{ fl }"
+                fl += 1
             else:
                 objName = f"{ state.filename }_Dummy_{ name }"
 
