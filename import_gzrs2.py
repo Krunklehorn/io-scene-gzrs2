@@ -569,13 +569,9 @@ def importRS2(self, context):
             if nameLower.startswith(('spawn_item', 'snd_amb')):
                 continue
 
-            dir = dummy['DIRECTION']
-
-            rot = dir.to_track_quat('Y', 'Z').to_matrix()
-
             RS_DUMMY_NAME_SPLIT_DATA = (
-                ((  'spawn_solo', 'spawn_team'  ), '_', 3),
-                ((  'spawn_npc', 'spawn_blitz'  ), '_', 4), # spawn_npc_melee_01, spawn_npc_melee_02, TODO: verify blitz data
+                ((  'spawn_solo', 'spawn_team'  ), '_', 3), # spawn_solo_101, spawn_team1_101
+                ((  'spawn_npc', 'spawn_blitz'  ), '_', 4), # spawn_npc_melee_01, spawn_npc_melee_02, spawn_blitz_<suffix>
                 ((  'camera_pos',               ), ' ', 2), # camera_pos 01, camera_pos 01
                 ((  'wait_pos',                 ), '_', 3)  # wait_pos_01
             )
@@ -596,12 +592,6 @@ def importRS2(self, context):
 
                 nameSuffix = nameSplits[-1]
 
-                if not nameSuffix.isnumeric():
-                    self.report({ 'WARNING' }, f"GZRS2: Dummy name with incorrect formatting, unable to detect spawn index, skipping: { name }")
-                    continue
-
-                nameIndex = int(nameSuffix)
-
             # TODO: Ugly code, pull these out to separate lists
             if nameLower.startswith(('spawn_solo', 'spawn_team', 'spawn_npc', 'spawn_blitz')):
                 objName = f"{ state.filename }_Spawn{ sp }"
@@ -614,6 +604,8 @@ def importRS2(self, context):
                 sm += 1
             else:
                 objName = f"{ state.filename }_Dummy_{ name }"
+
+            rot = dummy['DIRECTION'].to_track_quat('Y', 'Z').to_matrix()
 
             if nameLower.startswith(('camera_pos', 'wait_pos')):
                 blData = bpy.data.cameras.new(objName)
@@ -633,18 +625,18 @@ def importRS2(self, context):
             if nameLower.startswith('spawn_solo'):
                 props.dummyType = 'SPAWN'
                 props.spawnType = 'SOLO'
-                props.spawnIndex = nameIndex
+                props.spawnIndex = int(nameSuffix) - 100
             elif nameLower.startswith('spawn_team'):
                 props.dummyType = 'SPAWN'
                 props.spawnType = 'TEAM'
-                props.spawnIndex = nameIndex
+                props.spawnIndex = int(nameSuffix) - 100
 
                 # We assume that 'spawn_team' always prefixes a single digit number starting at 1
                 props.spawnTeamID = int(nameLower.split('spawn_team')[1][0])
             elif nameLower.startswith('spawn_npc'):
                 props.dummyType = 'SPAWN'
                 props.spawnType = 'NPC'
-                props.spawnIndex = nameIndex
+                props.spawnIndex = int(nameSuffix)
 
                 # TODO: Custom value support for npc types
                 if      nameLower.startswith('spawn_npc_melee'):    props.spawnEnemyType = 'MELEE'
@@ -653,18 +645,21 @@ def importRS2(self, context):
             elif nameLower.startswith('spawn_blitz'):
                 props.dummyType = 'SPAWN'
                 props.spawnType = 'BLITZ'
-                props.spawnIndex = nameIndex
+
+                # We assume that 'spawn_blitz_barricade' and 'spawn_blitz_radar' always prefix either 'r' or 'b'
+                if      nameLower.startswith('spawn_blitz_barricade'):  props.spawnIndex = 1 if nameSuffix == 'r' else 2
+                elif    nameLower.startswith('spawn_blitz_radar'):      props.spawnIndex = 1 if nameSuffix == 'r' else 2
 
                 # TODO: Custom value support for blitzkrieg types
                 if      nameLower.startswith('spawn_blitz_barricade'):  props.spawnBlitzType = 'BARRICADE'
                 elif    nameLower.startswith('spawn_blitz_guardian'):   props.spawnBlitzType = 'GUARDIAN'
                 elif    nameLower.startswith('spawn_blitz_radar'):      props.spawnBlitzType = 'RADAR'
-                elif    nameLower.startswith('spawn_blitz_honoritem'):  props.spawnBlitzType = 'TREASURE'
+                elif    nameLower.startswith('spawn_blitz_honoritem'):  props.spawnBlitzType = 'HONORITEM'
             elif nameLower.startswith('wait_pos'):
-                props.cameraIndex = nameIndex
+                props.cameraIndex = int(nameSuffix)
                 props.cameraType = 'WAIT'
             elif nameLower.startswith('camera_pos'):
-                props.cameraIndex = nameIndex
+                props.cameraIndex = int(nameSuffix)
                 props.cameraType = 'TRACK'
             elif nameLower.startswith(('smk_')):
                 props.dummyType = 'SMOKE'
@@ -675,15 +670,15 @@ def importRS2(self, context):
                 elif    nameLower.startswith(('smk_ts')):   props.smokeType = 'TS'
 
                 state.blSmokePairs.append((nameLower, blObj))
-            elif nameLower.startswith('sun_Dummy'):
+            elif nameLower.startswith('sun_dummy'):
                 props.dummyType = 'FLARE'
 
             state.blDummyObjs.append(blObj)
             rootDummies.objects.link(blObj)
 
-    skippedSounds = []
-
     if state.doSounds:
+        skippedSounds = []
+
         for s, sound in enumerate(state.xmlAmbs):
             if not all(tuple(key in sound for key in ('ObjName', 'type', 'filename'))):
                 skippedSounds.append(s)
@@ -699,7 +694,7 @@ def importRS2(self, context):
                 skippedSounds.append(s)
                 continue
 
-            blSoundObj = bpy.data.objects.new(f"{ state.filename }_Sound_{ soundObjName }", None)
+            blSoundObj = bpy.data.objects.new(f"{ state.filename }_Sound_{ s }", None)
 
             props = blSoundObj.gzrs2
             props.dummyType = 'SOUND'
@@ -726,8 +721,8 @@ def importRS2(self, context):
             state.blSoundObjs.append(blSoundObj)
             rootSounds.objects.link(blSoundObj)
 
-    if len(skippedSounds) > 0:
-        self.report({ 'WARNING' }, f"GZRS2: Skipped sounds with missing attributes: { skippedSounds }")
+        if len(skippedSounds) > 0:
+            self.report({ 'WARNING' }, f"GZRS2: Skipped sounds with missing attributes: { skippedSounds }")
 
     if state.doMisc:
         i = 1

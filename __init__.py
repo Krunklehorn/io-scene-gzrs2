@@ -2304,12 +2304,9 @@ class GZRS2_PT_Realspace_Object(Panel):
             column.prop(props, 'spawnType')
             column.prop(props, 'spawnIndex')
 
-            if props.spawnType == 'TEAM':
-                column.prop(props, 'spawnTeamID')
-            elif props.spawnType == 'NPC':
-                column.prop(props, 'spawnEnemyType')
-            elif props.spawnType == 'BLITZ':
-                column.prop(props, 'spawnBlitzType')
+            if props.spawnType == 'TEAM':       column.prop(props, 'spawnTeamID')
+            elif props.spawnType == 'NPC':      column.prop(props, 'spawnEnemyType')
+            elif props.spawnType == 'BLITZ':    column.prop(props, 'spawnBlitzType')
         elif props.dummyType == 'SOUND':
             column.prop(props, 'soundFileName')
             column.prop(props, 'soundSpace')
@@ -2466,7 +2463,6 @@ class GZRS2_PT_Realspace_Mesh(Panel):
             column.prop(props, 'propFilename')
 
             if not isChildProp(blMeshObj):
-
                 propFilename = props.propFilename
                 splitname = propFilename.split(meshName) if meshName in propFilename else ("N/A", "N/A")
 

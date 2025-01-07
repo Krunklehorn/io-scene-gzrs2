@@ -175,7 +175,7 @@ SPAWN_BLITZ_TYPE_DATA = (
     ('BARRICADE',   'Barricade',    "Spawn for barricades"),
     ('GUARDIAN',    'Guardian',     "Spawn for guardians"),
     ('RADAR',       'Radar',        "Spawn for radars"),
-    ('TREASURE',    'Treasure',     "Spawn for treasures")
+    ('HONORITEM',   'Treasure',     "Spawn for treasures")
 )
 
 SOUND_SPACE_DATA = (
