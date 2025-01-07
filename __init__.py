@@ -2462,20 +2462,22 @@ class GZRS2_PT_Realspace_Mesh(Panel):
             column.prop(props, 'propSubtype')
             column.prop(props, 'propFilename')
 
-            if not isChildProp(blMeshObj):
-                propFilename = props.propFilename
-                splitname = propFilename.split(meshName) if meshName in propFilename else ("N/A", "N/A")
+            propFilename = props.propFilename
 
-                box = layout.box()
-                column = box.column()
+            if meshName in propFilename:    splitname = propFilename.split(meshName)
+            else:                           splitname = ("N/A", "N/A")
 
-                row = column.row()
-                row.label(text = "Prefix:")
-                row.label(text = splitname[0])
-
-                row = column.row()
-                row.label(text = "Suffix:")
-                row.label(text = splitname[1])
+            box = layout.box()
+            column = box.column()
+            row = column.row()
+            row.label(text = "Is Child:")
+            row.label(text = "True" if isChildProp(blMeshObj) else "False")
+            row = column.row()
+            row.label(text = "Prefix:")
+            row.label(text = splitname[0])
+            row = column.row()
+            row.label(text = "Suffix:")
+            row.label(text = splitname[1])
 
             if props.propSubtype == 'FLAG':
                 column = layout.column()
