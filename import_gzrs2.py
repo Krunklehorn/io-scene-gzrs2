@@ -927,6 +927,9 @@ def importRS2(self, context):
             state.blFogShader = shader
 
         if len(state.xmlGlbs) == 1:
+            world = ensureWorld(context)
+            worldProps = world.gzrs2
+
             globalData = state.xmlGlbs[0]
             if globalData['fog_enable']:    worldProps.fogEnable    = True
             if globalData['far_z']:         worldProps.farClip      = globalData['far_z']
