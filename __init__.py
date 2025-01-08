@@ -181,25 +181,30 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         blMat = blObj.active_material
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
-        shader, output, info, transparent, mix, clip, add = getRelevantShaderNodes(nodes)
-        shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links)
+        shader, output, info, transparent, mix, clip, add, lightmix = getRelevantShaderNodes(nodes)
+        shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
 
-        texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid, validOnly = False)
+        texture, emission, alpha = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid, validOnly = False)
 
         # Reuse existing image texture nodes
         texture = texture or emission or alpha or getShaderNodeByID(nodes, 'ShaderNodeTexImage')
         emission = emission or texture or alpha
         alpha = alpha or texture or emission
 
-        texpath =       getValidImageNodePathSilent(texture     if texture.image    is not None else None, maxPathLength) if texture    else None
-        emitpath =      getValidImageNodePathSilent(emission    if emission.image   is not None else None, maxPathLength) if emission   else None
-        alphapath =     getValidImageNodePathSilent(alpha       if alpha.image      is not None else None, maxPathLength) if alpha      else None
+        '''
+        texpath =       getValidImageNodePathSilent(texture     if texture.image    is not None else None, maxPathLength)       if texture      else None
+        emitpath =      getValidImageNodePathSilent(emission    if emission.image   is not None else None, maxPathLength)       if emission     else None
+        alphapath =     getValidImageNodePathSilent(alpha       if alpha.image      is not None else None, maxPathLength)       if alpha        else None
+        lightpath =     getValidImageNodePathSilent(lightmap    if lightmap.image   is not None else None, RS_XML_PATH_LENGTH)  if lightmap     else None
+        '''
 
         twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
+        '''
         texBase, texName, _, _ = decomposePath(texpath)
         isAniTex = checkIsAniTex(texBase)
-        # success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
+        success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
+        '''
 
         # We avoid links.clear() to preserve the user's material as much as possible
         relevantNodes = [shader, output, info, transparent, mix, clip, add]
@@ -2827,11 +2832,11 @@ class GZRS2_PT_Realspace_Material(Panel):
         blMat = blObj.active_material
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
-        shader, output, info, transparent, mix, clip, add = getRelevantShaderNodes(nodes)
-        shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links)
+        shader, output, info, transparent, mix, clip, add, lightmix = getRelevantShaderNodes(nodes)
+        shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
 
         if shaderValid:
-            texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid)
+            texture, emission, alpha = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
             texpath = getValidImageNodePathSilent(texture, maxPathLength)
             alphapath = getValidImageNodePathSilent(alpha, maxPathLength)
 
@@ -2847,6 +2852,7 @@ class GZRS2_PT_Realspace_Material(Panel):
         mixLabel =          '' if mixValid              is None else ('Invalid' if mixValid ==              False else 'Valid')
         clipLabel =         '' if clipValid             is None else ('Invalid' if clipValid ==             False else 'Valid')
         addLabel =          '' if addValid              is None else ('Invalid' if addValid ==              False else 'Valid')
+        lightmixLabel =     '' if lightmixValid         is None else ('Invalid' if lightmixValid ==         False else 'Valid')
 
         props = blMat.gzrs2
 
@@ -2897,6 +2903,9 @@ class GZRS2_PT_Realspace_Material(Panel):
         row = column.row()
         row.label(text = "Add Shader:")
         row.label(text = addLabel)
+        row = column.row()
+        row.label(text = "Lightmap Mix:")
+        row.label(text = lightmixLabel)
 
         box = layout.box()
         column = box.column()

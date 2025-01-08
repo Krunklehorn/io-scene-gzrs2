@@ -312,6 +312,8 @@ def getShaderNodeByID(nodes, id):
             return node
 
 def getRelevantShaderNodes(nodes):
+    group = ensureLmMixGroup()
+
     shader          = getShaderNodeByID(nodes, 'ShaderNodeBsdfPrincipled')
     output          = getShaderNodeByID(nodes, 'ShaderNodeOutputMaterial')
     info            = getShaderNodeByID(nodes, 'ShaderNodeObjectInfo')
@@ -319,16 +321,17 @@ def getRelevantShaderNodes(nodes):
     mix             = getShaderNodeByID(nodes, 'ShaderNodeMixShader')
     clip            = getShaderNodeByID(nodes, 'ShaderNodeMath')
     add             = getShaderNodeByID(nodes, 'ShaderNodeAddShader')
+    lightmix        = getShaderNodeByID(nodes, 'ShaderNodeGroup')
 
     for node in nodes:
         if node.bl_idname == 'ShaderNodeMath' and node.operation == 'GREATER_THAN':
             clip = node
-    else:
-        clip = getShaderNodeByID(nodes, 'ShaderNodeMath')
+        elif node.bl_idname == 'ShaderNodeGroup' and node.node_tree == group:
+            lightmix = node
 
-    return shader, output, info, transparent, mix, clip, add
+    return shader, output, info, transparent, mix, clip, add, lightmix
 
-def checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links):
+def checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links):
     shaderValid         = False if shader           and mix                             else None
     infoValid           = False if info             and mix                             else None
     transparentValid    = False if transparent      and mix                             else None
@@ -338,6 +341,7 @@ def checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, l
     addValid1           = False if add              and shader                          else None
     addValid2           = False if add              and transparent                     else None
     addValid3           = False if add              and mix                             else None
+    lightmixValid       = False if lightmix         and shader                          else None
 
     for link in links:
         if link.is_hidden or not link.is_valid:
@@ -351,6 +355,7 @@ def checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, l
         elif    addValid1           == False    and link.from_socket == shader.outputs[0]       and link.to_socket == add.inputs[0]:        addValid1           = True
         elif    addValid2           == False    and link.from_socket == transparent.outputs[0]  and link.to_socket == add.inputs[1]:        addValid2           = True
         elif    addValid3           == False    and link.from_socket == add.outputs[0]          and link.to_socket == mix.inputs[2]:        addValid3           = True
+        elif    lightmixValid       == False    and link.from_socket == lightmix.outputs[0]     and link.to_socket == shader.inputs[0]:     lightmixValid       = True
 
     if clipValid and clip.operation != 'GREATER_THAN':
         clipValid = False
@@ -364,9 +369,9 @@ def checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, l
 
         if addValid                             and link.from_socket == add.outputs[0]          and link.to_socket == mix.inputs[2]:        shaderValid         = True
 
-    return shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid
+    return shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid
 
-def getLinkedImageNodes(shader, links, clip, clipValid, *, validOnly = True):
+def getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid, *, validOnly = True):
     texture = None
     emission = None
     alpha = None
@@ -374,18 +379,18 @@ def getLinkedImageNodes(shader, links, clip, clipValid, *, validOnly = True):
     for link in links:
         node = link.from_node
 
-        if node.bl_idname != 'ShaderNodeTexImage':
-            continue
+        if node.bl_idname != 'ShaderNodeTexImage':          continue
+        if validOnly and not isValidEluImageNode(node):     continue
+        if link.is_hidden or not link.is_valid:             continue
 
-        if validOnly and (link.is_muted or link.is_hidden or not link.is_valid or not isValidEluImageNode(node)):
-            continue
-
-        if link.to_node == shader:
+        if shaderValid and link.to_node == shader:
             if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[0]:      texture     = node
             if link.from_socket == node.outputs[0] and link.to_socket == shader.inputs[26]:     emission    = node
             if link.from_socket == node.outputs[1] and link.to_socket == shader.inputs[4]:      alpha       = node
-        elif link.to_node == clip and clipValid:
+        elif clipValid and link.to_node == clip:
             if link.from_socket == node.outputs[1] and link.to_socket == clip.inputs[0]:        alpha       = node
+        elif lightmixValid and link.to_node == lightmix:
+            if link.from_socket == node.outputs[0] and link.to_socket == lightmix.inputs[0]:    texture     = node
 
     return texture, emission, alpha
 

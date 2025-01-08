@@ -254,8 +254,8 @@ def exportElu(self, context):
             matName = blMat.name
             tree, links, nodes = getMatTreeLinksNodes(blMat)
 
-            shader, output, info, transparent, mix, clip, add = getRelevantShaderNodes(nodes)
-            shaderValid, _, transparentValid, _, clipValid, addValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, links)
+            shader, output, info, transparent, mix, clip, add, lightmix = getRelevantShaderNodes(nodes)
+            shaderValid, _, transparentValid, _, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
 
             if not shaderValid:
                 self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
@@ -266,7 +266,7 @@ def exportElu(self, context):
             specular = (blMat.gzrs2.specular[0], blMat.gzrs2.specular[1], blMat.gzrs2.specular[2], 1.0)
             exponent = blMat.gzrs2.exponent
 
-            texture, emission, alpha = getLinkedImageNodes(shader, links, clip, clipValid)
+            texture, emission, alpha = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
             texpath = getValidImageNodePath(self, texture, maxPathLength, matID, matName)
             alphapath = getValidImageNodePath(self, alpha, maxPathLength, matID, matName)
 
