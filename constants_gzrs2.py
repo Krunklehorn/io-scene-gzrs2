@@ -33,6 +33,8 @@ RS3_VERSION4 =                  8
 
 RS_SUPPORTED_VERSIONS =         [ RS2_VERSION, RS3_VERSION1, RS3_VERSION2, RS3_VERSION3, RS3_VERSION4 ]
 
+RS_XML_PATH_LENGTH =            256
+
 BSP_ID =                        0x35849298
 BSP_VERSION =                   2
 
@@ -155,6 +157,7 @@ RS_VERTEX_THRESHOLD_SQUARED =   RS_VERTEX_THRESHOLD * RS_VERTEX_THRESHOLD
 RS_COLOR_THRESHOLD =            0.0001
 RS_LIGHT_THRESHOLD =            0.0001
 RS_SOUND_THRESHOLD =            0.000001
+RS_OCCLUSION_THRESHOLD =        0.0001
 ELU_VALUE_THRESHOLD =           0.01
 ANI_VERTEX_THRESHOLD =          0.0001
 
@@ -261,9 +264,6 @@ FLAG_WINDTYPE_TAGS          = [data[0] for data in FLAG_WINDTYPE_DATA]
 FLAG_LIMIT_AXIS_TAGS        = [data[0] for data in FLAG_LIMIT_AXIS_DATA]
 FLAG_LIMIT_COMPARE_TAGS     = [data[0] for data in FLAG_LIMIT_COMPARE_DATA]
 MATERIAL_SOUND_TAGS         = [data[0] for data in MATERIAL_SOUND_DATA]
-
-RE_ESCAPE_GZD = re.compile(re.escape('gzd_'), re.IGNORECASE)
-RE_ESCAPE_MAP = re.compile(re.escape('map_'), re.IGNORECASE)
 
 DDSD_CAPS =                     0x00000001
 DDSD_HEIGHT =                   0x00000002

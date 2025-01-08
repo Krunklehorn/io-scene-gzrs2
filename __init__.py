@@ -1,6 +1,6 @@
 import os
 
-from mathutils import Vector
+from mathutils import Vector, Matrix
 
 from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rsnav, import_rslm, import_rsani
 from . import export_rselu, export_rsnav, export_rslm
@@ -1983,17 +1983,34 @@ class GZRS2ObjectProperties(PropertyGroup):
             return
 
         props = blObj.gzrs2
+        dummyType = props.dummyType
 
         # TODO: Custom sprite gizmos
-        if props.dummyType == 'SOUND':
-            if props.soundShape == 'AABB':
-                blObj.empty_display_type = 'CUBE'
-            elif props.soundShape == 'SPHERE':
-                blObj.empty_display_type = 'SPHERE'
-        elif props.dummyType == 'ITEM':
-            blObj.empty_display_type = 'SPHERE'
-        else:
-            blObj.empty_display_type = 'ARROWS'
+        if dummyType == 'SOUND':
+            soundShape = props.soundShape
+
+            if soundShape == 'AABB':        blObj.empty_display_type = 'CUBE'
+            elif soundShape == 'SPHERE':    blObj.empty_display_type = 'SPHERE'
+        elif dummyType == 'ITEM':           blObj.empty_display_type = 'SPHERE'
+        elif dummyType == 'OCCLUSION':      blObj.empty_display_type = 'IMAGE'
+        else:                               blObj.empty_display_type = 'ARROWS'
+
+        if dummyType == 'SOUND':
+            if soundShape == 'AABB':
+                blObj.rotation_euler = Matrix.Identity(4).to_euler()
+                blObj.empty_display_size = 1
+            elif soundShape == 'SPHERE':
+                blObj.rotation_euler = Matrix.Identity(4).to_euler()
+                blObj.scale = (1, 1, 1)
+                blObj.empty_display_size = int(blObj.empty_display_size * 100) / 100
+        elif dummyType == 'OCCLUSION':
+            # TODO: 'wall_' vs 'wall_partition_'?
+            # TODO: Custom occlusion image or sprite gizmo?
+            # TODO: Duplicate the empty panel to appear for image data as well
+            blObj.empty_display_type = 'IMAGE'
+            blObj.empty_image_side = 'FRONT'
+            blObj.use_empty_image_alpha = True
+            blObj.color[3] = 0.5
 
     dummyTypeEnumItems = (
         ('NONE',        'None',         "Not a Realspace object. Will not be exported"),
@@ -2001,7 +2018,8 @@ class GZRS2ObjectProperties(PropertyGroup):
         ('FLARE',       'Flare',        "Lens flare location. Not an actual light source"),
         ('SOUND',       'Sound',        "Ambient sound, based on proximity to a sphere or axis-aligned bounding box center"),
         ('ITEM',        'Item',         "Health, armor, ammo etc"),
-        ('SMOKE',       'Smoke',        "Smoke particle generator")
+        ('SMOKE',       'Smoke',        "Smoke particle generator"),
+        ('OCCLUSION',   'Occlusion',    "Occlusion plane, not visible, used to improve performance by skipping world and detail geometry")
     )
 
     spawnTypeEnumItems = SPAWN_TYPE_DATA
@@ -2311,6 +2329,10 @@ class GZRS2_PT_Realspace_Object(Panel):
             column.prop(props, 'soundFileName')
             column.prop(props, 'soundSpace')
             column.prop(props, 'soundShape')
+            soundShape = props.soundShape
+
+            if      soundShape == 'AABB':       column.label(text = "Tip: Keep size at 1m, use scale instead.")
+            elif    soundShape == 'SPHERE':     column.label(text = "Tip: Keep scale at (1, 1, 1), use size instead.")
         elif props.dummyType == 'ITEM':
             column.prop(props, 'itemGameID')
             column.prop(props, 'itemType')
@@ -2325,6 +2347,8 @@ class GZRS2_PT_Realspace_Object(Panel):
             column.prop(props, 'smokeLife')
             if props.smokeType == 'SS' or props.smokeType == 'TS':
                 column.prop(props, 'smokeToggleMinTime')
+        elif props.dummyType == 'OCCLUSION':
+            column.label(text = "Tip: Keep size at 1m, use scale instead.")
 
 class GZRS2MeshProperties(PropertyGroup):
     def onUpdate(self, context):
@@ -2351,8 +2375,7 @@ class GZRS2MeshProperties(PropertyGroup):
                  ('WORLD',           'World',        "World mesh, lit statically, necessary for graphics, must be fully sealed with no leaks"),
                  ('PROP',            'Prop',         "Prop mesh, lit dynamically, does not contribute to bsptree or octree data. Recorded in .rs.xml, exports to .elu"),
                  ('COLLISION',       'Collision',    "Collision mesh, not visible, necessary for gameplay, must be fully sealed with no leaks"),
-                 ('NAVIGATION',      'Navigation',   "Navigation mesh, not visible, only necessary for Quest mode"),
-                 ('OCCLUSION',       'Occlusion',    "Occlusion planes, not visible, used to improve performance by skipping world and detail geometry")),
+                 ('NAVIGATION',      'Navigation',   "Navigation mesh, not visible, only necessary for Quest mode")),
         update = onUpdate
     )
 
@@ -2403,6 +2426,11 @@ class GZRS2MeshProperties(PropertyGroup):
         soft_min = 0,
         soft_max = 10000,
         subtype = 'UNSIGNED'
+    )
+
+    flagUseLimit: BoolProperty(
+        name = 'Limit',
+        default = False
     )
 
     flagLimitAxis: EnumProperty(
@@ -2485,9 +2513,13 @@ class GZRS2_PT_Realspace_Mesh(Panel):
                 column.prop(props, 'flagPower')
                 column.prop(props, 'flagWindType')
                 column.prop(props, 'flagWindDelay')
-                column.prop(props, 'flagLimitAxis')
-                column.prop(props, 'flagLimitOffset')
-                column.prop(props, 'flagLimitCompare')
+                column.prop(props, 'flagUseLimit')
+
+                column2 = column.column()
+                column2.prop(props, 'flagLimitAxis')
+                column2.prop(props, 'flagLimitOffset')
+                column2.prop(props, 'flagLimitCompare')
+                column2.enabled = props.flagUseLimit
 
 class GZRS2LightProperties(PropertyGroup):
     lightType: EnumProperty(

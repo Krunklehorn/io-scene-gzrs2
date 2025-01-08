@@ -284,7 +284,7 @@ def importRS2(self, context):
     state.doLightDrivers =   state.doLightDrivers and state.doLights
     state.doFogDriver =      state.doFogDriver and state.doFog
     doDrivers =             self.panelDrivers and (state.doLightDrivers or state.doFogDriver)
-    doExtras =              state.doCollision or state.doNavigation or state.doOcclusion or state.doFog or state.doBounds or doDrivers
+    doExtras =              state.doCollision or state.doNavigation or state.doDummies or state.doOcclusion or state.doFog or state.doBounds or doDrivers
 
     bpy.ops.ed.undo_push()
     collections = bpy.data.collections
@@ -341,10 +341,9 @@ def importRS2(self, context):
     o = 1
 
     for m, xmlRsMat in enumerate(state.xmlRsMats):
-        nameSplit = xmlRsMat.get('name', f"Material_{ m }").split('_mt_')
+        nameSplit = xmlRsMat.get('name', f"Material{ m }").split('_mt_')
 
-        xmlRsMatName = RE_ESCAPE_GZD.sub('', nameSplit[0])
-        xmlRsMatName = RE_ESCAPE_MAP.sub('', xmlRsMatName)
+        xmlRsMatName = nameSplit[0]
 
         surfaceTag = nameSplit[1].upper() if len(nameSplit) == 2 else 'NONE'
         materialSound = surfaceTag if surfaceTag in MATERIAL_SOUND_TAGS else 'NONE'
@@ -480,7 +479,7 @@ def importRS2(self, context):
             position = light['POSITION']
             intensity = light['INTENSITY']
             attStart = light['ATTENUATIONSTART']
-            attEnd = clampLightAttEnd(light['ATTENUATIONEND'], attStart)
+            attEnd = light['ATTENUATIONEND'] # Don't clamp here because we assign later
             castshadow = light['CASTSHADOW']
             softness = calcLightSoftness(attStart, attEnd)
 
@@ -678,7 +677,9 @@ def importRS2(self, context):
                 props.dummyType = 'FLARE'
 
             state.blDummyObjs.append(blObj)
-            rootDummies.objects.link(blObj)
+
+            if nameLower.startswith(('camera_pos', 'wait_pos')):    rootExtras.objects.link(blObj)
+            else:                                                   rootDummies.objects.link(blObj)
 
     if state.doSounds:
         skippedSounds = []
@@ -698,7 +699,7 @@ def importRS2(self, context):
                 skippedSounds.append(s)
                 continue
 
-            blSoundObj = bpy.data.objects.new(f"{ state.filename }_Sound_{ s }", None)
+            blSoundObj = bpy.data.objects.new(f"{ state.filename }_Sound{ s }", None)
 
             props = blSoundObj.gzrs2
             props.dummyType = 'SOUND'
@@ -793,6 +794,9 @@ def importRS2(self, context):
                     continue
 
                 for limit in flag['limits']:
+                    if any(('AXIS' in limit,
+                            'POSITION' in limit,
+                            'COMPARE' in limit)):       props.flagUseLimit      = True
                     if 'AXIS'       in limit:           props.flagLimitAxis     = dataOrFirst(FLAG_LIMIT_AXIS_DATA, limit['AXIS'], 0)
                     if 'POSITION'   in limit:           props.flagLimitOffset   = limit['POSITION']
                     if 'COMPARE'    in limit:           props.flagLimitCompare  = dataOrFirst(FLAG_LIMIT_COMPARE_DATA, limit['AXIS'], 0)
@@ -851,44 +855,75 @@ def importRS2(self, context):
                 blNavLinksObj.hide_set(True, view_layer = viewLayer)
 
         if state.doOcclusion:
-            occName = f"{ state.filename }_Occlusion"
-            blOccMat = setupDebugMat(occName, (0.0, 1.0, 1.0, 0.25))
-
-            occVerts = []
-            occFaces = []
-            index = 0
+            reorientLocal = Matrix.Rotation(math.radians(90.0), 4, 'X')
 
             for o, occlusion in enumerate(state.xmlOccs):
-                points = occlusion['POSITION']
-                occVertexCount = len(points)
+                occName = f"{ state.filename }_Occlusion{ o }"
 
-                for point in points:
-                    occVerts.append(point)
+                # We assume the occlusion points are cyclical, not z-form
+                p1 = occlusion['POSITION'][0].copy()
+                p2 = occlusion['POSITION'][1].copy()
+                p3 = occlusion['POSITION'][2].copy()
+                p4 = occlusion['POSITION'][3].copy()
 
-                occFaces.append(tuple(range(index, index + occVertexCount)))
-                index += occVertexCount
+                # Compare the cross products of opposite corners
+                n1 = (p4 - p1).cross(p2 - p1).normalized()
+                n2 = (p2 - p3).cross(p4 - p3).normalized()
 
-            blOccMesh = bpy.data.meshes.new(occName)
-            blOccObj = bpy.data.objects.new(occName, blOccMesh)
+                if not all((math.isclose(n1.x, n2.x, abs_tol = RS_OCCLUSION_THRESHOLD),
+                            math.isclose(n1.y, n2.y, abs_tol = RS_OCCLUSION_THRESHOLD),
+                            math.isclose(n1.z, n2.z, abs_tol = RS_OCCLUSION_THRESHOLD))):
+                    self.report({ 'WARNING' }, f"GZRS2: Occlusion points aren't coplanar, resulting dummy may not be oriented correctly: { occName }")
 
-            blOccMesh.gzrs2.meshType = 'OCCLUSION'
+                # Convert to local space
+                center = (p1 + p2 + p3 + p4) / 4
+                rot = n1.lerp(n2, 0.5).to_track_quat('Y', 'Z').to_matrix().to_4x4() @ reorientLocal
+                rotInv = rot.inverted()
 
-            blOccMesh.from_pydata(occVerts, (), occFaces)
-            blOccMesh.validate()
-            blOccMesh.update()
+                v1 = rotInv @ (p1 - center)
+                v2 = rotInv @ (p2 - center)
+                v3 = rotInv @ (p3 - center)
+                v4 = rotInv @ (p4 - center)
 
-            setObjFlagsDebug(blOccObj)
+                # We assume the quad froms a rectangle
+                xMin = min(v1.x, v2.x, v3.x, v4.x)
+                xMax = max(v1.x, v2.x, v3.x, v4.x)
+                yMin = min(v1.y, v2.y, v3.y, v4.y)
+                yMax = max(v1.y, v2.y, v3.y, v4.y)
 
-            state.blOccMat = blOccMat
-            state.blOccMesh = blOccMesh
-            state.blOccObj = blOccObj
+                xMid = xMax + xMin
+                yMid = yMax + yMin
 
-            blOccObj.data.materials.append(blOccMat)
-            rootExtras.objects.link(blOccObj)
-            blOccObj.hide_render = True
+                xMidZero = math.isclose(xMid, 0.0, abs_tol = RS_OCCLUSION_THRESHOLD)
+                yMidZero = math.isclose(yMid, 0.0, abs_tol = RS_OCCLUSION_THRESHOLD)
 
-            for viewLayer in context.scene.view_layers:
-                blOccObj.hide_set(True, view_layer = viewLayer)
+                if not xMidZero or not yMidZero:
+                    self.report({ 'WARNING' }, f"GZRS2: Occlusion points don't form a rectangle, midpoint not zero, resulting dummy may not be oriented correctly: { occName }, { xMid }, { yMid }")
+
+                xHDim = (xMax - xMin)
+                yHDim = (yMax - yMin)
+
+                if xHDim <= 0 or yHDim <= 0:
+                    self.report({ 'WARNING' }, f"GZRS2: Occlusion points don't form a rectangle, negative dimension, resulting dummy may not be oriented correctly: { occName }, { xHDim }, { yHDim }")
+
+                blOccObj = bpy.data.objects.new(occName, None)
+                blOccObj.location = center
+                blOccObj.rotation_euler = rot.to_euler()
+                blOccObj.scale = Vector((xHDim, yHDim, 1))
+                blOccObj.empty_display_type = 'IMAGE'
+                blOccObj.empty_image_side = 'FRONT'
+                blOccObj.use_empty_image_alpha = True
+                blOccObj.color[3] = 0.5
+                # TODO: 'wall_' vs 'wall_partition_'?
+                # TODO: Custom occlusion image or sprite gizmo?
+                # TODO: Duplicate the empty panel to appear for image data as well
+
+                props = blOccObj.gzrs2
+                props.dummyType = 'OCCLUSION'
+
+                state.blOccObjs.append(blOccObj)
+
+                rootExtras.objects.link(blOccObj)
 
         if state.doBounds:
             def createBBoxEmpty(name, blBBoxObjs, rootBounds):

@@ -152,10 +152,6 @@ class GZRS2State:
 
     blLmImage:          list = field(default_factory = list)
 
-    blOccMat:           Material    = None
-    blOccMesh:          Mesh        = None
-    blOccObj:           Object      = None
-
     blLights:           list = field(default_factory = list)
     blBspMeshObjs:      list = field(default_factory = list)
     blOctMeshObjs:      list = field(default_factory = list)
@@ -166,6 +162,7 @@ class GZRS2State:
     blDummyObjs:        list = field(default_factory = list)
     blSoundObjs:        list = field(default_factory = list)
     blItemObjs:         list = field(default_factory = list)
+    blOccObjs:          list = field(default_factory = list)
     blBspBBoxObjs:      list = field(default_factory = list)
     blOctBBoxObjs:      list = field(default_factory = list)
 
