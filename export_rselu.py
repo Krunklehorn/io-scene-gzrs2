@@ -233,14 +233,15 @@ def exportElu(self, context):
     eluMats = []
 
     for m, blMat in enumerate(blMats):
-        matID = blMat.gzrs2.matID
-        isBase = blMat.gzrs2.isBase
-        subMatID = blMat.gzrs2.subMatID
-        subMatCount = blMat.gzrs2.subMatCount
+        props = blMat.gzrs2
+        matID = props.matID
+        isBase = props.isBase
+        subMatID = props.subMatID
+        subMatCount = props.subMatCount
 
-        ambient = (0.588235, 0.588235, 0.588235, 1.0)
-        diffuse = (0.588235, 0.588235, 0.588235, 1.0)
-        specular = (0.9, 0.9, 0.9, 1.0)
+        ambient = (0.5882353, 0.5882353, 0.5882353, 0.0)
+        diffuse = (0.5882353, 0.5882353, 0.5882353, 0.0)
+        specular = (0.9, 0.9, 0.9, 0.0)
         exponent = 0.0
 
         texpath = ''
@@ -256,25 +257,34 @@ def exportElu(self, context):
             tree, links, nodes = getMatTreeLinksNodes(blMat)
 
             shader, output, info, transparent, mix, clip, add, lightmix = getRelevantShaderNodes(nodes)
-            shaderValid, _, transparentValid, _, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
+            shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
 
-            if not shaderValid:
-                self.report({ 'ERROR' }, f"GZRS2: Invalid shader node in ELU material! Check the GitHub page for what makes a valid ELU material! { matID }, { matName }")
+            if any((shaderValid         == False,   infoValid   == False,
+                    transparentValid    == False,   mixValid    == False,
+                    clipValid           == False,   addValid    == False,
+                    lightmixValid       == False)):
+                self.report({ 'ERROR' }, f"GZRS2: ELU export requires all materials conform to a preset! { matID }, { matName }")
                 return { 'CANCELLED' }
 
-            ambient = (blMat.gzrs2.ambient[0], blMat.gzrs2.ambient[1], blMat.gzrs2.ambient[2], 1.0)
-            diffuse = (blMat.gzrs2.diffuse[0], blMat.gzrs2.diffuse[1], blMat.gzrs2.diffuse[2], 1.0)
-            specular = (blMat.gzrs2.specular[0], blMat.gzrs2.specular[1], blMat.gzrs2.specular[2], 1.0)
-            exponent = blMat.gzrs2.exponent
+            ambient = (props.ambient[0], props.ambient[1], props.ambient[2], 0.0)
+            diffuse = (props.diffuse[0], props.diffuse[1], props.diffuse[2], 0.0)
+            specular = (props.specular[0], props.specular[1], props.specular[2], 0.0)
+            exponent = props.exponent
 
             texture, emission, alpha = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
-            texpath = getValidImageNodePath(self, texture, maxPathLength, matID, matName)
-            alphapath = getValidImageNodePath(self, alpha, maxPathLength, matID, matName)
-
-            if texpath is None or alphapath is None:
-                return { 'CANCELLED' }
-
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
+
+            if props.overrideTexpath:   texpath = os.path.join(props.texDir, props.texBase)
+            elif texture is None:       texpath = ''
+            elif props.writeDirectory:  texpath = makeRS2DataPath(texture.image.filepath)
+            else:                       texpath = makePathExtSingle(os.path.basename(texture.image.filepath))
+
+            if texpath == False:
+                self.report({ 'ERROR' }, f"GZRS2: Directory requested but image filepath does not contain a valid data subdirectory! { matID }, { matName }, { texture.image.filepath }")
+
+            if len(texpath) >= maxPathLength:
+                self.report({ 'ERROR' }, f"GZRS2: ELU texture path has too many characters! Max length is { maxPathLength }! { matID }, { matName }, { texpath }")
+                return { 'CANCELLED' }
 
             texBase, texName, texExt, texDir = decomposePath(texpath)
             isAniTex = checkIsAniTex(texName)

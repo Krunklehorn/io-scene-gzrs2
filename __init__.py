@@ -6,12 +6,12 @@ from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rsn
 from . import export_rselu, export_rsnav, export_rslm
 
 from .constants_gzrs2 import *
-from .lib_gzrs2 import getEluExportConstants, getMatTreeLinksNodes, getRelevantShaderNodes, checkShaderNodeValidity
-from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getValidImageNodePathSilent, getMatFlagsRender
+from .lib_gzrs2 import getMatTreeLinksNodes, getRelevantShaderNodes, checkShaderNodeValidity
+from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getMatFlagsRender, makeRS2DataPath, makePathExtSingle
 from .lib_gzrs2 import decomposePath, checkIsAniTex, isChildProp, processAniTexParameters
-from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency, ensureLmMixGroup
-from .lib_gzrs2 import clampLightAttEnd, calcLightSoftness, calcLightEnergy, calcLightSoftSize, calcLightRender
-from .lib_gzrs2 import enumTagToIndex, enumIndexToTag, ensureWorld
+from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
+from .lib_gzrs2 import clampLightAttEnd, calcLightEnergy, calcLightSoftSize, calcLightRender
+from .lib_gzrs2 import enumTagToIndex, enumIndexToTag, ensureWorld, ensureLmMixGroup
 
 bl_info = {
     'name': 'GZRS2/3 Format',
@@ -175,36 +175,21 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
     def execute(self, context):
         bpy.ops.ed.undo_push()
 
-        version, maxPathLength = getEluExportConstants()
-
         blObj = context.active_object
         blMat = blObj.active_material
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
         shader, output, info, transparent, mix, clip, add, lightmix = getRelevantShaderNodes(nodes)
         shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
-
         texture, emission, alpha = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid, validOnly = False)
 
+        # TODO: Does this break with lightmap?
         # Reuse existing image texture nodes
         texture = texture or emission or alpha or getShaderNodeByID(nodes, 'ShaderNodeTexImage')
         emission = emission or texture or alpha
         alpha = alpha or texture or emission
 
-        '''
-        texpath =       getValidImageNodePathSilent(texture     if texture.image    is not None else None, maxPathLength)       if texture      else None
-        emitpath =      getValidImageNodePathSilent(emission    if emission.image   is not None else None, maxPathLength)       if emission     else None
-        alphapath =     getValidImageNodePathSilent(alpha       if alpha.image      is not None else None, maxPathLength)       if alpha        else None
-        lightpath =     getValidImageNodePathSilent(lightmap    if lightmap.image   is not None else None, RS_XML_PATH_LENGTH)  if lightmap     else None
-        '''
-
         twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
-
-        '''
-        texBase, texName, _, _ = decomposePath(texpath)
-        isAniTex = checkIsAniTex(texBase)
-        success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
-        '''
 
         # We avoid links.clear() to preserve the user's material as much as possible
         relevantNodes = [shader, output, info, transparent, mix, clip, add]
@@ -2787,6 +2772,27 @@ class GZRS2MaterialProperties(PropertyGroup):
         subtype = 'UNSIGNED'
     )
 
+    overrideTexpath: BoolProperty(
+        name = 'Override Texpath',
+        default = False
+    )
+
+    writeDirectory: BoolProperty(
+        name = 'Write Directory',
+        default = False
+    )
+
+    texBase: StringProperty(
+        name = 'Basename',
+        default = '',
+        subtype = 'FILE_NAME'
+    )
+
+    texDir: StringProperty(
+        name = 'Directory',
+        default = ''
+    )
+
     sound: EnumProperty(
         name = 'Sound',
         items = MATERIAL_SOUND_DATA
@@ -2820,16 +2826,16 @@ class GZRS2_PT_Realspace_Material(Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None and context.active_object.active_material is not None
+        return context.active_object is not None and context.active_object.data is not None and context.active_object.active_material is not None
 
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
 
-        version, maxPathLength = getEluExportConstants()
-
         blObj = context.active_object
         blMat = blObj.active_material
+        props = blMat.gzrs2
+
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
         shader, output, info, transparent, mix, clip, add, lightmix = getRelevantShaderNodes(nodes)
@@ -2837,12 +2843,20 @@ class GZRS2_PT_Realspace_Material(Panel):
 
         if shaderValid:
             texture, emission, alpha = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
-            texpath = getValidImageNodePathSilent(texture, maxPathLength)
-            alphapath = getValidImageNodePathSilent(alpha, maxPathLength)
-
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
-            isAniTex = checkIsAniTex(texName)
+            if props.overrideTexpath:   texpath = os.path.join(props.texDir, props.texBase)
+            elif texture is None:       texpath = ''
+            elif props.writeDirectory:  texpath = makeRS2DataPath(texture.image.filepath)
+            else:                       texpath = makePathExtSingle(os.path.basename(texture.image.filepath))
+
+            if texpath == False:
+                texBase = os.path.basename(texture.image.filepath)
+                texDir = 'Invalid'
+            else:
+                texBase, texName, _, texDir = decomposePath(texpath)
+                isAniTex = checkIsAniTex(texName)
+                success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
 
         shaderLabel =       '' if shaderValid           is None else ('Invalid' if shaderValid ==           False else 'Valid')
         infoLabel =         '' if infoValid             is None else ('Invalid' if infoValid ==             False else 'Valid')
@@ -2851,8 +2865,6 @@ class GZRS2_PT_Realspace_Material(Panel):
         clipLabel =         '' if clipValid             is None else ('Invalid' if clipValid ==             False else 'Valid')
         addLabel =          '' if addValid              is None else ('Invalid' if addValid ==              False else 'Valid')
         lightmixLabel =     '' if lightmixValid         is None else ('Invalid' if lightmixValid ==         False else 'Valid')
-
-        props = blMat.gzrs2
 
         column = layout.column()
         column.prop(props, 'matID')
@@ -2907,12 +2919,23 @@ class GZRS2_PT_Realspace_Material(Panel):
 
         box = layout.box()
         column = box.column()
+
         row = column.row()
-        row.label(text = "Texpath:")
-        row.label(text = texpath if shaderValid else 'N/A')
-        row = column.row()
-        row.label(text = "Alphapath:")
-        row.label(text = alphapath if shaderValid else 'N/A')
+        row.use_property_split = False
+        row.prop(props, 'overrideTexpath')
+        row.prop(props, 'writeDirectory')
+
+        if props.overrideTexpath:
+            column.prop(props, 'texBase')
+            column.prop(props, 'texDir')
+            column.label(text = "Tip: Use \"..\\\" to go up one folder.")
+        else:
+            row = column.row()
+            row.label(text = "Basename:")
+            row.label(text = texBase if shaderValid else 'N/A')
+            row = column.row()
+            row.label(text = "Directory:")
+            row.label(text = texDir if shaderValid else 'N/A')
 
         box = layout.box()
         column = box.column()
@@ -2933,16 +2956,16 @@ class GZRS2_PT_Realspace_Material(Panel):
         column = box.column()
         row = column.row()
         row.label(text = "Is Animated:")
-        row.label(text = str(isAniTex) if shaderValid else 'N/A')
+        row.label(text = str(isAniTex) if shaderValid and texpath else 'N/A')
         row = column.row()
         row.label(text = "Frame Count:")
-        row.label(text = str(frameCount) if shaderValid and success else 'N/A')
+        row.label(text = str(frameCount) if shaderValid and texpath and success else 'N/A')
         row = column.row()
         row.label(text = "Frame Speed:")
-        row.label(text = str(frameSpeed) if shaderValid and success else 'N/A')
+        row.label(text = str(frameSpeed) if shaderValid and texpath and success else 'N/A')
         row = column.row()
         row.label(text = "Frame Gap:")
-        row.label(text = str(frameGap) if shaderValid and success else 'N/A')
+        row.label(text = str(frameGap) if shaderValid and texpath and success else 'N/A')
 
 classes = (
     GZRS2_OT_Specify_Path_MRS,

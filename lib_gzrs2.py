@@ -96,9 +96,9 @@ def pathExists(path):
 
         return current
 
-def isValidTextureName(texName):
-    if texName.endswith(os.sep): return False
-    if os.path.splitext(texName)[1] == '': return False
+def isValidTexBase(texBase):
+    if texBase.endswith(os.sep):                return False
+    elif os.path.splitext(texBase)[1] == '':    return False
 
     return True
 
@@ -169,8 +169,16 @@ def ensureRS3DataDirectory(self, state):
     ensureRS3DataDict(self, state)
 
 def textureSearch(self, texBase, texDir, isRS3, state):
-    if not isValidTextureName(texBase):
-        self.report({ 'ERROR' }, f"GZRS2: Texture search attempted with an invalid texture name: { texBase }")
+    if texBase == None:
+        self.report({ 'WARNING' }, f"GZRS2: Texture search attempted with no texture name: { texBase }")
+        return
+
+    if texBase == '':
+        self.report({ 'WARNING' }, f"GZRS2: Texture search attempted with an empty texture name: { texBase }")
+        return
+
+    if not isValidTexBase(texBase):
+        self.report({ 'WARNING' }, f"GZRS2: Texture search attempted with an invalid texture name: { texBase }")
         return
 
     ddsBase = f"{ texBase }{ os.extsep }dds".replace(os.extsep + 'dds' + os.extsep + 'dds', os.extsep + 'dds')
@@ -262,6 +270,8 @@ def textureSearchLoadFake(self, texBase, texDir, isRS3, state):
 
     if texpath is None:
         return False, texBase, True
+
+    texpath = os.path.abspath(texpath)
 
     return True, texpath, False
 
@@ -393,42 +403,6 @@ def getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, l
             if link.from_socket == node.outputs[0] and link.to_socket == lightmix.inputs[0]:    texture     = node
 
     return texture, emission, alpha
-
-def getValidImageNodePath(self, node, maxPathLength, matID, matName):
-    if node is None:
-        return ''
-
-    if node.label == '':
-        texpath = makePathExtSingle(os.path.basename(node.image.filepath))
-    else:
-        texpath = makeRS2DataPath(node.label)
-
-        if texpath == False:
-            self.report({ 'ERROR' }, f"GZRS2: Unable to determine data path for texture in material! Check the GitHub page for a list of valid data subdirectories! { matID }, { matName }, { node.label }")
-            return None
-
-    if len(texpath) >= maxPathLength:
-        self.report({ 'ERROR' }, f"GZRS2: Data path for texture has too many characters! Max length is 40 for versions <= ELU_5005 and 256 for everything above! { matID }, { matName }, { texpath }")
-        return None
-
-    return texpath
-
-def getValidImageNodePathSilent(node, maxPathLength):
-    if node is None:
-        return ''
-
-    if node.label == '':
-        texpath = makePathExtSingle(os.path.basename(node.image.filepath))
-    else:
-        texpath = makeRS2DataPath(node.label)
-
-        if texpath == False:
-            return None
-
-    if len(texpath) >= maxPathLength:
-        return None
-
-    return texpath
 
 def getModifierByType(self, modifiers, type):
     for modifier in modifiers:
@@ -650,15 +624,18 @@ def setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, destinati
 
 def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state):
     texpath = xmlRsMat.get('DIFFUSEMAP')
+    texBase, _, _, texDir = decomposePath(texpath)
 
-    if not texpath:
-        self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with empty texture path: { blMat.name }")
+    if texBase == None:
+        # self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with no texture name: { texBase }")
         return
 
-    texBase, texName, texExt, texDir = decomposePath(texpath)
+    if texBase == '':
+        self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with an empty texture name: { texBase }")
+        return
 
-    if not isValidTextureName(texBase):
-        self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with invalid texture name: { blMat.name }, { texBase }")
+    if not isValidTexBase(texBase):
+        self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with an invalid texture name: { blMat.name }, { texBase }")
         return
 
     success, texpath, loadFake = textureSearchLoadFake(self, texBase, texDir, False, state)
@@ -667,6 +644,12 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
         self.report({ 'WARNING' }, f"GZRS2: Texture not found for .rs.xml material: { blMat.name }, { texBase }, { texDir }")
 
     texture = getMatImageTextureNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, loadFake, state)
+
+    props = blMat.gzrs2
+    props.overrideTexpath   = texDir != ''
+    props.writeDirectory    = texDir != ''
+    props.texBase           = texBase
+    props.texDir            = texDir
 
     if state.doLightmap:
         lightmap = nodes.new('ShaderNodeTexImage')
@@ -711,25 +694,29 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
 
 def processRS3TexLayer(self, texlayer, blMat, tree, links, nodes, shader, emission, alphatest, usealphatest, state):
     texType = texlayer['type']
-    texName = texlayer['name']
+    texBase = texlayer['name']
     useopacity = texType == 'OPACITYMAP'
 
     if texType not in XMLELU_TEXTYPES:
-        self.report({ 'ERROR' }, f"GZRS2: Unsupported texture type for .elu.xml material: { texName }, { texType }")
+        self.report({ 'ERROR' }, f"GZRS2: Unsupported texture type for .elu.xml material: { texBase }, { texType }")
         return useopacity
 
-    if not texName:
-        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with empty texture name: { texName }, { texType }")
+    if texBase == None:
+        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with no texture name: { texBase }, { texType }")
         return useopacity
 
-    if not isValidTextureName(texName):
-        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with invalid texture name: { texName }, { texType }")
+    if texBase == '':
+        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with an empty texture name: { texBase }, { texType }")
         return useopacity
 
-    success, texpath, loadFake = textureSearchLoadFake(self, texName, '', True, state)
+    if not isValidTexBase(texBase):
+        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with an invalid texture name: { texBase }, { texType }")
+        return useopacity
+
+    success, texpath, loadFake = textureSearchLoadFake(self, texBase, '', True, state)
 
     if not success:
-        self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu.xml material: { texName }, { texType }")
+        self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu.xml material: { texBase }, { texType }")
 
     if texType == 'DIFFUSEMAP':
         texture = getMatImageTextureNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, loadFake, state)
@@ -1024,31 +1011,35 @@ def setupEluMat(self, m, eluMat, state):
     matName = texName or f"Material_{ m }"
     blMat, tree, links, nodes, shader, _, _, transparent, mix = setupMatBase(matName)
 
-    blMat.gzrs2.matID = matID
-    blMat.gzrs2.isBase = subMatID == -1
-    blMat.gzrs2.subMatID = subMatID
-    blMat.gzrs2.subMatCount = subMatCount
+    props = blMat.gzrs2
+    props.matID             = matID
+    props.isBase            = subMatID == -1
+    props.subMatID          = subMatID
+    props.subMatCount       = subMatCount
+    props.ambient           = (ambient[0], ambient[1], ambient[2])
+    props.diffuse           = (diffuse[0], diffuse[1], diffuse[2])
+    props.specular          = (specular[0], specular[1], specular[2])
+    props.exponent          = eluMat.exponent
 
-    blMat.gzrs2.ambient = (ambient[0], ambient[1], ambient[2])
-    blMat.gzrs2.diffuse = (diffuse[0], diffuse[1], diffuse[2])
-    blMat.gzrs2.specular = (specular[0], specular[1], specular[2])
-    blMat.gzrs2.exponent = eluMat.exponent
-
-    if texBase and isValidTextureName(texBase):
+    if texBase == None:
+        # self.report({ 'WARNING' }, f"GZRS2: .elu material with no texture name: { blMat.name }, { texBase }")
+        pass
+    elif texBase == '':
+        self.report({ 'WARNING' }, f"GZRS2: .elu material with an empty texture name: { blMat.name }, { texBase }")
+    elif not isValidTexBase(texBase):
+        self.report({ 'WARNING' }, f"GZRS2: .elu material with an invalid texture name: { blMat.name }, { texBase }")
+    else:
         success, texpath, loadFake = textureSearchLoadFake(self, texBase, texDir, False, state)
 
         if not success:
-            self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu material: { texName }")
+            self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu material: { blMat.name }, { texBase }, { texDir }")
 
         texture = getMatImageTextureNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, loadFake, state)
 
-        if texDir != '':
-            datapath = makeRS2DataPath(texpath)
-
-            if datapath != False:
-                texture.label = datapath
-            else:
-                texture.label = os.path.join(texDir, texBase)
+        props.overrideTexpath   = texDir != ''
+        props.writeDirectory    = texDir != ''
+        props.texBase           = texBase
+        props.texDir            = texDir
 
         links.new(texture.outputs[0], shader.inputs[0]) # Base Color
         usealphatest = alphatest > 0
@@ -1540,8 +1531,10 @@ def getStrictMaterials(self, blObjs, *, warnPlaceholder = True):
                 blMat = matSlot.material
 
                 if blMat is not None:
+                    props = blMat.gzrs2
+
                     blMats.add(blMat)
-                    matSets.setdefault(blMat.gzrs2.matID, set()).add(blMat.gzrs2.subMatID)
+                    matSets.setdefault(props.matID, set()).add(props.subMatID)
 
     blMats = list(blMats)
 
@@ -1549,7 +1542,9 @@ def getStrictMaterials(self, blObjs, *, warnPlaceholder = True):
     invalidMats = set()
 
     for blMat in blMats:
-        if not blMat.gzrs2.isBase and blMat.gzrs2.subMatID == -1:
+        props = blMat.gzrs2
+
+        if not props.isBase and props.subMatID == -1:
             self.report({ 'ERROR' }, f"GZRS2: ELU export found a sub-material with an invalid sub-material id: { blMat.name }, -1")
             invalidMats.add(blMat)
 
@@ -1609,27 +1604,33 @@ def makePathExtSingle(path):
     return path
 
 def makeRS2DataPath(path):
-    if path is None or path == '': return False
-    found = None
+    if path is None or path == '':
+        return False
 
+    result = None
+
+    # TODO: True case-insensitivity, compare with .lower() and calculate an index then split manually
     for token in RS2_VALID_DATA_SUBDIRS:
         if token in path:
-            found = token + path.split(token, 1)[1]
+            result = token + path.split(token, 1)[1]
             break
 
         lower = token.lower()
         if lower in path:
-            found = lower + path.split(lower, 1)[1]
+            result = lower + path.split(lower, 1)[1]
             break
 
         upper = token.upper()
         if upper in path:
-            found = upper + path.split(upper, 1)[1]
+            result = upper + path.split(upper, 1)[1]
             break
 
-    if found is None: return False
+    if result is None:
+        return False
 
-    return makePathExtSingle(found)
+    result = makePathExtSingle(result)
+
+    return result
 
 # This data doesn't appear to be used for anything
 # Blender matrices don't support arbitrary scale anyways

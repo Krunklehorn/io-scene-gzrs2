@@ -342,10 +342,8 @@ def importRS2(self, context):
     o = 1
 
     for m, xmlRsMat in enumerate(state.xmlRsMats):
-        nameSplit = xmlRsMat.get('name', f"Material{ m }").split('_mt_')
-
-        xmlRsMatName = nameSplit[0]
-
+        xmlRsMatName = xmlRsMat.get('name', f"Material{ m }")
+        nameSplit = xmlRsMatName.split('_mt_')
         surfaceTag = nameSplit[1].upper() if len(nameSplit) == 2 else 'NONE'
         materialSound = surfaceTag if surfaceTag in MATERIAL_SOUND_TAGS else 'NONE'
 
@@ -354,8 +352,18 @@ def importRS2(self, context):
 
         blMat, tree, links, nodes, shader, _, _, transparent, mix = setupMatBase(xmlRsMatName)
 
-        blMat.gzrs2.matID = m
-        blMat.gzrs2.sound = materialSound
+        ambient     = xmlRsMat.get('AMBIENT')
+        diffuse     = xmlRsMat.get('DIFFUSE')
+        specular    = xmlRsMat.get('SPECULAR')
+
+        props = blMat.gzrs2
+        props.matID = m
+
+        if ambient:     props.ambient   = (ambient[0],      ambient[1],     ambient[2])
+        if diffuse:     props.diffuse   = (diffuse[0],      diffuse[1],     diffuse[2])
+        if specular:    props.specular  = (specular[0],     specular[1],    specular[2])
+
+        props.sound = materialSound
 
         processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state)
 
