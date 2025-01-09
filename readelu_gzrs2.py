@@ -174,7 +174,7 @@ def readEluRS2Materials(self, path, file, version, matCount, state):
             print()
 
         texBase, texName, texExt, texDir = decomposePath(texpath)
-        isAniTex = checkIsAniTex(texBase)
+        isAniTex = checkIsAniTex(texName)
         success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName)
 
         if not success:

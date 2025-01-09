@@ -16,6 +16,7 @@ from .lib_gzrs2 import *
 
 def exportNav(self, context):
     state = RSNAVExportState()
+    ensureLmMixGroup()
 
     state.convertUnits = self.convertUnits
 

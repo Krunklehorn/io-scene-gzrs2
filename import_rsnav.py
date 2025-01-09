@@ -16,6 +16,7 @@ from .lib_gzrs2 import *
 
 def importNav(self, context):
     state = GZRS2State()
+    ensureLmMixGroup()
 
     state.convertUnits = self.convertUnits
 

@@ -43,6 +43,7 @@ from .lib_gzrs2 import *
 
 def exportElu(self, context):
     state = RSELUExportState()
+    ensureLmMixGroup()
 
     state.convertUnits = self.convertUnits
     state.selectedOnly = self.selectedOnly
@@ -276,7 +277,7 @@ def exportElu(self, context):
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
             texBase, texName, texExt, texDir = decomposePath(texpath)
-            isAniTex = checkIsAniTex(texBase)
+            isAniTex = checkIsAniTex(texName)
             success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName)
 
             if not success:

@@ -55,6 +55,7 @@ def writeBMPHeader(file, imageSize, bmpSize):
 
 def exportLm(self, context):
     state = RSLMExportState()
+    ensureLmMixGroup()
 
     state.doUVs = self.doUVs
     state.lmVersion4 = self.lmVersion4

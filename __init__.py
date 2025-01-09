@@ -76,7 +76,7 @@ class GZRS2_OT_Specify_Path_MRS(Operator):
     dataPath: StringProperty(
         name = 'Path',
         default = '',
-        options = { 'ANIMATABLE', 'OUTPUT_PATH' },
+        options = { 'OUTPUT_PATH' },
         subtype = 'DIR_PATH'
     )
 
@@ -116,7 +116,7 @@ class GZRS2_OT_Specify_Path_MRF(Operator):
     dataPath: StringProperty(
         name = 'Path',
         default = '',
-        options = { 'ANIMATABLE', 'OUTPUT_PATH' },
+        options = { 'OUTPUT_PATH' },
         subtype = 'DIR_PATH'
     )
 
@@ -357,7 +357,7 @@ class GZRS2Preferences(AddonPreferences):
         name = 'RS2/.mrs',
         description = "Path to a folder containing extracted .mrs data",
         default = '',
-        options = { 'ANIMATABLE', 'OUTPUT_PATH' },
+        options = { 'OUTPUT_PATH' },
         subtype = 'DIR_PATH'
     )
 
@@ -365,7 +365,7 @@ class GZRS2Preferences(AddonPreferences):
         name = 'RS3/.mrf',
         description = "Path to a folder containing extracted .mrf data",
         default = '',
-        options = { 'ANIMATABLE', 'OUTPUT_PATH' },
+        options = { 'OUTPUT_PATH' },
         subtype = 'DIR_PATH'
     )
 
@@ -2360,7 +2360,7 @@ class GZRS2MeshProperties(PropertyGroup):
         if self.id_data is None:
             return
 
-        blMeshObjs = tuple(blObj for blObj in context.scene.objects if blObj.data is not None and blObj.data.gzrs2 == self)
+        blMeshObjs = tuple(blObj for blObj in context.scene.objects if blObj.type == 'MESH' and blObj.data.gzrs2 == self)
 
         for blMeshObj in blMeshObjs:
             if self.meshType == 'PROP' and self.propSubtype == 'SKY':
@@ -2746,7 +2746,7 @@ class GZRS2MaterialProperties(PropertyGroup):
 
     ambient: FloatVectorProperty(
         name = 'Ambient',
-        default = (0.588235, 0.588235, 0.588235),
+        default = (0.5882353, 0.5882353, 0.5882353),
         min = 0.0,
         max = 1.0,
         soft_min = 0.0,
@@ -2757,7 +2757,7 @@ class GZRS2MaterialProperties(PropertyGroup):
 
     diffuse: FloatVectorProperty(
         name = 'Diffuse',
-        default = (0.588235, 0.588235, 0.588235),
+        default = (0.5882353, 0.5882353, 0.5882353),
         min = 0.0,
         max = 1.0,
         soft_min = 0.0,
@@ -2842,9 +2842,7 @@ class GZRS2_PT_Realspace_Material(Panel):
 
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
-            texBase, texName, texExt, texDir = decomposePath(texpath)
-            isAniTex = checkIsAniTex(texBase)
-            success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName, silent = True)
+            isAniTex = checkIsAniTex(texName)
 
         shaderLabel =       '' if shaderValid           is None else ('Invalid' if shaderValid ==           False else 'Valid')
         infoLabel =         '' if infoValid             is None else ('Invalid' if infoValid ==             False else 'Valid')
@@ -3027,7 +3025,6 @@ def unregister():
         bpy.utils.unregister_class(cls)
 
     cleanse_modules()
-
 
 if __name__ == '__main__':
     register()

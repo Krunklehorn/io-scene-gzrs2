@@ -15,6 +15,7 @@ from .lib_gzrs2 import *
 
 def importLm(self, context):
     state = GZRS2State()
+    ensureLmMixGroup()
 
     if self.logLmHeaders or self.logLmImages:
         print()

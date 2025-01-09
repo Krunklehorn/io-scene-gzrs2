@@ -519,8 +519,8 @@ def decomposePath(path):
 
     return basename, filename, extension, directory
 
-def checkIsAniTex(texBase):
-    return False if texBase is None else texBase.lower().startswith('txa')
+def checkIsAniTex(texName):
+    return False if texName is None else texName.lower().startswith('txa')
 
 def isChildProp(blPropObj):
     if      blPropObj.parent is None:                           return False
@@ -699,8 +699,9 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
     additive = xmlRsMat['ADDITIVE']
     twosided = xmlRsMat['TWOSIDED']
 
-    texBase, texName, _, _ = decomposePath(texpath)
-    isAniTex = checkIsAniTex(texBase)
+    # _, texName, _, _ = decomposePath(texpath)
+    # isAniTex = checkIsAniTex(texName)
+    # success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName)
 
     source = group if state.doLightmap else texture
 
@@ -1052,8 +1053,9 @@ def setupEluMat(self, m, eluMat, state):
         links.new(texture.outputs[0], shader.inputs[0]) # Base Color
         usealphatest = alphatest > 0
 
-        texBase, texName, _, _ = decomposePath(texpath)
-        isAniTex = checkIsAniTex(texBase)
+        # _, texName, _, _ = decomposePath(texpath)
+        # isAniTex = checkIsAniTex(texName)
+        # success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName)
 
         setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest, useopacity, texture, shader)
         setupMatNodesAdditive(blMat, tree, links, nodes, additive, texture, shader, transparent, mix)
