@@ -166,17 +166,12 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
     def poll(cls, context):
         blObj = context.active_object
 
-        if blObj is None:
+        if blObj is None or blObj.type != 'MESH':
             return
 
-        blData = blObj.data
+        blMesh = blObj.data
 
-        if blData is None:
-            return
-
-        meshType = blData.gzrs2.meshType
-
-        if meshType not in ('WORLD', 'PROP'):
+        if blMesh is None or blMesh.gzrs2.meshType not in ('WORLD', 'PROP'):
             return
 
         return blObj.active_material is not None
@@ -2850,17 +2845,12 @@ class GZRS2_PT_Realspace_Material(Panel):
     def poll(cls, context):
         blObj = context.active_object
 
-        if blObj is None:
+        if blObj is None or blObj.type != 'MESH':
             return
 
-        blData = blObj.data
+        blMesh = blObj.data
 
-        if blData is None:
-            return
-
-        meshType = blData.gzrs2.meshType
-
-        if meshType not in ('WORLD', 'PROP'):
+        if blMesh is None:
             return
 
         return blObj.active_material is not None
@@ -2870,8 +2860,15 @@ class GZRS2_PT_Realspace_Material(Panel):
         layout.use_property_split = True
 
         blObj = context.active_object
+        blMesh = blObj.data
         blMat = blObj.active_material
+
+        meshType = blMesh.gzrs2.meshType
         props = blMat.gzrs2
+
+        if meshType not in ('WORLD', 'PROP'):
+            layout.label(text = "Mesh type must be World or Prop!")
+            return
 
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
