@@ -27,7 +27,6 @@ from .lib_gzrs2 import *
 
 def importAni(self, context):
     state = GZRS2State()
-    ensureLmMixGroup()
 
     state.convertUnits = self.convertUnits
     state.overwriteAction = self.overwriteAction

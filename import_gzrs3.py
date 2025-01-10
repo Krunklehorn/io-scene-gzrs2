@@ -48,7 +48,6 @@ from .lib_gzrs2 import *
 
 def importRS3(self, context):
     state = GZRS2State()
-    ensureLmMixGroup()
 
     rs3DataDir = os.path.dirname(context.preferences.addons[__package__].preferences.rs3DataDir)
 

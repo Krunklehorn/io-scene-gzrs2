@@ -47,7 +47,6 @@ from .lib_gzrs2 import *
 
 def importElu(self, context):
     state = GZRS2State()
-    ensureLmMixGroup()
 
     rs2DataDir = os.path.dirname(context.preferences.addons[__package__].preferences.rs2DataDir)
 

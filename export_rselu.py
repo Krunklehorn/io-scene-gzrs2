@@ -43,7 +43,6 @@ from .lib_gzrs2 import *
 
 def exportElu(self, context):
     state = RSELUExportState()
-    ensureLmMixGroup()
 
     state.convertUnits = self.convertUnits
     state.selectedOnly = self.selectedOnly

@@ -38,9 +38,11 @@ if 'bpy' in locals():
     if 'export_rslm'    in locals(): importlib.reload(export_rslm)
 else:
     import bpy
+
+    from bpy.app.handlers import persistent
+    from bpy.props import IntProperty, BoolProperty, FloatProperty, FloatVectorProperty, StringProperty, EnumProperty, PointerProperty
     from bpy.types import Operator, Panel, PropertyGroup, AddonPreferences
     from bpy_extras.io_utils import ImportHelper, ExportHelper
-    from bpy.props import IntProperty, BoolProperty, FloatProperty, FloatVectorProperty, StringProperty, EnumProperty, PointerProperty
 
 def cleanse_modules():
     import sys
@@ -53,6 +55,13 @@ def cleanse_modules():
             del sys.modules[k]
 
     return
+
+@persistent
+def gzrs2LoadPost(filepath):
+    ensureWorld(bpy.context)
+    ensureLmMixGroup()
+
+bpy.app.handlers.load_post.append(gzrs2LoadPost)
 
 def validateRSDataDirectory(dirpath, isRS3):
     if dirpath == '' or not os.path.exists(dirpath) or not os.path.isdir(dirpath):

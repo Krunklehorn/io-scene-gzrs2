@@ -51,7 +51,6 @@ from .lib_gzrs2 import *
 
 def importRS2(self, context):
     state = GZRS2State()
-    ensureLmMixGroup()
 
     rs2DataDir = os.path.dirname(context.preferences.addons[__package__].preferences.rs2DataDir)
 
@@ -620,8 +619,8 @@ def importRS2(self, context):
             rot = dummy['DIRECTION'].to_track_quat('Y', 'Z').to_matrix()
 
             if nameLower.startswith(('camera_pos', 'wait_pos')):
-                blData = bpy.data.cameras.new(objName)
-                blObj = bpy.data.objects.new(objName, blData)
+                blCamera = bpy.data.cameras.new(objName)
+                blObj = bpy.data.objects.new(objName, blCamera)
                 blObj.location = dummy['POSITION']
                 blObj.rotation_euler = (rot.to_4x4() @ reorientLocal).to_euler()
 
