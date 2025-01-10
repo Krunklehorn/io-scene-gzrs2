@@ -271,7 +271,7 @@ def exportElu(self, context):
             specular = (props.specular[0], props.specular[1], props.specular[2], 0.0)
             exponent = props.exponent
 
-            texture, emission, alpha = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
+            texture, emission, alpha, _ = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
             if props.overrideTexpath:   texpath = os.path.join(props.texDir, props.texBase)

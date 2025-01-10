@@ -316,9 +316,9 @@ def getTexImage(bpy, texpath, alphamode, state):
 
     return texImages[alphamode]
 
-def getShaderNodeByID(nodes, id):
+def getShaderNodeByID(nodes, id, *, blacklist = ()):
     for node in nodes:
-        if node.bl_idname == id:
+        if node.bl_idname == id and node not in blacklist:
             return node
 
 def getRelevantShaderNodes(nodes):
@@ -385,6 +385,7 @@ def getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, l
     texture = None
     emission = None
     alpha = None
+    lightmap = None
 
     for link in links:
         node = link.from_node
@@ -401,8 +402,9 @@ def getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, l
             if link.from_socket == node.outputs[1] and link.to_socket == clip.inputs[0]:        alpha       = node
         elif lightmixValid and link.to_node == lightmix:
             if link.from_socket == node.outputs[0] and link.to_socket == lightmix.inputs[0]:    texture     = node
+            if link.from_socket == node.outputs[0] and link.to_socket == lightmix.inputs[1]:    lightmap    = node
 
-    return texture, emission, alpha
+    return texture, emission, alpha, lightmap
 
 def getModifierByType(self, modifiers, type):
     for modifier in modifiers:
@@ -582,6 +584,29 @@ def setupMatBase(name, *, blMat = None, shader = None, output = None, info = Non
 
     return blMat, tree, links, nodes, shader, output, info, transparent, mix
 
+def setupMatNodesLightmap(blMat, tree, links, nodes, shader, *, lightmap = None, uvmap = None, lightmix = None, image = None):
+    lightmap = lightmap or nodes.new('ShaderNodeTexImage')
+    uvmap = uvmap or getShaderNodeByID(nodes, 'ShaderNodeUVMap') or nodes.new('ShaderNodeUVMap')
+    lightmix = lightmix or nodes.new('ShaderNodeGroup')
+
+    lightmap.image = image or lightmap.image
+    uvmap.uv_map = 'UVMap.001'
+    lightmix.node_tree = ensureLmMixGroup()
+
+    lightmap.location = (-440, -20)
+    uvmap.location = (-640, -20)
+    lightmix.location = (-160, 300)
+
+    lightmap.select = False
+    uvmap.select = False
+    lightmix.select = False
+
+    links.new(lightmap.outputs[0], lightmix.inputs[1])
+    links.new(uvmap.outputs[0], lightmap.inputs[0])
+    links.new(lightmix.outputs[0], shader.inputs[0]) # Base Color
+
+    return lightmap, uvmap, lightmix, lightmap.image
+
 def setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest, useopacity, source, destination, *, clip = False):
     if usealphatest:
         blMat.surface_render_method = 'DITHERED'
@@ -626,6 +651,8 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
     texpath = xmlRsMat.get('DIFFUSEMAP')
     texBase, _, _, texDir = decomposePath(texpath)
 
+    # TODO: Don't return on failure, continue with color preset
+
     if texBase == None:
         # self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with no texture name: { texBase }")
         return
@@ -652,27 +679,8 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
     props.texDir            = texDir
 
     if state.doLightmap:
-        lightmap = nodes.new('ShaderNodeTexImage')
-        uvmap = nodes.new('ShaderNodeUVMap')
-        group = nodes.new('ShaderNodeGroup')
-
-        lightmap.image = state.blLmImage
-        uvmap.uv_map = 'UVMap.001'
-        group.node_tree = ensureLmMixGroup()
-
-        lightmap.location = (-440, -20)
-        uvmap.location = (-640, -20)
-        group.location = (-160, 300)
-
-        texture.select = False
-        lightmap.select = False
-        uvmap.select = False
-        group.select = False
-
-        links.new(texture.outputs[0], group.inputs[0])
-        links.new(lightmap.outputs[0], group.inputs[1])
-        links.new(uvmap.outputs[0], lightmap.inputs[0])
-        links.new(group.outputs[0], shader.inputs[0]) # Base Color
+        _, _, lightmix, _ = setupMatNodesLightmap(blMat, tree, links, nodes, shader, image = state.blLmImage)
+        links.new(texture.outputs[0], lightmix.inputs[0])
     else:
         links.new(texture.outputs[0], shader.inputs[0]) # Base Color
 
@@ -686,7 +694,7 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
     # isAniTex = checkIsAniTex(texName)
     # success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName)
 
-    source = group if state.doLightmap else texture
+    source = lightmix if state.doLightmap else texture
 
     setupMatNodesTransparency(blMat, tree, links, nodes, alphatest, usealphatest, useopacity, texture, shader)
     setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, shader, transparent, mix)

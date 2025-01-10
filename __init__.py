@@ -9,7 +9,7 @@ from .constants_gzrs2 import *
 from .lib_gzrs2 import getMatTreeLinksNodes, getRelevantShaderNodes, checkShaderNodeValidity
 from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getMatFlagsRender, makeRS2DataPath, makePathExtSingle
 from .lib_gzrs2 import decomposePath, checkIsAniTex, isChildProp, processAniTexParameters
-from .lib_gzrs2 import setupMatBase, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
+from .lib_gzrs2 import setupMatBase, setupMatNodesLightmap, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
 from .lib_gzrs2 import clampLightAttEnd, calcLightEnergy, calcLightSoftSize, calcLightRender
 from .lib_gzrs2 import enumTagToIndex, enumIndexToTag, ensureWorld, ensureLmMixGroup
 
@@ -164,7 +164,22 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
 
     @classmethod
     def poll(cls, context):
-        return True
+        blObj = context.active_object
+
+        if blObj is None:
+            return
+
+        blData = blObj.data
+
+        if blData is None:
+            return
+
+        meshType = blData.gzrs2.meshType
+
+        if meshType not in ('WORLD', 'PROP'):
+            return
+
+        return blObj.active_material is not None
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
@@ -176,23 +191,25 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         bpy.ops.ed.undo_push()
 
         blObj = context.active_object
+        meshType = blObj.data.gzrs2.meshType
+
         blMat = blObj.active_material
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
         shader, output, info, transparent, mix, clip, add, lightmix = getRelevantShaderNodes(nodes)
         shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
-        texture, emission, alpha = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid, validOnly = False)
+        texture, emission, alpha, lightmap = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid, validOnly = False)
 
-        # TODO: Does this break with lightmap?
         # Reuse existing image texture nodes
-        texture = texture or emission or alpha or getShaderNodeByID(nodes, 'ShaderNodeTexImage')
-        emission = emission or texture or alpha
-        alpha = alpha or texture or emission
+        texture     = texture   or emission or alpha    or getShaderNodeByID(nodes, 'ShaderNodeTexImage', blacklist = (lightmap,))
+        emission    = emission  or texture  or alpha
+        alpha       = alpha     or texture  or emission
+        lightmap    = lightmap                          or getShaderNodeByID(nodes, 'ShaderNodeTexImage', blacklist = (texture, emission, alpha))
 
         twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
         # We avoid links.clear() to preserve the user's material as much as possible
-        relevantNodes = [shader, output, info, transparent, mix, clip, add]
+        relevantNodes = [shader, output, info, transparent, mix, clip, add, lightmix]
 
         for link in links:
             if link.from_node in relevantNodes or link.to_node in relevantNodes:
@@ -201,6 +218,9 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         # We assume the setup functions modify valid inputs and only create what is missing
         blMat, tree, links, nodes, shader, output, info, transparent, mix = setupMatBase(blMat.name, blMat = blMat, shader = shader, output = output, info = info, transparent = transparent, mix = mix)
 
+        if meshType == 'WORLD':
+            _, _, lightmix, _ = setupMatNodesLightmap(blMat, tree, links, nodes, shader, lightmap = lightmap, lightmix = lightmix)
+
         if self.materialPreset == 'COLORED':
             return { 'FINISHED' }
 
@@ -208,7 +228,8 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         texture.location = (-440, 300)
         texture.select = False
 
-        links.new(texture.outputs[0], shader.inputs[0]) # Base Color
+        if meshType == 'WORLD':     links.new(texture.outputs[0], lightmix.inputs[0])
+        else:                       links.new(texture.outputs[0], shader.inputs[0]) # Base Color
 
         if self.materialPreset == 'TEXTURED':
             return { 'FINISHED' }
@@ -228,7 +249,8 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         elif self.materialPreset == 'ADDITIVE':
             additive = True
 
-            add = setupMatNodesAdditive(blMat, tree, links, nodes, additive, texture, shader, transparent, mix, add = add)
+            source = lightmix if meshType == 'WORLD' else texture
+            add = setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, shader, transparent, mix, add = add)
 
         setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
 
@@ -2826,7 +2848,22 @@ class GZRS2_PT_Realspace_Material(Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None and context.active_object.data is not None and context.active_object.active_material is not None
+        blObj = context.active_object
+
+        if blObj is None:
+            return
+
+        blData = blObj.data
+
+        if blData is None:
+            return
+
+        meshType = blData.gzrs2.meshType
+
+        if meshType not in ('WORLD', 'PROP'):
+            return
+
+        return blObj.active_material is not None
 
     def draw(self, context):
         layout = self.layout
@@ -2842,7 +2879,8 @@ class GZRS2_PT_Realspace_Material(Panel):
         shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
 
         if shaderValid:
-            texture, emission, alpha = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
+            # TODO: Display lightmap information
+            texture, emission, alpha, lightmap = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
             if props.overrideTexpath:   texpath = os.path.join(props.texDir, props.texBase)
