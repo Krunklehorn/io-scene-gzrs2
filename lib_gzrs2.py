@@ -1949,6 +1949,8 @@ def ensureLmMixGroup():
         groupTosRGB.select = False
         groupMix.select = False
 
+        group.use_fake_user = True
+
     return group
 
 def clampLightAttEnd(attEnd, attStart):
