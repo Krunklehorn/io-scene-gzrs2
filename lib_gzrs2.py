@@ -498,12 +498,13 @@ def decomposePath(path):
 def checkIsAniTex(texName):
     return False if texName is None else texName.lower().startswith('txa')
 
-def isChildProp(blPropObj):
-    if      blPropObj.parent is None:                           return False
-    elif    blPropObj.parent.data is None:                      return False
-    elif    blPropObj.parent.data.gzrs2.meshType == 'PROP':     return True
+def isChildProp(blObj):
+    if      blObj.parent is None:                           return False
+    elif    blObj.parent.type != 'MESH':                    return False
+    elif    blObj.parent.data is None:                      return False
+    elif    blObj.parent.data.gzrs2.meshType == 'PROP':     return True
 
-    return isChildProp(blParentObj)
+    return isChildProp(blObj.parent)
 
 def processAniTexParameters(isAniTex, texName, *, silent = False):
     if not isAniTex:
