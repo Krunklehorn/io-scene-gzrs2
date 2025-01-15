@@ -356,7 +356,8 @@ def importRS2(self, context):
         specular    = xmlRsMat.get('SPECULAR')
 
         props = blMat.gzrs2
-        props.matID = m
+        props.priority  = m
+        props.parent    = None
 
         if ambient:     props.ambient   = (ambient[0],      ambient[1],     ambient[2])
         if diffuse:     props.diffuse   = (diffuse[0],      diffuse[1],     diffuse[2])
@@ -531,8 +532,7 @@ def importRS2(self, context):
                     if dummy['name'] == propName:
                         propDums.append(d)
 
-        for m, eluMat in enumerate(state.eluMats):
-            setupEluMat(self, m, eluMat, state)
+        setupEluMats(self, state)
 
         if state.xmlEluMats:
             for elupath, materials in state.xmlEluMats.items():

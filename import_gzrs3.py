@@ -188,8 +188,7 @@ def importRS3(self, context):
     rootMap.children.link(rootActors)
     rootMap.children.link(rootNodes)
 
-    for m, eluMat in enumerate(state.eluMats):
-        setupEluMat(self, m, eluMat, state)
+    setupEluMats(self, state)
 
     if state.xmlEluMats:
         for elupath, materials in state.xmlEluMats.items():

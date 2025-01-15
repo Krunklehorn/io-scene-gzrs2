@@ -237,6 +237,26 @@ FLAG_LIMIT_COMPARE_DATA = (
     ('LESS',        'Less',     "Vertex position less than specified position along the specified axis")
 )
 
+MESH_TYPE_DATA = (
+    ('NONE',        'None',         "Not a Realspace mesh. Will not be exported"),
+    ('RAW',         'Raw',          "Freshly imported, may need modification. Will not be exported"),
+    ('WORLD',       'World',        "World mesh, lit statically, necessary for graphics, must be fully sealed with no leaks"),
+    ('PROP',        'Prop',         "Prop mesh, lit dynamically, does not contribute to bsptree or octree data. Recorded in .rs.xml, exports to .elu"),
+    ('COLLISION',   'Collision',    "Collision mesh, not visible, necessary for gameplay, must be fully sealed with no leaks"),
+    ('NAVIGATION',  'Navigation',   "Navigation mesh, not visible, only necessary for Quest mode")
+)
+
+PROP_SUBTYPE_DATA = (
+    ('NONE',        'None',         "Mesh has no special properties"),
+    ('SKY',         'Sky',          "Mesh is assumed to be large and surrounding the entire map"),
+    ('FLAG',        'Flag',         "Mesh is affected by wind forces")
+)
+
+CAMERA_TYPE_DATA = (
+    ('WAIT',        'Wait',         "Camera position between rounds, mainly used for Team Deathmatch, Duel etc"),
+    ('TRACK',       'Track',        "Camera position along a track, mainly used on the character select screen")
+)
+
 MATERIAL_SOUND_DATA = (
     ('NONE',    'None',             ""),
     ('CLO',     'Cloth (Missing)',  ""),
@@ -263,6 +283,9 @@ SMOKE_TYPE_TAGS             = [data[0] for data in SMOKE_TYPE_DATA]
 FLAG_WINDTYPE_TAGS          = [data[0] for data in FLAG_WINDTYPE_DATA]
 FLAG_LIMIT_AXIS_TAGS        = [data[0] for data in FLAG_LIMIT_AXIS_DATA]
 FLAG_LIMIT_COMPARE_TAGS     = [data[0] for data in FLAG_LIMIT_COMPARE_DATA]
+MESH_TYPE_TAGS              = [data[0] for data in MESH_TYPE_DATA]
+PROP_SUBTYPE_TAGS           = [data[0] for data in PROP_SUBTYPE_DATA]
+CAMERA_TYPE_TAGS            = [data[0] for data in CAMERA_TYPE_DATA]
 MATERIAL_SOUND_TAGS         = [data[0] for data in MATERIAL_SOUND_DATA]
 
 DDSD_CAPS =                     0x00000001

@@ -83,7 +83,8 @@ def exportElu(self, context):
 
     objects = getFilteredObjects(context, state)
 
-    blObjs = []
+    blEmptyObjs = []
+    blMeshObjs = []
     blArmatureObjs = []
     blValidBones = {}
 
@@ -97,31 +98,39 @@ def exportElu(self, context):
         if object is None:
             continue
 
-        if object.type in ('EMPTY', 'MESH'):
+        objProps    = object.gzrs2          if object.type == 'EMPTY'   else None
+        meshProps   = object.data.gzrs2     if object.type == 'MESH'    else None
+
+        # TODO: Need a new dummy type to specify a prop association
+        validEmpty  = objProps is not None      and objProps.dummyType == 'NONE'
+        validMesh   = meshProps is not None     and meshProps.meshType == 'PROP'
+
+        if validEmpty or validMesh:
             foundValid = True
 
-            if object.type == 'MESH':
-                object.update_from_editmode()
+        if validEmpty:
+            blEmptyObjs.append(object)
+        elif validMesh:
+            object.update_from_editmode()
+            blMeshObjs.append(object)
 
-                blArmatureObj, blArmature = getValidArmature(self, object, state)
+            blArmatureObj, blArmature = getValidArmature(self, object, state)
 
-                if blArmatureObj not in blArmatureObjs and blArmature is not None:
-                    blArmatureObj.update_from_editmode()
-                    blArmatureObjs.append(blArmatureObj)
+            if blArmatureObj not in blArmatureObjs and blArmature is not None:
+                blArmatureObj.update_from_editmode()
+                blArmatureObjs.append(blArmatureObj)
 
-                    for blBone in blArmature.bones:
-                        blBoneName = blBone.name
+                for blBone in blArmature.bones:
+                    blBoneName = blBone.name
 
-                        if not blBoneName.startswith(('Bip', 'Bone', 'Dummy')):
-                            continue
+                    if not blBoneName.startswith(('Bip', 'Bone', 'Dummy')):
+                        continue
 
-                        if blBoneName not in blValidBones:
-                            blValidBones[blBoneName] = blBone
-                        else:
-                            self.report({ 'ERROR' }, "GZRS2: ELU export requires unique names for all bones across all connected armatures!")
-                            return { 'CANCELLED' }
-
-            blObjs.append(object)
+                    if blBoneName not in blValidBones:
+                        blValidBones[blBoneName] = blBone
+                    else:
+                        self.report({ 'ERROR' }, "GZRS2: ELU export requires unique names for all bones across all connected armatures!")
+                        return { 'CANCELLED' }
         elif object.type != 'ARMATURE':
             invalidCount += 1
 
@@ -135,8 +144,36 @@ def exportElu(self, context):
     if len(blArmatureObjs) > 1:
         self.report({ 'WARNING' }, f"GZRS2: ELU export detected multiple armatures! This scenerio is untested and may not be successful!")
 
-    blObjs = tuple(blObjs)
+    blEmptyObjs = tuple(sorted(blEmptyObjs, key = lambda x: x.name))
+    blMeshObjs = tuple(blMeshObjs)
     blArmatureObjs = tuple(blArmatureObjs)
+
+    # Re-gather & sort meshes
+    def sortProp(x):
+        return (PROP_SUBTYPE_TAGS.index(x.data.gzrs2.propSubtype), x.name)
+
+    blMeshObjs = tuple(blMeshObj for blMeshObj in blMeshObjs if not isChildProp(blMeshObj))
+    blMeshObjs = tuple(sorted(blMeshObjs, key = sortProp))
+
+    # Consolidate and freeze meshes
+    blMeshObjsAll = []
+
+    for blMeshObj in blMeshObjs:
+        blMeshObjsAll.append(blMeshObj)
+        blMeshObjChildren = []
+
+        for object in blMeshObj.children_recursive:
+            if      object not in objects:                  continue
+            elif    object.type != 'MESH':                  continue
+            elif    object.data.gzrs2.meshType != 'PROP':   continue
+
+            blMeshObjChildren.append(object)
+
+        blMeshObjsAll += tuple(sorted(tuple(blMeshObjChildren), key = sortProp))
+
+    blMeshObjsAll = tuple(blMeshObjsAll)
+
+    blObjs = blEmptyObjs + blMeshObjsAll
 
     eluObjByName = {}
 
@@ -149,7 +186,7 @@ def exportElu(self, context):
 
     eluBoneIDs = {}
 
-    m = 0
+    meshCount = 0
 
     # Non-bone meshes first
     for blObj in blObjs:
@@ -167,7 +204,7 @@ def exportElu(self, context):
         worldInvMatrices.append(matrixWorld.inverted())
         worldMatrixByName[objName] = matrixWorld
 
-        m += 1
+        meshCount += 1
 
     # Bone meshes second
     for blObj in blObjs:
@@ -185,9 +222,9 @@ def exportElu(self, context):
         worldInvMatrices.append(matrixWorld.inverted())
         worldMatrixByName[objName] = matrixWorld
 
-        eluBoneIDs[objName] = m
+        eluBoneIDs[objName] = meshCount
 
-        m += 1
+        meshCount += 1
 
     # Remaining bones last
     for blArmatureObj in blArmatureObjs:
@@ -209,11 +246,9 @@ def exportElu(self, context):
             worldInvMatrices.append(matrixWorld.inverted())
             worldMatrixByName[boneName] = matrixWorld
 
-            eluBoneIDs[boneName] = m
+            eluBoneIDs[boneName] = meshCount
 
-            m += 1
-
-    meshCount = m
+            meshCount += 1
 
     eluMeshObjs = tuple(eluMeshObjs)
     eluEmptyBones = tuple(eluEmptyBones)
@@ -221,76 +256,82 @@ def exportElu(self, context):
     worldMatrices = tuple(worldMatrices)
     worldInvMatrices = tuple(worldInvMatrices)
 
-    blMats = getStrictMaterials(self, eluMeshObjs)
-    matCount = len(blMats)
+    # Check for error, early exit
+    if checkMeshesEmptySlots(eluMeshObjs, self):     return { 'CANCELLED' }
+
+    # Gather materials
+    eluMeshMats     = set(matSlot.material for eluMeshObj in eluMeshObjs for matSlot in eluMeshObj.material_slots)
+    eluMeshMats     |= set(eluMeshMat.gzrs2.parent for eluMeshMat in eluMeshMats) - { None }
+
+    # Check for errors
+    if checkPropsParentForks(eluMeshObjs, self):    return { 'CANCELLED' }
+    if checkPropsParentChains(eluMeshObjs, self):   return { 'CANCELLED' }
+
+    # Generate material info
+    eluBaseMats, eluSubMats, eluMeshMatLists = divideMeshMats(eluMeshObjs)
+    subIDsByMat = recordSubIDs(eluSubMats, eluMeshMatLists)
+
+    # Check for errors
+    if checkSubMatsSwizzles(subIDsByMat, self):                                 return { 'CANCELLED' }
+    if checkSubMatsCollisions(eluSubMats, eluMeshMatLists, subIDsByMat, self):  return { 'CANCELLED' }
+
+    # Associate & sort materials
+    eluMeshMatGraph = generateMatGraph(eluBaseMats, eluSubMats, subIDsByMat, eluMeshObjs)
+    matCount = sum(1 + len(subMats) for blBaseMat, subMats in eluMeshMatGraph)
 
     if state.logEluMats and matCount > 0:
         print()
         print("=========  Elu Materials  =========")
         print()
 
-    eluMats = []
+    m = 0
 
-    for m, blMat in enumerate(blMats):
-        props = blMat.gzrs2
-        matID = props.matID
-        isBase = props.isBase
-        subMatID = props.subMatID
-        subMatCount = props.subMatCount
+    def createMaterial(self, eluMat, matID, subMatID, subMatCount, state):
+        nonlocal eluMats, m
 
-        ambient = (0.5882353, 0.5882353, 0.5882353, 0.0)
-        diffuse = (0.5882353, 0.5882353, 0.5882353, 0.0)
-        specular = (0.9, 0.9, 0.9, 0.0)
-        exponent = 0.0
+        matName = eluMat.name
+        props = eluMat.gzrs2
 
-        texpath = ''
-        alphapath = ''
+        tree, links, nodes = getMatTreeLinksNodes(eluMat)
 
-        twosided = False
-        additive = False
-        alphatest = 0
-        useopacity = False
+        shader, output, info, transparent, mix, clip, add, lightmix = getRelevantShaderNodes(nodes)
+        shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
 
-        if not isinstance(blMat, RSELUExportMaterialPlaceholder):
-            matName = blMat.name
-            tree, links, nodes = getMatTreeLinksNodes(blMat)
+        if any((shaderValid         == False,   infoValid   == False,
+                transparentValid    == False,   mixValid    == False,
+                clipValid           == False,   addValid    == False,
+                lightmixValid       == False)):
+            self.report({ 'ERROR' }, f"GZRS2: ELU export requires all materials conform to a preset! { matID }, { matName }")
+            return { 'CANCELLED' }
 
-            shader, output, info, transparent, mix, clip, add, lightmix = getRelevantShaderNodes(nodes)
-            shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
+        ambient = (props.ambient[0], props.ambient[1], props.ambient[2], 0.0)
+        diffuse = (props.diffuse[0], props.diffuse[1], props.diffuse[2], 0.0)
+        specular = (props.specular[0], props.specular[1], props.specular[2], 0.0)
+        exponent = props.exponent
 
-            if any((shaderValid         == False,   infoValid   == False,
-                    transparentValid    == False,   mixValid    == False,
-                    clipValid           == False,   addValid    == False,
-                    lightmixValid       == False)):
-                self.report({ 'ERROR' }, f"GZRS2: ELU export requires all materials conform to a preset! { matID }, { matName }")
-                return { 'CANCELLED' }
+        texture, emission, alpha, _ = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
+        twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(eluMat, clip, addValid, clipValid, emission, alpha)
 
-            ambient = (props.ambient[0], props.ambient[1], props.ambient[2], 0.0)
-            diffuse = (props.diffuse[0], props.diffuse[1], props.diffuse[2], 0.0)
-            specular = (props.specular[0], props.specular[1], props.specular[2], 0.0)
-            exponent = props.exponent
+        if      props.overrideTexpath:  texpath = os.path.join(props.texDir, props.texBase)
+        elif    texture is None:        texpath = ''
+        elif    props.writeDirectory:   texpath = makeRS2DataPath(texture.image.filepath)
+        else:                           texpath = makePathExtSingle(os.path.basename(texture.image.filepath))
 
-            texture, emission, alpha, _ = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
-            twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
+        alphapath = texpath if useopacity else ''
 
-            if props.overrideTexpath:   texpath = os.path.join(props.texDir, props.texBase)
-            elif texture is None:       texpath = ''
-            elif props.writeDirectory:  texpath = makeRS2DataPath(texture.image.filepath)
-            else:                       texpath = makePathExtSingle(os.path.basename(texture.image.filepath))
+        if texpath == False:
+            self.report({ 'ERROR' }, f"GZRS2: Directory requested but image filepath does not contain a valid data subdirectory! { matID }, { matName }, { texture.image.filepath }")
 
-            if texpath == False:
-                self.report({ 'ERROR' }, f"GZRS2: Directory requested but image filepath does not contain a valid data subdirectory! { matID }, { matName }, { texture.image.filepath }")
+        if len(texpath) >= maxPathLength:
+            self.report({ 'ERROR' }, f"GZRS2: ELU texture path has too many characters! Max length is { maxPathLength }! { matID }, { matName }, { texpath }")
+            return { 'CANCELLED' }
 
-            if len(texpath) >= maxPathLength:
-                self.report({ 'ERROR' }, f"GZRS2: ELU texture path has too many characters! Max length is { maxPathLength }! { matID }, { matName }, { texpath }")
-                return { 'CANCELLED' }
+        texBase, texName, texExt, texDir = decomposePath(texpath)
+        isAniTex = checkIsAniTex(texName)
+        success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName)
 
-            texBase, texName, texExt, texDir = decomposePath(texpath)
-            isAniTex = checkIsAniTex(texName)
-            success, frameCount, frameSpeed, frameGap = processAniTexParameters(isAniTex, texName)
-
-            if not success:
-                return { 'CANCELLED' }
+        if not success:
+            return { 'CANCELLED' }
 
         if state.logEluMats:
             print(f"===== Material { m } =====")
@@ -327,10 +368,44 @@ def exportElu(self, context):
 
                 print()
 
-        eluMats.append(EluMaterialExport(matID, subMatID,
-                                         ambient, diffuse, specular, exponent,
-                                         subMatCount, texpath, alphapath,
-                                         twosided, additive, alphatest))
+            m += 1
+
+        eluMats.append(EluMaterialExport(
+            matID, subMatID,
+            ambient, diffuse, specular, exponent,
+            subMatCount, texpath, alphapath,
+            twosided, additive, alphatest))
+
+    eluMats = []
+
+    for matID, (eluBaseMat, subMats) in enumerate(eluMeshMatGraph):
+        subMatCount = len(subMats)
+
+        if eluBaseMat is not None:
+            createMaterial(self, eluBaseMat, matID, -1, subMatCount, state)
+        else:
+            eluMats.append(EluMaterialExport(
+                matID, -1,
+                (0.5882353, 0.5882353, 0.5882353, 0.0),
+                (0.5882353, 0.5882353, 0.5882353, 0.0),
+                (0.9, 0.9, 0.9, 0.0), 0.0,
+                subMatCount, '', '',
+                False, False, 0))
+
+            if state.logEluMats:
+                print(f"===== Material { m } =====")
+                print(f"Mat ID:             { matID }")
+                print(f"Sub Mat ID:         { -1 }")
+                print(f"Sub Mat Count:      { subMatCount }")
+                print()
+                print("Placeholder!")
+                print()
+
+                m += 1
+
+        if subMatCount > 0:
+            for subMatID, eluSubMat in enumerate(subMats):
+                createMaterial(self, eluSubMat, matID, subMatID, 0, state)
 
     eluMats = tuple(eluMats)
     usesDummies = False
@@ -457,21 +532,14 @@ def exportElu(self, context):
                 colorCount = 0
                 colors = ()
 
-            matID = None
+            matID = 0
+            matSlot = getOrNone(eluMeshObj.material_slots, 0)
+            eluMat = matSlot.material if matSlot is not None else None
 
-            for blMatSlot in eluMeshObj.material_slots:
-                if blMatSlot.material is None:
-                    self.report({ 'ERROR' }, f"GZRS2: Mesh with empty material slot! { meshName }")
-                    return { 'CANCELLED' }
-
-                if matID is None:
-                    matID = blMatSlot.material.gzrs2.matID
-                elif matID != blMatSlot.material.gzrs2.matID:
-                    self.report({ 'ERROR' }, f"GZRS2: Mesh with two different material IDs! { meshName }")
-                    return { 'CANCELLED' }
-
-            if matID is None:
-                matID = 0
+            if eluMat is not None:
+                for matID, (eluBaseMat, subMats) in enumerate(eluMeshMatGraph):
+                    if (eluBaseMat is not None and eluBaseMat == eluMat) or eluMat in subMats:
+                        break
 
             if state.logEluMeshNodes:
                 matIDs.add(matID)

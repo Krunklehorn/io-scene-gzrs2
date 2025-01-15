@@ -498,13 +498,13 @@ def decomposePath(path):
 def checkIsAniTex(texName):
     return False if texName is None else texName.lower().startswith('txa')
 
-def isChildProp(blObj):
-    if      blObj.parent is None:                           return False
-    elif    blObj.parent.type != 'MESH':                    return False
-    elif    blObj.parent.data is None:                      return False
-    elif    blObj.parent.data.gzrs2.meshType == 'PROP':     return True
+def isChildProp(blMeshObj):
+    if      blMeshObj.parent is None:                           return False
+    elif    blMeshObj.parent.type != 'MESH':                    return False
+    elif    blMeshObj.parent.data is None:                      return False
+    elif    blMeshObj.parent.data.gzrs2.meshType == 'PROP':     return True
 
-    return isChildProp(blObj.parent)
+    return isChildProp(blMeshObj.parent)
 
 def processAniTexParameters(isAniTex, texName, *, silent = False):
     if not isAniTex:
@@ -993,7 +993,6 @@ def setupEluMat(self, m, eluMat, state):
     texBase = eluMat.texBase
     texDir = eluMat.texDir
 
-    # TODO: compare with all materials in project, not just current
     for eluMat2, blMat2 in state.blEluMatPairs:
         if subMatID     !=  eluMat2.subMatID:       continue
         if subMatCount  !=  eluMat2.subMatCount:    continue
@@ -1012,8 +1011,8 @@ def setupEluMat(self, m, eluMat, state):
         if eluMat.texpath       != eluMat2.texpath:     continue
         if eluMat.alphapath     != eluMat2.alphapath:   continue
 
-        blEluMatAtIndex = state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})
-        blEluMatAtIndex[subMatID] = blMat2
+        blEluMatsAtIndex = state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})
+        blEluMatsAtIndex[subMatID] = blMat2
 
         return
 
@@ -1021,14 +1020,12 @@ def setupEluMat(self, m, eluMat, state):
     blMat, tree, links, nodes, shader, _, _, transparent, mix = setupMatBase(matName)
 
     props = blMat.gzrs2
-    props.matID             = matID
-    props.isBase            = subMatID == -1
-    props.subMatID          = subMatID
-    props.subMatCount       = subMatCount
-    props.ambient           = (ambient[0], ambient[1], ambient[2])
-    props.diffuse           = (diffuse[0], diffuse[1], diffuse[2])
-    props.specular          = (specular[0], specular[1], specular[2])
-    props.exponent          = eluMat.exponent
+    props.priority      = matID if subMatID == -1 else subMatID
+    props.parent        = None
+    props.ambient       = (ambient[0], ambient[1], ambient[2])
+    props.diffuse       = (diffuse[0], diffuse[1], diffuse[2])
+    props.specular      = (specular[0], specular[1], specular[2])
+    props.exponent      = eluMat.exponent
 
     if texBase == None:
         # self.report({ 'WARNING' }, f"GZRS2: .elu material with no texture name: { blMat.name }, { texBase }")
@@ -1061,17 +1058,32 @@ def setupEluMat(self, m, eluMat, state):
         setupMatNodesAdditive(blMat, tree, links, nodes, additive, texture, shader, transparent, mix)
         setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
 
-    blEluMatAtIndex = state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})
-    blEluMatAtIndex[subMatID] = blMat
+    blEluMatsAtIndex = state.blEluMats.setdefault(elupath, {}).setdefault(matID, {})
+    blEluMatsAtIndex[subMatID] = blMat
     state.blEluMatPairs.append((eluMat, blMat))
 
+def setupEluMats(self, state):
+    for m, eluMat in enumerate(state.eluMats):
+        setupEluMat(self, m, eluMat, state)
+
+    for eluMat1, blMat1 in state.blEluMatPairs:
+        if eluMat1.subMatID == -1: continue
+
+        for eluMat2, blMat2 in state.blEluMatPairs:
+            if eluMat2 == eluMat1: continue
+            if eluMat2.subMatID != -1: continue
+            if eluMat2.matID != eluMat1.matID: continue
+
+            blMat1.gzrs2.parent = blMat2
+            break
+
 def setupXmlEluMat(self, elupath, xmlEluMat, state):
-    specular = xmlEluMat['SPECULAR_LEVEL']
-    glossiness = xmlEluMat['GLOSSINESS']
-    emission = xmlEluMat['SELFILLUSIONSCALE']
-    alphatest = xmlEluMat['ALPHATESTVALUE']
-    additive = xmlEluMat['ADDITIVE']
-    twosided = xmlEluMat['TWOSIDED']
+    specular    = xmlEluMat['SPECULAR_LEVEL']
+    glossiness  = xmlEluMat['GLOSSINESS']
+    emission    = xmlEluMat['SELFILLUSIONSCALE']
+    alphatest   = xmlEluMat['ALPHATESTVALUE']
+    additive    = xmlEluMat['ADDITIVE']
+    twosided    = xmlEluMat['TWOSIDED']
 
     for xmlEluMat2, blMat2 in state.blXmlEluMatPairs:
         if not math.isclose(specular,       xmlEluMat2['SPECULAR_LEVEL'],       abs_tol = ELU_VALUE_THRESHOLD): continue
@@ -1242,6 +1254,7 @@ def setupRsTreeMesh(self, m, blMesh, treePolygons, treeVerts, state, *, allowLig
     if state.meshMode == 'STANDARD': return True
     elif state.meshMode == 'BAKE': return tuple(meshMatIDs)
 
+# TODO: Broken?
 def deleteInfoReports(num, context):
     # This only works if the user has an Info area open somewhere
     # Luckily, the Scripting layout has one by default
@@ -1397,20 +1410,21 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
         baseMat = None
 
         if elupath in state.blEluMats:
-            blEluMatAtPath = state.blEluMats[elupath]
+            blEluMatsAtPath = state.blEluMats[elupath]
 
-            if eluMatID in blEluMatAtPath:
-                blEluMatAtIndex = blEluMatAtPath[eluMatID]
+            if eluMatID in blEluMatsAtPath:
+                blEluMatsAtIndex = blEluMatsAtPath[eluMatID]
 
-                if blEluMatAtIndex[-1].gzrs2.subMatCount > 0:
+                # We assume all sub-materials have a valid base
+                if len(blEluMatsAtIndex) > 1:
                     for s in range(slotCount):
-                        if s not in slotIDs:        blMesh.materials.append(None)
-                        elif s in blEluMatAtIndex:  blMesh.materials.append(blEluMatAtIndex[s])
+                        if s not in slotIDs:            blMesh.materials.append(None)
+                        elif s in blEluMatsAtIndex:     blMesh.materials.append(blEluMatsAtIndex[s])
                         else:
                             self.report({ 'WARNING' }, f"GZRS2: Failed to find .elu sub-material for mesh at index/sub-index: { meshName }, { eluMatID }/{ s }")
                             blMesh.materials.append(getErrorMat(state))
                 else:
-                    baseMat = blEluMatAtIndex[-1]
+                    baseMat = blEluMatsAtIndex[-1]
             else:
                 self.report({ 'WARNING' }, f"GZRS2: Missing .elu material for mesh at index: { meshName }, { eluMatID }")
                 baseMat = getErrorMat(state)
@@ -1530,68 +1544,188 @@ def createBackupFile(path):
 
     shutil.copy2(path, os.path.join(directory, filename + "_backup") + extension)
 
-def getStrictMaterials(self, blObjs, *, warnPlaceholder = True):
-    blMats = set()
-    matSets = {}
+# TODO: This pattern is ugly, wrap and generalize with a function call
+def checkMeshesEmptySlots(blMeshObjs, self = None):
+    if not self:
+        names = set()
 
-    for blObj in blObjs:
-        if blObj.type != 'EMPTY':
-            for matSlot in blObj.material_slots:
-                blMat = matSlot.material
+    for blMeshObj in blMeshObjs:
+        for matSlot in blMeshObj.material_slots:
+            if matSlot.material is None:
+                if self:
+                    self.report({ 'ERROR' }, f"GZRS2: Mesh objects cannot have empty material slots: { blMeshObj.name }")
+                    return { 'CANCELLED' }
+                else:
+                    names.add(blMeshObj.name)
 
-                if blMat is not None:
-                    props = blMat.gzrs2
+    if not self:
+        return tuple(names), len(names) > 0
 
-                    blMats.add(blMat)
-                    matSets.setdefault(props.matID, set()).add(props.subMatID)
+def checkMatTypeOverlaps(blWorldMats, blPropMats, self = None):
+    if not self:
+        names = set()
 
-    blMats = list(blMats)
+    for blWorldMat in blWorldMats:
+        if blWorldMat in blPropMats:
+            if self:
+                self.report({ 'ERROR' }, f"GZRS2: Prop materials must be exclusive to props: { blWorldMat.name }")
+                return { 'CANCELLED' }
+            else:
+                names.add(blWorldMat.name)
 
-    # Check for sub-materials with unmodified sub-material ids
-    invalidMats = set()
+    if not self:
+        return tuple(names), len(names) > 0
 
-    for blMat in blMats:
-        props = blMat.gzrs2
+def checkPropsParentForks(blPropObjs, self = None):
+    if not self:
+        names = set()
 
-        if not props.isBase and props.subMatID == -1:
-            self.report({ 'ERROR' }, f"GZRS2: ELU export found a sub-material with an invalid sub-material id: { blMat.name }, -1")
-            invalidMats.add(blMat)
+    for blPropObj in blPropObjs:
+        if len(set(matSlot.material.gzrs2.parent for matSlot in blPropObj.material_slots)) > 1:
+            if self:
+                self.report({ 'ERROR' }, f"GZRS2: Mesh objects of type 'Prop' with multiple materials must link to the same parent, or none at all: { blPropObj.name }")
+                return { 'CANCELLED' }
+            else:
+                names.add(blPropObj.name)
 
-    if len(invalidMats) > 0:
-        return { 'CANCELLED' }
+    if not self:
+        return tuple(names), len(names) > 0
 
-    # Check for duplicate material id pairs
-    dupePairs = set()
+def checkPropsParentChains(blPropObjs, self = None):
+    if not self:
+        names = set()
 
-    for m1, blMat1 in enumerate(blMats):
-        pair1 = (blMat1.gzrs2.matID, blMat1.gzrs2.subMatID)
+    for blPropObj in blPropObjs:
+        for matSlot in blPropObj.material_slots:
+            parentMat = matSlot.material.gzrs2.parent
 
-        if pair1 in dupePairs:
-            continue
+            if parentMat is not None and parentMat.gzrs2.parent is not None:
+                if self:
+                    self.report({ 'ERROR' }, f"GZRS2: Mesh objects of type 'Prop' cannot have materials that form parent chains: { blPropObj.name }")
+                    return { 'CANCELLED' }
+                else:
+                    names.add(blPropObjs.name)
 
-        for m2, blMat2 in enumerate(blMats):
-            if m2 == m1:
-                continue
+    if not self:
+        return tuple(names), len(names) > 0
 
-            pair2 = (blMat2.gzrs2.matID, blMat2.gzrs2.subMatID)
+# Divide into base-materials and sub-materials
+#   Base:   One unique material with no parent, whether explicitly defined or implied by a placeholder
+#   Sub:    Multiple unique materials or single unique material with parent
+def divideMeshMats(blMeshObjs):
+    def filterUnique(seenSet, item):
+        notInside = item not in seenSet
+        seenSet.add(item)
 
-            if pair2 in dupePairs:
-                continue
+        return notInside
 
-            if pair1 == pair2:
-                self.report({ 'ERROR' }, f"GZRS2: ELU export found a duplicate material id/subid pair: { pair1 }, { blMat1.name }, { blMat2.name }")
-                dupePairs.add(pair1)
+    seenSet = set()
 
-    if len(dupePairs) > 0:
-        return { 'CANCELLED' }
+    # We assume the meshes have no empty slots, parent forks or parent chains
+    meshMatLists    = tuple((blMeshObj, tuple(matSlot.material for matSlot in blMeshObj.material_slots)) for blMeshObj in blMeshObjs)
+    meshMatLists    = tuple(filter(lambda x: len(x[1]) > 0, meshMatLists))
+    meshMatLists    = tuple(filter(lambda x: filterUnique(seenSet, x[1]), meshMatLists))
 
-    # Ensure all sub-materials have a base
-    for matID, subMatIDs in matSets.items():
-        if -1 not in subMatIDs:
-            if warnPlaceholder: self.report({ 'WARNING' }, f"GZRS2: ELU export found sub-materials with no base! A placeholder will be included for id: { matID }")
-            blMats.append(RSELUExportMaterialPlaceholder(matID, max(subMatIDs) + 1))
+    singleMatLists  = tuple(filter(lambda x: len(set(x[1])) == 1,   meshMatLists))
+    multiMatLists   = tuple(filter(lambda x: len(set(x[1])) > 1,    meshMatLists))
 
-    return tuple(sorted(blMats, key = lambda x: (x.gzrs2.matID, x.gzrs2.subMatID)))
+    singleMats  = set(matList[0]    for _, matList in singleMatLists)
+    multiMats   = set(material      for _, matList in multiMatLists for material in matList)
+
+    baseMats    = set(filter(lambda x: x.gzrs2.parent is None       and     x not in multiMats,     singleMats))
+    subMats     = set(filter(lambda x: x.gzrs2.parent is not None   or      x in multiMats,         singleMats))
+    subMats     |= multiMats
+
+    baseMats    |= set(subMat.gzrs2.parent for subMat in subMats) - { None }
+    baseMats    = tuple(sorted(baseMats, key = lambda x: (x.gzrs2.priority, x.name)))
+
+    return baseMats, subMats, meshMatLists
+
+def recordSubIDs(blSubMats, blPropMatLists):
+    subIDsByMat = {}
+
+    for blSubMat in blSubMats:
+        for blPropObj, matList in blPropMatLists:
+            for s, material in enumerate(matList):
+                if material != blSubMat:
+                    continue
+
+                subIDs = subIDsByMat.setdefault(blSubMat, [s])
+
+                if s not in subIDs:
+                    subIDs.append(s)
+
+    subIDsByMat = { blSubMat: tuple(sorted(subIDs)) for blSubMat, subIDs in subIDsByMat.items() }
+
+    return subIDsByMat
+
+def checkSubMatsSwizzles(subIDsByMat, self = None):
+    if not self:
+        names = set()
+
+    for blSubMat, subIDs in subIDsByMat.items():
+        if len(subIDs) > 1:
+            if self:
+                self.report({ 'ERROR' }, f"GZRS2: Child materials must be placed in the same slot across all meshes that share them: { blSubMat.name }")
+                return { 'CANCELLED' }
+            else:
+                names.add(blSubMat.name)
+
+    if not self:
+        return tuple(names), len(names) > 0
+
+def checkSubMatsCollisions(blSubMats, blPropMatLists, subIDsByMat, self = None):
+    if not self:
+        names = set()
+
+    for blSubMat1, subIDs1 in subIDsByMat.items():
+        for subID1 in subIDs1:
+            for blSubMat2, subIDs2 in subIDsByMat.items():
+                for subID2 in subIDs2:
+                    if      subID1 != subID2:                                   continue
+                    elif    blSubMat2 == blSubMat1:                             continue
+                    elif    blSubMat2.gzrs2.parent != blSubMat1.gzrs2.parent:   continue
+                    elif    self:
+                        self.report({ 'ERROR' }, f"GZRS2: Child materials cannot link to the same parent if they occupy the same slot as another: { blSubMat.name }")
+                        return { 'CANCELLED' }
+                    else:
+                        names.add(blSubMat1.name)
+                        names.add(blSubMat2.name)
+
+    if not self:
+        return tuple(names), len(names) > 0
+
+def generateMatGraph(blBaseMats, blSubMats, subIDsByMat, blPropObjs):
+    # Associate & sort materials
+    matGraph = []
+    seenSubMats = set()
+
+    for blBaseMat in blBaseMats:
+        subMats = tuple(filter(lambda x: x.gzrs2.parent == blBaseMat, blSubMats))
+        subMats = tuple(sorted(subMats, key = lambda x: subIDsByMat[x][0]))
+
+        matGraph.append((blBaseMat, subMats))
+        seenSubMats |= set(subMats)
+
+    blImplicitSubMats = blSubMats - seenSubMats
+
+    # if set(blSubMat.gzrs2.parent for blSubMat in blImplicitSubMats) - { None } != set(): print("Error 1!")
+
+    for blPropObj in blPropObjs:
+        subMats = tuple(matSlot.material for matSlot in blPropObj.material_slots)
+        uniqueMats = set(subMats)
+
+        if len(uniqueMats) < 2: continue
+        if uniqueMats - seenSubMats == set(): continue
+        # if set(uniqueMat.gzrs2.parent for uniqueMat in uniqueMats) != { None }: print("Error 2!")
+        # if uniqueMats - blImplicitSubMats != set(): print("Error 3!")
+
+        matGraph.append((None, subMats))
+        seenSubMats |= uniqueMats
+
+    # if blSubMats - seenSubMats != set(): print("Error 4!")
+
+    return matGraph
 
 def isValidEluImageNode(node):
     if node is None: return False

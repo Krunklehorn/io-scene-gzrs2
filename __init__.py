@@ -6,12 +6,7 @@ from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rsn
 from . import export_rselu, export_rsnav, export_rslm
 
 from .constants_gzrs2 import *
-from .lib_gzrs2 import getMatTreeLinksNodes, getRelevantShaderNodes, checkShaderNodeValidity
-from .lib_gzrs2 import getLinkedImageNodes, getShaderNodeByID, getMatFlagsRender, makeRS2DataPath, makePathExtSingle
-from .lib_gzrs2 import decomposePath, checkIsAniTex, isChildProp, processAniTexParameters
-from .lib_gzrs2 import setupMatBase, setupMatNodesLightmap, setupMatNodesTransparency, setupMatNodesAdditive, setMatFlagsTransparency
-from .lib_gzrs2 import clampLightAttEnd, calcLightEnergy, calcLightSoftSize, calcLightRender
-from .lib_gzrs2 import enumTagToIndex, enumIndexToTag, ensureWorld, ensureLmMixGroup
+from .lib_gzrs2 import *
 
 bl_info = {
     'name': 'GZRS2/3 Format',
@@ -39,10 +34,10 @@ if 'bpy' in locals():
 else:
     import bpy
 
-    from bpy.app.handlers import persistent
-    from bpy.props import IntProperty, BoolProperty, FloatProperty, FloatVectorProperty, StringProperty, EnumProperty, PointerProperty
-    from bpy.types import Operator, Panel, PropertyGroup, AddonPreferences
-    from bpy_extras.io_utils import ImportHelper, ExportHelper
+from bpy.app.handlers import persistent
+from bpy.props import IntProperty, BoolProperty, FloatProperty, FloatVectorProperty, StringProperty, EnumProperty, PointerProperty
+from bpy.types import Operator, Panel, PropertyGroup, AddonPreferences
+from bpy_extras.io_utils import ImportHelper, ExportHelper
 
 def cleanse_modules():
     import sys
@@ -2368,38 +2363,33 @@ class GZRS2_PT_Realspace_Object(Panel):
 
 class GZRS2MeshProperties(PropertyGroup):
     def onUpdate(self, context):
-        if self.id_data is None:
+        blSelfMesh = self.id_data
+
+        if blSelfMesh is None:
             return
 
-        blMeshObjs = tuple(blObj for blObj in context.scene.objects if blObj.type == 'MESH' and blObj.data.gzrs2 == self)
+        blLinkedObjs = tuple(blObj for blObj in context.scene.objects if blObj.type == 'MESH' and blObj.data == blSelfMesh)
 
-        for blMeshObj in blMeshObjs:
+        for blLinkedObj in blLinkedObjs:
             if self.meshType == 'PROP' and self.propSubtype == 'SKY':
-                blMeshObj.visible_volume_scatter = False
-                blMeshObj.visible_transmission = False
-                blMeshObj.visible_shadow = False
+                blLinkedObj.visible_volume_scatter = False
+                blLinkedObj.visible_transmission = False
+                blLinkedObj.visible_shadow = False
             else:
-                blMeshObj.visible_volume_scatter = True
-                blMeshObj.visible_transmission = True
-                blMeshObj.visible_shadow = True
+                blLinkedObj.visible_volume_scatter = True
+                blLinkedObj.visible_transmission = True
+                blLinkedObj.visible_shadow = True
 
     # TODO: Custom sprite gizmos
     meshType: EnumProperty(
         name = 'Type',
-        items = (('NONE',            'None',         "Not a Realspace mesh. Will not be exported"),
-                 ('RAW',             'Raw',          "Freshly imported, may need modification. Will not be exported"),
-                 ('WORLD',           'World',        "World mesh, lit statically, necessary for graphics, must be fully sealed with no leaks"),
-                 ('PROP',            'Prop',         "Prop mesh, lit dynamically, does not contribute to bsptree or octree data. Recorded in .rs.xml, exports to .elu"),
-                 ('COLLISION',       'Collision',    "Collision mesh, not visible, necessary for gameplay, must be fully sealed with no leaks"),
-                 ('NAVIGATION',      'Navigation',   "Navigation mesh, not visible, only necessary for Quest mode")),
+        items = MESH_TYPE_DATA,
         update = onUpdate
     )
 
     propSubtype: EnumProperty(
         name = 'Subtype',
-        items = (('NONE',            'None',         "Mesh has no special properties"),
-                 ('SKY',             'Sky',          "Mesh is assumed to be large and surrounding the entire map"),
-                 ('FLAG',            'Flag',         "Mesh is affected by wind forces")),
+        items = PROP_SUBTYPE_DATA,
         update = onUpdate
     )
 
@@ -2652,8 +2642,7 @@ class GZRS2CameraProperties(PropertyGroup):
 
     cameraType: EnumProperty(
         name = 'Type',
-        items = (('WAIT',       'Wait',         "Camera position between rounds, mainly used for Team Deathmatch, Duel etc"),
-                 ('TRACK',      'Track',        "Camera position along a track, mainly used on the character select screen"))
+        items = CAMERA_TYPE_DATA
     )
 
     @classmethod
@@ -2686,74 +2675,97 @@ class GZRS2_PT_Realspace_Camera(Panel):
         column.prop(props, 'cameraIndex')
         column.prop(props, 'cameraType')
 
+def getFilteredObjectLists(blObjs):
+    # Gather data into lists
+    blMeshObjs = tuple(blObj for blObj in blObjs if blObj.type == 'MESH')
+    blWorldObjs = tuple(blMeshObj for blMeshObj in blMeshObjs if blMeshObj.data.gzrs2.meshType == 'WORLD')
+    blPropObjs = tuple(blMeshObj for blMeshObj in blMeshObjs if blMeshObj.data.gzrs2.meshType == 'PROP' and not isChildProp(blMeshObj))
+
+    # Sort lists
+    def sortProp(x):
+        return (
+            PROP_SUBTYPE_TAGS.index(x.data.gzrs2.propSubtype),
+            x.name
+        )
+
+    blWorldObjs     = tuple(sorted(blWorldObjs,     key = lambda x: x.name))
+    blPropObjs      = tuple(sorted(blPropObjs,      key = sortProp))
+
+    # Consolidate and freeze lists
+    blPropObjsAll = []
+
+    for blPropObj in blPropObjs:
+        blPropObjsAll.append(blPropObj)
+        blPropObjChildren = []
+
+        for object in blPropObj.children_recursive:
+            if      object.type != 'MESH':                  continue
+            elif    object.data.gzrs2.meshType != 'PROP':   continue
+
+            blPropObjChildren.append(object)
+
+        blPropObjsAll += tuple(sorted(tuple(blPropObjChildren), key = sortProp))
+
+    return blWorldObjs, tuple(blPropObjsAll)
+
 class GZRS2MaterialProperties(PropertyGroup):
-    def ensureAll(self):
-        if 'matID'          not in self: self['matID']          = 0
-        if 'isBase'         not in self: self['isBase']         = True
-        if 'subMatID'       not in self: self['subMatID']       = -1
-        if 'subMatCount'    not in self: self['subMatCount']    = 0
+    def onPollParent(self, object):
+        blSelfMat = self.id_data
+        blTargetMat = object
 
-    def onUpdate(self, context):
-        self.ensureAll()
+        if blSelfMat == blTargetMat:
+            return False
 
-        if self['isBase']:  self['subMatID'] = -1
-        else:               self['subMatCount'] = 0
+        # Prevent parent chains
+        if blTargetMat.gzrs2.parent is not None:
+            return False
 
-    def onGetSubMatID(self):        self.ensureAll(); return self['subMatID']       if not  self['isBase'] else -1
-    def onGetSubMatCount(self):     self.ensureAll(); return self['subMatCount']    if      self['isBase'] else 0
+        # We assume none of these contain empty slots
+        blWorldObjs, blPropObjsAll = getFilteredObjectLists(bpy.context.scene.objects)
 
-    def onSetSubMatID(self, value):     self.ensureAll(); self['subMatID']      = value if not  self['isBase'] else -1
-    def onSetSubMatCount(self, value):  self.ensureAll(); self['subMatCount']   = value if      self['isBase'] else 0
+        blWorldMats     = set(matSlot.material for blWorldObj   in blWorldObjs      for matSlot in blWorldObj.material_slots)
+        blPropMats      = set(matSlot.material for blPropObj    in blPropObjsAll    for matSlot in blPropObj.material_slots)
+        blPropMats      |= set(blPropMat.gzrs2.parent for blPropMat in blPropMats) - { None }
 
-    matID: IntProperty(
-        name = 'Material ID',
+        # TODO: Prevent collisions, if possible
+
+        # Prevent parent forking
+        blSelfObjs      = set(blPropObj for blPropObj in blPropObjsAll for matSlot in blPropObj.material_slots if matSlot.material == blSelfMat)
+        blSiblingMats   = set(matSlot.material for blSelfObj in blSelfObjs for matSlot in blSelfObj.material_slots if matSlot.material != blSelfMat)
+        blParentMats    = set(blSiblingMat.gzrs2.parent for blSiblingMat in blSiblingMats if blSiblingMat != blSelfMat) - { None }
+
+        if len(blParentMats) > 0:
+            if blTargetMat not in blParentMats:
+                return False
+
+        # Prevent parent chains
+        blParentMats    = set(blPropMat.gzrs2.parent for blPropMat in blPropMats)
+
+        if len(blParentMats) > 0:
+            if blSelfMat in blParentMats:
+                return False
+
+        # Prevent type overlap
+        if      blSelfMat in blWorldMats    and blTargetMat in blPropMats:      return False
+        elif    blSelfMat in blPropMats     and blTargetMat in blWorldMats:     return False
+
+        return True
+
+    priority: IntProperty(
+        name = 'Priority',
         default = 0,
         min = 0,
         max = 2**31 - 1,
         soft_min = 0,
         soft_max = 256,
-        subtype = 'UNSIGNED',
-        update = onUpdate
+        subtype = 'UNSIGNED'
     )
 
-    isBase: BoolProperty(
-        name = 'Base',
-        default = True,
-        update = onUpdate
-    )
-
-    subMatID: IntProperty(
-        name = 'Sub Material ID',
-        default = -1,
-        min = -1,
-        max = 2**31 - 1,
-        soft_min = -1,
-        soft_max = 31,
-        update = onUpdate,
-        get = onGetSubMatID,
-        set = onSetSubMatID
-    )
-
-    subMatCount: IntProperty(
-        name = 'Sub Material Count',
-        default = 0,
-        min = 0,
-        max = 2**31 - 1,
-        soft_min = 0,
-        soft_max = 256,
-        subtype = 'UNSIGNED',
-        update = onUpdate,
-        get = onGetSubMatCount,
-        set = onSetSubMatCount
-    )
-
-    # TODO: Automate material IDs
-    '''
-    parentMat: PointerProperty(
+    parent: PointerProperty(
         type = bpy.types.Material,
-        name = 'Parent Material'
+        name = 'Parent',
+        poll = onPollParent
     )
-    '''
 
     ambient: FloatVectorProperty(
         name = 'Ambient',
@@ -2872,12 +2884,155 @@ class GZRS2_PT_Realspace_Material(Panel):
         blMesh = blObj.data
         blMat = blObj.active_material
 
-        meshType = blMesh.gzrs2.meshType
-        props = blMat.gzrs2
+        worldProps = ensureWorld(context).gzrs2
+        meshProps = blMesh.gzrs2
+        matProps = blMat.gzrs2
+
+        meshType = meshProps.meshType
 
         if meshType not in ('WORLD', 'PROP'):
-            layout.label(text = "Mesh type must be World or Prop!")
+            column = layout.column()
+            row = column.row()
+            row.alert = True
+            row.label(text = "Mesh type must be World or Prop!")
+            column.prop(meshProps, 'meshType', text = "Mesh Type")
             return
+
+        blWorldObjs, blPropObjsAll = getFilteredObjectLists(context.scene.objects)
+        blExportObjs = blWorldObjs + blPropObjsAll
+
+        def reportUI(column, needSeparator, names, errorText):
+            if needSeparator:
+                column.separator()
+
+            row = column.row()
+            row.alert = True
+            row.label(text = errorText)
+
+            for name in names:
+                column.label(text = "\t\t\t\t\t\t\t\t" + name)
+
+        # Check for and report error, early exit
+        emptyNames, hasEmpty = checkMeshesEmptySlots(blExportObjs)
+
+        if hasEmpty:
+            column = layout.column(align = True)
+            reportUI(column, False, emptyNames, "Mesh objects cannot have empty slots!")
+            return
+
+        # Gather materials by type
+        blWorldMats     = set(matSlot.material for blWorldObj   in blWorldObjs      for matSlot in blWorldObj.material_slots)
+        blPropMats      = set(matSlot.material for blPropObj    in blPropObjsAll    for matSlot in blPropObj.material_slots)
+        blPropMats      |= set(blPropMat.gzrs2.parent for blPropMat in blPropMats) - { None }
+
+        # Check for errors
+        overlapNames,       hasOverlaps     = checkMatTypeOverlaps(blWorldMats, blPropMats)
+        forkedNames,        hasForked       = checkPropsParentForks(blPropObjsAll)
+        chainedNames,       hasChained      = checkPropsParentChains(blPropObjsAll)
+
+        # Generate material info
+        blBaseMats, blSubMats, blPropMatLists = divideMeshMats(blPropObjsAll)
+        subIDsByMat = recordSubIDs(blSubMats, blPropMatLists)
+
+        # Check for errors
+        swizzledNames,      hasSwizzled     = checkSubMatsSwizzles(subIDsByMat)
+        collidingNames,     hasColliding    = checkSubMatsCollisions(blSubMats, blPropMatLists, subIDsByMat)
+
+        # Associate & sort materials
+        blPropMatGraph = generateMatGraph(blBaseMats, blSubMats, subIDsByMat, blPropObjsAll)
+
+        # Report errors
+        needSeparator = hasOverlaps or hasForked or hasChained or hasSwizzled or hasColliding
+
+        if needSeparator:
+            column = layout.column(align = True)
+
+        if hasOverlaps:     reportUI(column, needSeparator,     overlapNames,       "Prop materials must be exclusive to props!")
+        if hasForked:       reportUI(column, needSeparator,     forkedNames,        "Material parent links must match for all!")
+        if hasChained:      reportUI(column, needSeparator,     chainedNames,       "Materials cannot form chains or loops!")
+        if hasSwizzled:     reportUI(column, needSeparator,     swizzledNames,      "Child materials cannot swizzle slots!")
+        if hasColliding:    reportUI(column, needSeparator,     collidingNames,     "Child materials cannot have conflicting slots!")
+
+        if hasOverlaps:
+            return
+
+        # Sort materials
+        blWorldMats = tuple(sorted(blWorldMats, key = lambda x: (x.gzrs2.priority, x.name)))
+
+        # Begin layout
+        column = layout.column()
+        column.prop(matProps, 'priority')
+
+        if meshType == 'WORLD':
+            row = column.row()
+            split = row.split(factor = 0.4125)
+            split.alignment = 'RIGHT'
+            split.label(text = "Parent")
+            split.alignment = 'LEFT'
+            split.label(text = "N/A")
+
+            row.label(text = "", icon = 'DECORATE')
+
+            row = column.row()
+            split = row.split(factor = 0.4125)
+            split.alignment = 'RIGHT'
+            split.label(text = "Material ID")
+
+            row2 = split.row()
+            row2.label(text = "Xml " + str(blWorldMats.index(blMat)))
+            row2.label(text = "")
+            row2.label(text = "")
+
+            row.label(text = "", icon = 'DECORATE')
+        elif meshType == 'PROP':
+            childCount = 0
+
+            for blBaseMat1, subMats1 in blPropMatGraph:
+                if blBaseMat1 == blMat:
+                    childCount = len(subMats1)
+                    break
+
+            if childCount > 0:
+                row = column.row()
+                split = row.split(factor = 0.4125)
+                split.alignment = 'RIGHT'
+
+                if childCount == 1:
+                    split.label(text = "Child")
+                    split.alignment = 'LEFT'
+                    split.label(text = subMats1[0].name)
+                else:
+                    split.label(text = "Children")
+                    split.alignment = 'LEFT'
+                    split.label(text = str(childCount))
+
+                row.label(text = "", icon = 'DECORATE')
+            else:
+                column.prop(matProps, 'parent')
+
+            row = column.row()
+            split = row.split(factor = 0.4125)
+            split.alignment = 'RIGHT'
+            split.label(text = "Material ID")
+            split.alignment = 'LEFT'
+
+            if not (hasForked or hasChained or hasSwizzled or hasColliding):
+                for matID, (blBaseMat2, subMats2) in enumerate(blPropMatGraph):
+                    if (blBaseMat2 is not None and blBaseMat2 == blMat) or blMat in subMats2:
+                        break
+
+                matList = tuple(matSlot.material for matSlot in blObj.material_slots)
+
+                row2 = split.row()
+                row2.label(text = "Xml " + str(matID + len(blWorldMats)))
+                row2.label(text = "Elu " + str(matID))
+
+                if blMat in blSubMats:  row2.label(text = "Slot " + str(subIDsByMat[blMat][0]))
+                else:                   row2.label(text = "")
+            else:
+                split.label(text = "Error")
+
+            row.label(text = "", icon = 'DECORATE')
 
         tree, links, nodes = getMatTreeLinksNodes(blMat)
 
@@ -2889,10 +3044,10 @@ class GZRS2_PT_Realspace_Material(Panel):
             texture, emission, alpha, lightmap = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
-            if props.overrideTexpath:   texpath = os.path.join(props.texDir, props.texBase)
-            elif texture is None:       texpath = ''
-            elif props.writeDirectory:  texpath = makeRS2DataPath(texture.image.filepath)
-            else:                       texpath = makePathExtSingle(os.path.basename(texture.image.filepath))
+            if      matProps.overrideTexpath:   texpath = os.path.join(matProps.texDir, matProps.texBase)
+            elif    texture is None:            texpath = ''
+            elif    matProps.writeDirectory:    texpath = makeRS2DataPath(texture.image.filepath)
+            else:                               texpath = makePathExtSingle(os.path.basename(texture.image.filepath))
 
             if texpath == False:
                 texBase = os.path.basename(texture.image.filepath)
@@ -2911,28 +3066,16 @@ class GZRS2_PT_Realspace_Material(Panel):
         lightmixLabel =     '' if lightmixValid         is None else ('Invalid' if lightmixValid ==         False else 'Valid')
 
         column = layout.column()
-        column.prop(props, 'matID')
-        column.prop(props, 'isBase')
-
-        row = column.row()
-        row.prop(props, 'subMatID')
-        row.enabled = not props.isBase
-
-        row = column.row()
-        row.prop(props, 'subMatCount')
-        row.enabled = props.isBase
-
-        column = layout.column()
-        column.prop(props, 'ambient')
-        column.prop(props, 'diffuse')
-        column.prop(props, 'specular')
-        column.prop(props, 'exponent')
+        column.prop(matProps, 'ambient')
+        column.prop(matProps, 'diffuse')
+        column.prop(matProps, 'specular')
+        column.prop(matProps, 'exponent')
         if shaderValid and addValid:    column.prop(shader.inputs[27], 'default_value', text = "Emission") # Emission Strength
-        else:                           column.prop(props, 'fakeEmission', text = "Emission")
+        else:                           column.prop(matProps, 'fakeEmission', text = "Emission")
 
         column = layout.column()
-        column.prop(props, 'sound')
-        column.enabled = '_mt_' not in blMat.name
+        column.prop(matProps, 'sound')
+        column.enabled = meshType == 'WORLD' and '_mt_' not in blMat.name
 
         column = layout.column()
         column.operator(GZRS2_OT_Apply_Material_Preset.bl_idname, text = "Change Preset")
@@ -2960,18 +3103,19 @@ class GZRS2_PT_Realspace_Material(Panel):
         row = column.row()
         row.label(text = "Lightmap Mix:")
         row.label(text = lightmixLabel)
+        row.enabled = meshType == 'WORLD'
 
         box = layout.box()
         column = box.column()
 
         row = column.row()
         row.use_property_split = False
-        row.prop(props, 'overrideTexpath')
-        row.prop(props, 'writeDirectory')
+        row.prop(matProps, 'overrideTexpath')
+        row.prop(matProps, 'writeDirectory')
 
-        if props.overrideTexpath:
-            column.prop(props, 'texBase')
-            column.prop(props, 'texDir')
+        if matProps.overrideTexpath:
+            column.prop(matProps, 'texBase')
+            column.prop(matProps, 'texDir')
             column.label(text = "Tip: Use \"..\\\" to go up one folder.")
         else:
             row = column.row()

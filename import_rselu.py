@@ -107,8 +107,7 @@ def importElu(self, context):
     rootMesh = collections.new(state.filename)
     context.collection.children.link(rootMesh)
 
-    for m, eluMat in enumerate(state.eluMats):
-        setupEluMat(self, m, eluMat, state)
+    setupEluMats(self, state)
 
     if eluxmlpath:
         for xmlEluMat in state.xmlEluMats[elupath]:
