@@ -1630,8 +1630,8 @@ def divideMeshMats(blPropObjs):
     # We assume the meshes have no empty slots, parent forks or parent chains
     uniqueMatLists = getUniqueMatLists(blPropObjs)
 
-    singleMatLists  = set(filter(lambda x: len(x) == 1,   uniqueMatLists))
-    multiMatLists   = set(filter(lambda x: len(x) > 1,    uniqueMatLists))
+    singleMatLists  = set(filter(lambda x: len(set(x)) == 1,   uniqueMatLists))
+    multiMatLists   = set(filter(lambda x: len(set(x)) > 1,    uniqueMatLists))
 
     singleMats  = set(matList[0]    for matList in singleMatLists)
     multiMats   = set(material      for matList in multiMatLists for material in matList)
