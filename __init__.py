@@ -2936,15 +2936,14 @@ class GZRS2_PT_Realspace_Material(Panel):
         chainedNames,       hasChained      = checkPropsParentChains(blPropObjsAll)
 
         # Generate material info
-        blBaseMats, blSubMats, blPropMatLists = divideMeshMats(blPropObjsAll)
-        subIDsByMat = recordSubIDs(blSubMats, blPropMatLists)
+        blBaseMats, blSubMats, subIDsByMat, uniqueMatLists = divideMeshMats(blPropObjsAll)
 
         # Check for errors
         swizzledNames,      hasSwizzled     = checkSubMatsSwizzles(subIDsByMat)
-        collidingNames,     hasColliding    = checkSubMatsCollisions(blSubMats, blPropMatLists, subIDsByMat)
+        collidingNames,     hasColliding    = checkSubMatsCollisions(subIDsByMat)
 
         # Associate & sort materials
-        blPropMatGraph = generateMatGraph(blBaseMats, blSubMats, subIDsByMat, blPropObjsAll)
+        blPropMatGraph = generateMatGraph(blBaseMats, blSubMats, subIDsByMat, uniqueMatLists)
 
         # Report errors
         needSeparator = hasOverlaps or hasForked or hasChained or hasSwizzled or hasColliding

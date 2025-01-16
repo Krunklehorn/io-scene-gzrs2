@@ -1545,6 +1545,7 @@ def createBackupFile(path):
     shutil.copy2(path, os.path.join(directory, filename + "_backup") + extension)
 
 # TODO: This pattern is ugly, wrap and generalize with a function call
+# TODO: Try the walrus operator for succinct error handling
 def checkMeshesEmptySlots(blMeshObjs, self = None):
     if not self:
         names = set()
@@ -1609,43 +1610,44 @@ def checkPropsParentChains(blPropObjs, self = None):
     if not self:
         return tuple(names), len(names) > 0
 
+def largerSubtuple(x, y):
+    if all(x[m] == y[m] for m in range(min(len(x), len(y)))):
+        x = max(x, y)
+
+    return x
+
+def getUniqueMatLists(blMeshObjs):
+    matListSet = set(tuple(matSlot.material for matSlot in blMeshObj.material_slots) for blMeshObj in blMeshObjs)
+    matListSet = set(filter(lambda x: len(x) > 0, matListSet))
+    matListSet = set(max(largerSubtuple(matList1, matList2) for matList2 in matListSet) for matList1 in matListSet)
+
+    return matListSet
+
 # Divide into base-materials and sub-materials
 #   Base:   One unique material with no parent, whether explicitly defined or implied by a placeholder
 #   Sub:    Multiple unique materials or single unique material with parent
-def divideMeshMats(blMeshObjs):
-    def filterUnique(seenSet, item):
-        notInside = item not in seenSet
-        seenSet.add(item)
-
-        return notInside
-
-    seenSet = set()
-
+def divideMeshMats(blPropObjs):
     # We assume the meshes have no empty slots, parent forks or parent chains
-    meshMatLists    = tuple((blMeshObj, tuple(matSlot.material for matSlot in blMeshObj.material_slots)) for blMeshObj in blMeshObjs)
-    meshMatLists    = tuple(filter(lambda x: len(x[1]) > 0, meshMatLists))
-    meshMatLists    = tuple(filter(lambda x: filterUnique(seenSet, x[1]), meshMatLists))
+    uniqueMatLists = getUniqueMatLists(blPropObjs)
 
-    singleMatLists  = tuple(filter(lambda x: len(set(x[1])) == 1,   meshMatLists))
-    multiMatLists   = tuple(filter(lambda x: len(set(x[1])) > 1,    meshMatLists))
+    singleMatLists  = set(filter(lambda x: len(x) == 1,   uniqueMatLists))
+    multiMatLists   = set(filter(lambda x: len(x) > 1,    uniqueMatLists))
 
-    singleMats  = set(matList[0]    for _, matList in singleMatLists)
-    multiMats   = set(material      for _, matList in multiMatLists for material in matList)
+    singleMats  = set(matList[0]    for matList in singleMatLists)
+    multiMats   = set(material      for matList in multiMatLists for material in matList)
 
-    baseMats    = set(filter(lambda x: x.gzrs2.parent is None       and     x not in multiMats,     singleMats))
-    subMats     = set(filter(lambda x: x.gzrs2.parent is not None   or      x in multiMats,         singleMats))
-    subMats     |= multiMats
+    blBaseMats  = set(filter(lambda x: x.gzrs2.parent is None       and     x not in multiMats,     singleMats))
+    blSubMats   = set(filter(lambda x: x.gzrs2.parent is not None   or      x in multiMats,         singleMats))
+    blSubMats   |= multiMats
 
-    baseMats    |= set(subMat.gzrs2.parent for subMat in subMats) - { None }
-    baseMats    = tuple(sorted(baseMats, key = lambda x: (x.gzrs2.priority, x.name)))
+    blBaseMats  |= set(subMat.gzrs2.parent for subMat in blSubMats) - { None }
+    blBaseMats  = tuple(sorted(blBaseMats, key = lambda x: (x.gzrs2.priority, x.name)))
 
-    return baseMats, subMats, meshMatLists
-
-def recordSubIDs(blSubMats, blPropMatLists):
+    # Generate subIDs
     subIDsByMat = {}
 
     for blSubMat in blSubMats:
-        for blPropObj, matList in blPropMatLists:
+        for matList in uniqueMatLists:
             for s, material in enumerate(matList):
                 if material != blSubMat:
                     continue
@@ -1657,7 +1659,7 @@ def recordSubIDs(blSubMats, blPropMatLists):
 
     subIDsByMat = { blSubMat: tuple(sorted(subIDs)) for blSubMat, subIDs in subIDsByMat.items() }
 
-    return subIDsByMat
+    return blBaseMats, blSubMats, subIDsByMat, uniqueMatLists
 
 def checkSubMatsSwizzles(subIDsByMat, self = None):
     if not self:
@@ -1674,28 +1676,27 @@ def checkSubMatsSwizzles(subIDsByMat, self = None):
     if not self:
         return tuple(names), len(names) > 0
 
-def checkSubMatsCollisions(blSubMats, blPropMatLists, subIDsByMat, self = None):
+def checkSubMatsCollisions(subIDsByMat, self = None):
     if not self:
         names = set()
 
-    for blSubMat1, subIDs1 in subIDsByMat.items():
-        for subID1 in subIDs1:
-            for blSubMat2, subIDs2 in subIDsByMat.items():
-                for subID2 in subIDs2:
-                    if      subID1 != subID2:                                   continue
-                    elif    blSubMat2 == blSubMat1:                             continue
-                    elif    blSubMat2.gzrs2.parent != blSubMat1.gzrs2.parent:   continue
-                    elif    self:
-                        self.report({ 'ERROR' }, f"GZRS2: Child materials cannot link to the same parent if they occupy the same slot as another: { blSubMat.name }")
-                        return { 'CANCELLED' }
-                    else:
-                        names.add(blSubMat1.name)
-                        names.add(blSubMat2.name)
+    items = tuple(filter(lambda x: x[0].gzrs2.parent is not None, subIDsByMat.items()))
+    items = tuple((mat1, mat2, ids1, ids2) for mat1, ids1 in items for mat2, ids2 in items)
+    items = tuple(filter(lambda x: x[0] != x[1] and x[0].gzrs2.parent == x[1].gzrs2.parent, items))
+
+    for blSubMat1, blSubMat2, subIDs1, subIDs2 in items:
+        if any(subID1 in subIDs2 for subID1 in subIDs1):
+            if self:
+                self.report({ 'ERROR' }, f"GZRS2: Child materials cannot link to the same parent if they occupy the same slot as another: { blSubMat1.name }, { blSubMat2.name }")
+                return { 'CANCELLED' }
+            else:
+                names.add(blSubMat1.name)
+                names.add(blSubMat2.name)
 
     if not self:
         return tuple(names), len(names) > 0
 
-def generateMatGraph(blBaseMats, blSubMats, subIDsByMat, blPropObjs):
+def generateMatGraph(blBaseMats, blSubMats, subIDsByMat, uniqueMatLists):
     # Associate & sort materials
     matGraph = []
     seenSubMats = set()
@@ -1711,8 +1712,7 @@ def generateMatGraph(blBaseMats, blSubMats, subIDsByMat, blPropObjs):
 
     # if set(blSubMat.gzrs2.parent for blSubMat in blImplicitSubMats) - { None } != set(): print("Error 1!")
 
-    for blPropObj in blPropObjs:
-        subMats = tuple(matSlot.material for matSlot in blPropObj.material_slots)
+    for subMats in uniqueMatLists:
         uniqueMats = set(subMats)
 
         if len(uniqueMats) < 2: continue

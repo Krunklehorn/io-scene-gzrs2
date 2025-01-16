@@ -268,15 +268,14 @@ def exportElu(self, context):
     if checkPropsParentChains(eluMeshObjs, self):   return { 'CANCELLED' }
 
     # Generate material info
-    eluBaseMats, eluSubMats, eluMeshMatLists = divideMeshMats(eluMeshObjs)
-    subIDsByMat = recordSubIDs(eluSubMats, eluMeshMatLists)
+    eluBaseMats, eluSubMats, subIDsByMat, uniqueMatLists = divideMeshMats(eluMeshObjs)
 
     # Check for errors
-    if checkSubMatsSwizzles(subIDsByMat, self):                                 return { 'CANCELLED' }
-    if checkSubMatsCollisions(eluSubMats, eluMeshMatLists, subIDsByMat, self):  return { 'CANCELLED' }
+    if checkSubMatsSwizzles(subIDsByMat, self):     return { 'CANCELLED' }
+    if checkSubMatsCollisions(subIDsByMat, self):   return { 'CANCELLED' }
 
     # Associate & sort materials
-    eluMeshMatGraph = generateMatGraph(eluBaseMats, eluSubMats, subIDsByMat, eluMeshObjs)
+    eluMeshMatGraph = generateMatGraph(eluBaseMats, eluSubMats, subIDsByMat, uniqueMatLists)
     matCount = sum(1 + len(subMats) for blBaseMat, subMats in eluMeshMatGraph)
 
     if state.logEluMats and matCount > 0:
