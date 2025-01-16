@@ -14,24 +14,33 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 # Latest Update
 
-[***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.5.2***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.5)
+[***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.6***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.6)
 
-* NEW: .ani import support for GunZ 1 versions: 0x0012, 0x1001, 0x1002 and 0x1003
-  * Animations become Actions, manage them with the Timeline or Dopesheet areas, combine them using NLA tracks
-  * Per-object visibility is controlled through the object's viewport alpha channel (Object -> Viewport Display -> Color)
-  * Bone type: Animates the selected armature's bones, disconnects bones to allow translation, controls bone position and rotation, but not scale
-  * TM type: Controls object world space matrices, supports scaling but does not support parenting
-  * Vertex type: Adds absolute mode shape keys, animates by keying Evaluation Time, may fail for meshes with duplicate or overlapping vertices
-* NEW: .nav import & export support
-  * When exporting, automatically triangulates quads and ngons however, users should do so manually for best results
-  * When exporting, selected mesh must be manifold
-* NEW: Material guidelines for .elu export have been simplified, see below!
-* NEW: Reconfigured shader nodes and implemented material presets
-* NEW: Added material info to the Realspace panel
-* Simplified texture searching, renamed 'Smart' texture mode to 'Brute'
-* Implicit effects now control additive rendering ('\_ef' and 'ef\_' prefixes)
-* Sky objects no longer catch rays ('obj\_sky\_' and 'obj\_ef\_sky' prefixes)
-* Mesh nodes beginning with "Dummy" are now treated as bones
+* NEW: Object types! .rs and .elu import overhaul!
+  * Artist friendly UI panels, no more string tags!
+  * Empties, meshes, lights, cameras and more!
+  * Content imported from previous versions will NOT be compatible, sorry!
+  * Look for more 'Realspace' panels to see what controls are available!
+* NEW: Light overhaul
+  * Removed 'tweaks' and simplified
+  * Dynamic lights hidden from render by default
+  * New translation layer retains Realspace values in preparation for .rs export
+  * Added UI controls for lightmap mix, mod4 fix and light recalculation
+  * Phased out light drivers in favor of a UI panel for light translation, fog and other global settings
+* NEW: Automatic material ID handling!
+  * IDs and sub-IDs are now abstracted behind 'Priority', all of which you can safely ignore
+  * Material type, base/sub distinctions are now implied by things like slot order and parent-child relationships
+  * Don't panic if warnings appear in the material panel, just follow their instructions
+  * Many, many checks are in place to help guide you and you can always message Krunk#6051 for support
+* NEW: Better texture path controls, no more labeling image texture nodes!
+* NEW: flag.xml and smoke.xml support
+* Exposed shader emission and renamed 'Power' to 'Exponent'
+* Converted occlusion planes to image dummies
+* Fixed data directory processing for Linux paths
+* Fixed lightmap uvs for atlased lightmaps (Citadel)
+* Fixed .elu power values
+* Phased out lightmap export atlasing, better to just increase texture resolution
+* Phased out isEffects and UV layer 3
 * Other minor fixes
 
 
@@ -48,7 +57,6 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 * Approximates fog using a volume scatter or volume absorption shader
 * Reinterprets light data to be useful in Blender
 * Displays lightmaps using a linked node group for quick toggling
-* Creates a driver object for quickly tuning lights and fog
 
 
 # Current Export Features
@@ -86,50 +94,20 @@ Some parameters can be configured for special behavior:
 
 | Parameter | Controlled By | Details |
 | :---: | :---: | :---: |
-| Texture / Alpha Path | Image Texture Label: Right Click -> Rename | If labeled, represents a path relative to GunZ.exe (see below) |
+| Texture / Alpha Path | Override Texpath / Write Directory ||
 | Twosided | Material Properties -> Viewport Display -> Backface Culling ||
 | Additive | Change Preset -> Additive ||
 | Alphatest | Change Preset -> Tested | Configure the Threshold value of the Math: Greater Than node |
 | Use Opacity | Change Preset -> Blended | Must have a valid texture in the Image Texture node |
-| Is Effect | '\_ef' or 'ef\_' prefix in the object or exported file name | For advanced users |
 | Is Animated | File name of the connected texture ||
 | Frame Count / Frame Speed / Frame Gap | File name of the connected texture ||
-
-### Material ID/Sub-ID Guidelines
-
-Realspace materials are not well defined. Certain effects are implicit, some cancel each other out, some behave differently based on context. Frankly, it's a mess.
-
-The following guidelines help you set your material IDs and sub-IDs to sane values during export...
-
-1. Material IDs must not have gaps. Example: cannot export with IDs 0, 3, and 4. Instead, use 0, 1, and 2.
-2. Different meshes can use the same material, but one mesh with different materials must mark them as sub-materials by unchecking Base.
-3. The sub-IDs of sub-materials must match the material slot they are used in. The top slot is 0.
-4. Groups of sub-materials need a base of the same ID.*
-5. The sub-material count of a base material must be high enough to hold it's sub-materials.
-
-*No. 4 is handled for you automatically. Future updates will handle more.
-
-These guidelines are based on patterns found in the vanilla GunZ content. Please submit an issue if you belive these guidelines are too restrictive or in error.
 
 ### Notes on texture paths, labels and valid data subdirectories...
 
 RealSpace2's .elu format references textures using relative file paths. Paths are either relative to the .elu or relative to GunZ.exe.
 
-Blender on the other hand, references textures using absolute file paths. Paths are always relative to your system's root. (ex: C:/...)
-
-If you get this error during export...
-
-    Unable to determine data path for texture in ELU material!
-
-...this means one of your Image Texture node labels does not contain a valid RealSpace2 data subdirectory.
-This check is not case sensitive. Valid data subdirectories are...
-
-    GunZ 1/.mrs: 'Interface', 'Maps', 'Model', 'Quest', 'Sfx', 'Shader', 'Sound' and 'System'
-    GunZ 2/.mrf: 'Data', 'EngineRes'
-
-To work around this difference, you can control what path is written during export by labeling an Image Texture node. (right click -> rename)
-- If an Image Texture node has no label, the file name of the image is written, which RealSpace2 interprets as .elu relative
-- If it does have a label, the label needs to be a file path relative to Gunz.exe
+The Override Texpath and Write Directory switches give you control over what path is written during export.
+If Write Directory is disabled, only the file name of the image is written which RealSpace2 interprets as .elu relative.
 
 The plugin will automatically truncate and verify the result for you. It will also remove double extensions (tex.bmp.dds -> tex.bmp) and sanitize double dds errors. (tex.dds.dds -> tex.dds)
 
@@ -141,7 +119,7 @@ Advanced users can still use the Maiet Character Viewer (MCV) to modify material
 
 ### Examples of invalid path labels:
 - "shoes.tga" -> just omit the label entirely
-- "Documents\My Custom Gunz Content\fireball.bmp.dds" -> rearrange your folders, include a data subdirectory
+- "Documents\My Custom Gunz Content\fireball.bmp.dds" -> double check your working directory in addon preferences then relocate your image to somewhere inside it
 
 
 ## Navmesh Export (.nav)
@@ -165,10 +143,7 @@ Advanced users can still use the Maiet Character Viewer (MCV) to modify material
 
 # Planned Features
 
-* GunZ 1: .rs smoke.xml support
-* GunZ 1: .rs flag.xml support
 * GunZ 1: alpha .elu versions: 0x11, 0x5001, 0x5002 and 0x5003
-* GunZ 1: .nav support
 * GunZ 1: lightmap export UV generation
 
 <!-- -->
@@ -207,6 +182,8 @@ Advanced users can still use the Maiet Character Viewer (MCV) to modify material
 [Nayr438](https://github.com/Nayr438)<br>
 [DeffJay](https://github.com/Jetman823)<br>
 [HeroBanana](https://github.com/HeroBanana)<br>
+Ennui<br>
 bastardgoose<br>
 Menotso<br>
-Ennui
+Milanor<br>
+Sunrui<br>
