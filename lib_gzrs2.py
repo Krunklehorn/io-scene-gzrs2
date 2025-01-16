@@ -1652,10 +1652,11 @@ def divideMeshMats(blPropObjs):
                 if material != blSubMat:
                     continue
 
-                subIDs = subIDsByMat.setdefault(blSubMat, [s])
-
-                if s not in subIDs:
-                    subIDs.append(s)
+                if blSubMat not in subIDsByMat:
+                    subIDsByMat[blSubMat] = { s }
+                    break
+                elif s not in subIDs:
+                    subIDs.add(s)
 
     subIDsByMat = { blSubMat: tuple(sorted(subIDs)) for blSubMat, subIDs in subIDsByMat.items() }
 
