@@ -2901,13 +2901,18 @@ class GZRS2_PT_Realspace_Material(Panel):
         blWorldObjs, blPropObjsAll = getFilteredObjectLists(context.scene.objects)
         blExportObjs = blWorldObjs + blPropObjsAll
 
-        def reportUI(column, needSeparator, names, errorText):
+        def reportUI(column, needSeparator, names, errorText1, errorText2):
             if needSeparator:
                 column.separator()
 
             row = column.row()
             row.alert = True
-            row.label(text = errorText)
+            row.label(text = errorText1)
+
+            if errorText2 is not None:
+                row = column.row()
+                row.alert = True
+                row.label(text = errorText2)
 
             for name in names:
                 column.label(text = "\t\t\t\t\t\t\t\t" + name)
@@ -2947,11 +2952,11 @@ class GZRS2_PT_Realspace_Material(Panel):
         if needSeparator:
             column = layout.column(align = True)
 
-        if hasOverlaps:     reportUI(column, needSeparator,     overlapNames,       "Prop materials must be exclusive to props!")
-        if hasForked:       reportUI(column, needSeparator,     forkedNames,        "Material parent links must match for all!")
-        if hasChained:      reportUI(column, needSeparator,     chainedNames,       "Materials cannot form chains or loops!")
-        if hasSwizzled:     reportUI(column, needSeparator,     swizzledNames,      "Child materials cannot swizzle slots!")
-        if hasColliding:    reportUI(column, needSeparator,     collidingNames,     "Child materials cannot have conflicting slots!")
+        if hasOverlaps:     reportUI(column, needSeparator,     overlapNames,       "Prop materials must be exclusive to props!",       "Rearrange materials or change mesh type!")
+        if hasForked:       reportUI(column, needSeparator,     forkedNames,        "Parents must match for all materials in mesh!",    "Empty parent fields count too!")
+        if hasChained:      reportUI(column, needSeparator,     chainedNames,       "Materials cannot form chains or loops!",           "Double check parent fields!")
+        if hasSwizzled:     reportUI(column, needSeparator,     swizzledNames,      "Child materials cannot swizzle slots!",            "Check meshes and rearrange materials!")
+        if hasColliding:    reportUI(column, needSeparator,     collidingNames,     "Materials of the same parent cannot collide!",     "Rearrange materials or duplicate the parent!")
 
         if hasOverlaps:
             return
@@ -2959,9 +2964,26 @@ class GZRS2_PT_Realspace_Material(Panel):
         # Sort materials
         blWorldMats = tuple(sorted(blWorldMats, key = lambda x: (x.gzrs2.priority, x.name)))
 
+        # Get relevant variables
+        isBase = False
+        childCount = 0
+
+        for matID, (blBaseMat, subMats) in enumerate(blPropMatGraph):
+            if blBaseMat is not None and blBaseMat == blMat:
+                isBase = True
+                childCount = len(subMats)
+                break
+
+            if blMat in subMats:
+                isBase = False
+                childCount = 0
+                break
+
         # Begin layout
         column = layout.column()
-        column.prop(matProps, 'priority')
+        row = column.row()
+        row.prop(matProps, 'priority')
+        row.enabled = isBase
 
         if meshType == 'WORLD':
             row = column.row()
@@ -2985,13 +3007,6 @@ class GZRS2_PT_Realspace_Material(Panel):
 
             row.label(text = "", icon = 'DECORATE')
         elif meshType == 'PROP':
-            childCount = 0
-
-            for blBaseMat1, subMats1 in blPropMatGraph:
-                if blBaseMat1 == blMat:
-                    childCount = len(subMats1)
-                    break
-
             if childCount > 0:
                 row = column.row()
                 split = row.split(factor = 0.4125)
@@ -3000,7 +3015,7 @@ class GZRS2_PT_Realspace_Material(Panel):
                 if childCount == 1:
                     split.label(text = "Child")
                     split.alignment = 'LEFT'
-                    split.label(text = subMats1[0].name)
+                    split.label(text = subMats[0].name)
                 else:
                     split.label(text = "Children")
                     split.alignment = 'LEFT'
@@ -3017,12 +3032,6 @@ class GZRS2_PT_Realspace_Material(Panel):
             split.alignment = 'LEFT'
 
             if not (hasForked or hasChained or hasSwizzled or hasColliding):
-                for matID, (blBaseMat2, subMats2) in enumerate(blPropMatGraph):
-                    if (blBaseMat2 is not None and blBaseMat2 == blMat) or blMat in subMats2:
-                        break
-
-                matList = tuple(matSlot.material for matSlot in blObj.material_slots)
-
                 row2 = split.row()
                 row2.label(text = "Xml " + str(matID + len(blWorldMats)))
                 row2.label(text = "Elu " + str(matID))
