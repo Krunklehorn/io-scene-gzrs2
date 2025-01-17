@@ -102,26 +102,6 @@ Some parameters can be configured for special behavior:
 | Is Animated | File name of the connected texture ||
 | Frame Count / Frame Speed / Frame Gap | File name of the connected texture ||
 
-### Notes on texture paths, labels and valid data subdirectories...
-
-RealSpace2's .elu format references textures using relative file paths. Paths are either relative to the .elu or relative to GunZ.exe.
-
-The Override Texpath and Write Directory switches give you control over what path is written during export.
-If Write Directory is disabled, only the file name of the image is written which RealSpace2 interprets as .elu relative.
-
-The plugin will automatically truncate and verify the result for you. It will also remove double extensions (tex.bmp.dds -> tex.bmp) and sanitize double dds errors. (tex.dds.dds -> tex.dds)
-
-Advanced users can still use the Maiet Character Viewer (MCV) to modify material paths after exporting.
-
-### Examples of valid path labels:
-- "model\woman\shoes.tga"
-- "Documents\My Custom Gunz Content\SFX\fireball.bmp.dds"
-
-### Examples of invalid path labels:
-- "shoes.tga" -> just omit the label entirely
-- "Documents\My Custom Gunz Content\fireball.bmp.dds" -> double check your working directory in addon preferences then relocate your image to somewhere inside it
-
-
 ## Navmesh Export (.nav)
 
 * Automatically triangulates quads and ngons
