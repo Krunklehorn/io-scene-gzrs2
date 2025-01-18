@@ -2922,7 +2922,7 @@ class GZRS2_PT_Realspace_Material(Panel):
 
         if hasEmpty:
             column = layout.column(align = True)
-            reportUI(column, False, emptyNames, "Mesh objects cannot have empty slots!")
+            reportUI(column, False, emptyNames, "Mesh objects cannot have empty slots!", "Remove them before continuing!")
             return
 
         # Gather materials by type
