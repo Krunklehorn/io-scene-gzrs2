@@ -14,7 +14,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 # Latest Update
 
-[***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.6***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.6)
+[***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.6.1***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.6)
 
 * NEW: Object types! .rs and .elu import overhaul!
   * Artist friendly UI panels, no more string tags!
