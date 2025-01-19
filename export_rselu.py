@@ -199,7 +199,7 @@ def exportElu(self, context):
 
         eluMeshObjs.append(blObj)
 
-        matrixWorld = blObj.matrix_world
+        matrixWorld = reorientWorld @ blObj.matrix_world
         worldMatrices.append(matrixWorld)
         worldInvMatrices.append(matrixWorld.inverted())
         worldMatrixByName[objName] = matrixWorld
@@ -217,7 +217,7 @@ def exportElu(self, context):
 
         eluMeshObjs.append(blObj)
 
-        matrixWorld = blObj.matrix_world
+        matrixWorld = reorientWorld @ blObj.matrix_world
         worldMatrices.append(matrixWorld)
         worldInvMatrices.append(matrixWorld.inverted())
         worldMatrixByName[objName] = matrixWorld
@@ -241,7 +241,7 @@ def exportElu(self, context):
 
             eluEmptyBones.append(blBone)
 
-            matrixWorld = blArmatureObj.matrix_world @ blBone.matrix_local @ reorientLocal
+            matrixWorld = reorientWorld @ blArmatureObj.matrix_world @ blBone.matrix_local @ reorientLocal
             worldMatrices.append(matrixWorld)
             worldInvMatrices.append(matrixWorld.inverted())
             worldMatrixByName[boneName] = matrixWorld
@@ -457,7 +457,7 @@ def exportElu(self, context):
                 self.report({ 'ERROR' }, f"GZRS2: ELU export tried to parent a mesh object to itself! { meshName }")
                 return { 'CANCELLED' }
 
-        worldMatrix = reorientWorld @ worldMatrices[m]
+        worldMatrix = worldMatrixByName.get(meshName)
         parentWorld = worldMatrixByName.get(parentName) or Matrix.Identity(4)
         apScale, rotAA, stretchAA, etcMatrix = calcEtcData(worldMatrix, parentWorld)
 
@@ -621,7 +621,7 @@ def exportElu(self, context):
             self.report({ 'ERROR' }, f"GZRS2: ELU export tried to parent a bone to itself! { boneName }")
             return { 'CANCELLED' }
 
-        worldMatrix = reorientWorld @ worldMatrices[m]
+        worldMatrix = worldMatrixByName.get(boneName)
         parentWorld = worldMatrixByName.get(parentName) or Matrix.Identity(4)
         apScale, rotAA, stretchAA, etcMatrix = calcEtcData(worldMatrix, parentWorld)
 
