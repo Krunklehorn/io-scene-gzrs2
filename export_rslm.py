@@ -118,7 +118,7 @@ def exportLm(self, context):
 
             if id == RS2_ID and version == RS2_VERSION:
                 for _ in range(readInt(file)): # skip packed material strings
-                    for __ in range(256):
+                    for __ in range(RS_PATH_LENGTH):
                         if file.read(1) == b'\x00':
                             break
 

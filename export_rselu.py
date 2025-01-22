@@ -463,7 +463,7 @@ def exportElu(self, context):
 
         if eluMeshObj.type == 'MESH':
             blMesh = eluMeshObj.data
-            uvLayer1 = blMesh.uv_layers[0] if len(blMesh.uv_layers) > 0 else None
+            uvLayer1 = getOrNone(blMesh.uv_layers, 0)
             color1 = blMesh.color_attributes[0] if len(blMesh.color_attributes) > 0 else None
             vertexGroups = eluMeshObj.vertex_groups if len(eluMeshObj.vertex_groups) > 0 else None
             blArmatureObj, blArmature = getValidArmature(self, eluMeshObj, state)
@@ -490,7 +490,7 @@ def exportElu(self, context):
 
             for triangle in blMesh.loop_triangles:
                 indices = tuple(reversed(triangle.vertices))
-                uv1s = tuple(reversed(tuple(uvLayer1.uv[triangle.loops[i]].vector for i in range(3)))) if hasUV1s else (Vector((0, 0)), Vector((0, 0)), Vector((0, 0)))
+                uv1s = tuple(reversed(tuple(uvLayer1.uv[triangle.loops[i]].vector for i in range(3)))) if hasUV1s else tuple(Vector((0, 0)) for _ in range(3))
                 slotID = triangle.material_index
                 slotIDs.add(slotID)
 
@@ -499,7 +499,7 @@ def exportElu(self, context):
 
                 if version >= ELU_5005:
                     normal = triangle.normal
-                    normals = tuple(reversed(tuple(blMesh.loops[triangle.loops[i]].normal for i in range(3)))) if hasCustomNormals else (normal, normal, normal)
+                    normals = tuple(reversed(tuple(blMesh.loops[triangle.loops[i]].normal for i in range(3)))) if hasCustomNormals else tuple(normal for _ in range(3))
                 else:
                     normal = None
                     normals = None

@@ -73,7 +73,7 @@ def readBsp(self, file, path, state):
     def openRSBsptreeNode():
         nonlocal nodeCount, vertexOffset, p
 
-        state.bspTreeBounds.append(readBounds(file, state.convertUnits, True))
+        state.bspTreeBounds.append(readBounds(file, state.convertUnits))
 
         skipBytes(file, 4 * 4) # skip plane
 

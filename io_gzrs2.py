@@ -179,11 +179,11 @@ def readTransform(file, convertUnits, flipY, *, swizzle = False):
 
     return Matrix.LocRotScale(loc, rot, sca)
 
-def readBounds(file, convertUnits, flipY):
-    min = Vector(readCoordinate(file, convertUnits, flipY))
-    max = Vector(readCoordinate(file, convertUnits, flipY))
+def readBounds(file, convertUnits):
+    min = Vector(readCoordinate(file, convertUnits, False))
+    max = Vector(readCoordinate(file, convertUnits, False))
 
-    return (min, max)
+    return min, max
 
 def readPath(file, length):
     path = readString(file, length)
@@ -317,8 +317,6 @@ def writeTransform(file, transform, convertUnits, flipY):
 
     writeVec4Array(file, tuple(Matrix.LocRotScale(loc, rot, sca).transposed()))
 
-def writeBounds(file, bounds, convertUnits, flipY):
-    bounds = (bounds[0].copy(), bounds[1].copy())
-
-    writeCoordinate(file, bounds[0], convertUnits, flipY)
-    writeCoordinate(file, bounds[1], convertUnits, flipY)
+def writeBounds(file, bounds, convertUnits):
+    writeCoordinate(file, bounds[0], convertUnits, False)
+    writeCoordinate(file, bounds[1], convertUnits, False)

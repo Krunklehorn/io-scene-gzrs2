@@ -33,7 +33,7 @@ RS3_VERSION4 =                  8
 
 RS_SUPPORTED_VERSIONS =         [ RS2_VERSION, RS3_VERSION1, RS3_VERSION2, RS3_VERSION3, RS3_VERSION4 ]
 
-RS_XML_PATH_LENGTH =            256
+RS_PATH_LENGTH =                256
 
 BSP_ID =                        0x35849298
 BSP_VERSION =                   2

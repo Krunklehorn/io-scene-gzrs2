@@ -57,13 +57,13 @@ def readRs(self, file, path, state):
         return { 'CANCELLED' }
 
     if id == RS2_ID and version == RS2_VERSION:
-        matCount = readInt(file)
+        rsMatCount = readInt(file)
 
-        if matCount != len(state.xmlRsMats):
-            self.report({ 'WARNING' }, f"GZRS2: RS material count did not match the XML parse! Corruption may occur! { matCount }, { len(state.xmlRsMats) }")
+        if rsMatCount != len(state.xmlRsMats):
+            self.report({ 'WARNING' }, f"GZRS2: RS material count did not match the XML parse! Corruption may occur! { rsMatCount }, { len(state.xmlRsMats) }")
 
-        for _ in range(matCount): # skip packed material strings
-            for __ in range(256):
+        for _ in range(rsMatCount): # skip packed material strings
+            for __ in range(RS_PATH_LENGTH):
                 if file.read(1) == b'\x00':
                     break
 
@@ -128,7 +128,7 @@ def readRs(self, file, path, state):
 
         state.rsONodeCount = readUInt(file)
         state.rsOPolygonCount = readUInt(file)
-        state.rsOVertexCount = readInt(file)
+        state.rsOVertexCount = readUInt(file)
         skipBytes(file, 4) # skip octree indices count
 
         if state.logRsHeaders:
@@ -144,7 +144,7 @@ def readRs(self, file, path, state):
         def openRS2OctreeNode():
             nonlocal nodeCount, vertexOffset, p
 
-            state.rsOctreeBounds.append(readBounds(file, state.convertUnits, True))
+            state.rsOctreeBounds.append(readBounds(file, state.convertUnits))
 
             skipBytes(file, 4 * 4) # skip plane
 
@@ -336,7 +336,7 @@ def readRs(self, file, path, state):
                     def openRS3OctreeNode():
                         nonlocal vertexOffset, p
 
-                        state.rsOctreeBounds.append(readBounds(file, state.convertUnits, False))
+                        state.rsOctreeBounds.append(readBounds(file, state.convertUnits))
 
                         if not readBool(file):
                             openRS3OctreeNode() # positive

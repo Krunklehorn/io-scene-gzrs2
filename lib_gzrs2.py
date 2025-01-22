@@ -237,7 +237,7 @@ def textureSearch(self, texBase, texDir, isRS3, state):
 
                 parentDir = os.path.dirname(parentDir)
 
-            self.report({ 'WARNING' }, f"GZRS2: Texture search failed, no upward directory match: { texBase }, { texDir }")
+            self.report({ 'WARNING' }, f"GZRS2: Texture search failed, no upward directory match: { texDir }, { texBase }")
     else:
         # Check the local folder and all sub-folders
         result = texMatchDownward(state.directory, texBase, ddsBase)
@@ -669,7 +669,7 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
     success, texpath, loadFake = textureSearchLoadFake(self, texBase, texDir, False, state)
 
     if not success:
-        self.report({ 'WARNING' }, f"GZRS2: Texture not found for .rs.xml material: { blMat.name }, { texBase }, { texDir }")
+        self.report({ 'WARNING' }, f"GZRS2: Texture not found for .rs.xml material: { blMat.name }, { texDir }, { texBase }")
 
     texture = getMatImageTextureNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, loadFake, state)
 
@@ -1030,7 +1030,7 @@ def setupEluMat(self, m, eluMat, state):
         success, texpath, loadFake = textureSearchLoadFake(self, texBase, texDir, False, state)
 
         if not success:
-            self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu material: { blMat.name }, { texBase }, { texDir }")
+            self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu material: { blMat.name }, { texDir }, { texBase }")
 
         texture = getMatImageTextureNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, loadFake, state)
 

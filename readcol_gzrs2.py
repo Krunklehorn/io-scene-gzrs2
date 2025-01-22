@@ -133,7 +133,7 @@ def readCol(self, file, path, state):
             nonlocal n, trisRead
 
             if not state.logColNodes: skipBytes(file, 4 * 3 * 2) # skip bounding box
-            else: bounds = readBounds(file, state.convertUnits, False)
+            else: bounds = readBounds(file, state.convertUnits)
 
             if not readBool(file):
                 openCol2Node() # positive
