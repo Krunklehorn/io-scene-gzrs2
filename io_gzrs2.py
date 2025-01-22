@@ -81,11 +81,15 @@ def readDirection(file, flipY):
     return dir.normalized()
 
 def readPlane(file, flipY):
-    plane = Vector(readVec4(file))
+    plane = readVec4(file)
 
-    if flipY: plane.y = -plane.y
+    dir = Vector(plane[:3])
+    dir.normalize()
+    dist = plane[3]
 
-    return plane.normalized()
+    if flipY: dir.y = -dir.y
+
+    return Vector((dir.x, dir.y, dir.z, dist))
 
 def readUV2Array(file, length): return tuple(readUV2(file) for _ in range(length))
 def readUV3Array(file, length): return tuple(readUV3(file) for _ in range(length))
@@ -125,10 +129,13 @@ def readPlaneArray(file, length, flipY):
     result = []
 
     for plane in readVec4Array(file, length):
-        plane = Vector(plane)
-        if flipY: plane.y = -plane.y
+        dir = Vector(plane[:3])
+        dir.normalize()
+        dist = plane[3]
 
-        result.append(plane.normalized())
+        if flipY: dir.y = -dir.y
+
+        result.append(Vector(dir.x, dir.y, dir.z, dist))
 
     return tuple(result)
 
@@ -241,11 +248,13 @@ def writeDirection(file, dir, flipY):
     writeVec3(file, dir.normalized()[:3])
 
 def writePlane(file, plane, flipY):
-    plane = plane.copy()
+    dir = Vector(plane[:3])
+    dir.normalize()
+    dist = plane[3]
 
-    if flipY: plane.y = -plane.y
+    if flipY: dir.y = -dir.y
 
-    writeVec4(file, plane.normalized()[:4])
+    writeVec4(file, (dir.x, dir.y, dir.z, dist))
 
 def writeUV2Array(file, uvs):
     uvs = tuple(uv.copy() for uv in uvs)
@@ -281,14 +290,18 @@ def writeDirectionArray(file, dirs, flipY):
     writeVec3Array(file, tuple(dir[:3] for dir in dirs))
 
 def writePlaneArray(file, planes, flipY):
-    planes = tuple(plane.copy() for plane in planes)
+    output = []
 
     for plane in planes:
-        if flipY: plane.y = -plane.y
+        dir = Vector(plane[:3])
+        dir.normalize()
+        dist = plane[3]
 
-        plane.normalize()
+        if flipY: dir.y = -dir.y
 
-    writeVec4Array(file, tuple(plane[:4] for plane in planes))
+        output.append((dir.x, dir.y, dir.z, dist))
+
+    writeVec4Array(file, tuple(output))
 
 def writeTransform(file, transform, convertUnits, flipY):
     transform = transform.copy()
