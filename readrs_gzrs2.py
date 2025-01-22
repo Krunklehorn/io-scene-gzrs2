@@ -60,8 +60,7 @@ def readRs(self, file, path, state):
         matCount = readInt(file)
 
         if matCount != len(state.xmlRsMats):
-            self.report({ 'ERROR' }, f"GZRS2: RS material count did not match the XML parse! { matCount }, { len(state.xmlRsMats) }")
-            return { 'CANCELLED' }
+            self.report({ 'WARNING' }, f"GZRS2: RS material count did not match the XML parse! Corruption may occur! { matCount }, { len(state.xmlRsMats) }")
 
         for _ in range(matCount): # skip packed material strings
             for __ in range(256):
