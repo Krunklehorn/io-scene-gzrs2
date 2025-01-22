@@ -152,7 +152,9 @@ def importElu(self, context):
         for viewLayer in context.scene.view_layers:
             viewLayer.objects.active = state.blArmatureObj
 
+        counts = countInfoReports(context)
         bpy.ops.object.mode_set(mode = 'EDIT')
+        deleteInfoReports(context, counts)
 
         reorientLocal = Matrix.Rotation(math.radians(-90.0), 4, 'Z') @ Matrix.Rotation(math.radians(-90.0), 4, 'Y')
 
@@ -203,14 +205,18 @@ def importElu(self, context):
                 editBone.use_connect = True
 
         if state.doBoneRolls:
+            counts = countInfoReports(context)
+
             with redirect_stdout(state.silentIO):
                 bpy.ops.armature.select_all(action = 'SELECT')
                 bpy.ops.armature.calculate_roll(type = 'GLOBAL_POS_Z')
                 bpy.ops.armature.select_all(action = 'DESELECT')
-            deleteInfoReports(3, context)
 
+            deleteInfoReports(context, counts)
+
+        counts = countInfoReports(context)
         bpy.ops.object.mode_set(mode = 'OBJECT')
-        deleteInfoReports(1, context)
+        deleteInfoReports(context, counts)
 
         blPoseBones = state.blArmatureObj.pose.bones
 
@@ -264,7 +270,8 @@ def importElu(self, context):
             if modifier:
                 modifier.object = state.blArmatureObj
 
+    counts = countInfoReports(context)
     bpy.ops.object.select_all(action = 'DESELECT')
-    deleteInfoReports(1, context)
+    deleteInfoReports(context, counts)
 
     return { 'FINISHED' }

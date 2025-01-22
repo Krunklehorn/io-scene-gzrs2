@@ -302,7 +302,8 @@ def importRS3(self, context):
     for node in state.rs3Graph:
         processRS3Node(node)
 
+    counts = countInfoReports(context)
     bpy.ops.object.select_all(action = 'DESELECT')
-    deleteInfoReports(1, context)
+    deleteInfoReports(context, counts)
 
     return { 'FINISHED' }

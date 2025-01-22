@@ -400,6 +400,8 @@ def importRS2(self, context):
         print()
 
     def cleanupFunc(blObj):
+        counts = countInfoReports(context)
+
         bpy.ops.object.select_all(action = 'DESELECT')
         blObj.select_set(True)
         bpy.ops.object.shade_smooth()
@@ -416,7 +418,7 @@ def importRS2(self, context):
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
 
-        deleteInfoReports(11, context) # TODO: 5? 9? Not working?
+        deleteInfoReports(context, counts)
 
     def setupUnifiedMesh(name, setupFunc, isBakeMesh = False):
         blMesh = bpy.data.meshes.new(name)
@@ -1024,9 +1026,9 @@ def importRS2(self, context):
             state.blDriverObj = driverObj
             rootExtras.objects.link(driverObj)
 
+    counts = countInfoReports(context)
     bpy.ops.object.select_all(action = 'DESELECT')
-    deleteInfoReports(1, context)
-
     bpy.ops.gzrs2.recalculate_lights_fog()
+    deleteInfoReports(context, counts)
 
     return { 'FINISHED' }

@@ -486,7 +486,7 @@ def exportElu(self, context):
                 self.report({ 'ERROR' }, f"GZRS2: Mesh with too many vertices, maximum is { ELU_MAX_VERTEX }, must split mesh before continuing: { meshName }")
                 return { 'CANCELLED' }
 
-            useCustomNormals = blMesh.has_custom_normals
+            hasCustomNormals = blMesh.has_custom_normals
 
             for triangle in blMesh.loop_triangles:
                 indices = tuple(reversed(triangle.vertices))
@@ -499,7 +499,7 @@ def exportElu(self, context):
 
                 if version >= ELU_5005:
                     normal = triangle.normal
-                    normals = tuple(reversed(tuple(blMesh.loops[triangle.loops[i]].normal for i in range(3)))) if useCustomNormals else (normal, normal, normal)
+                    normals = tuple(reversed(tuple(blMesh.loops[triangle.loops[i]].normal for i in range(3)))) if hasCustomNormals else (normal, normal, normal)
                 else:
                     normal = None
                     normals = None

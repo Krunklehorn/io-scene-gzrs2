@@ -856,7 +856,7 @@ def setupColMesh(name, collection, context, extension, state):
         print()
 
     if state.doCleanup:
-        reportCount = 0
+        counts = countInfoReports(context)
 
         bpy.ops.object.select_all(action = 'DESELECT')
         blColObj.select_set(True)
@@ -867,58 +867,51 @@ def setupColMesh(name, collection, context, extension, state):
         bpy.ops.mesh.select_mode(type = 'VERT')
         bpy.ops.mesh.select_all(action = 'SELECT')
 
-        reportCount += 3
+        deleteInfoReports(context, counts)
 
         def subCleanup():
-            nonlocal reportCount
-
             for _ in range(10):
                 bpy.ops.mesh.dissolve_degenerate()
                 bpy.ops.mesh.delete_loose()
                 bpy.ops.mesh.select_all(action = 'SELECT')
                 bpy.ops.mesh.remove_doubles(threshold = 0.0001)
-                reportCount += 4
 
         def cleanupFunc():
-            nonlocal reportCount
+            counts = countInfoReports(context)
 
             if extension == 'col':
                 bpy.ops.mesh.intersect(mode = 'SELECT', separate_mode = 'ALL', threshold = 0.0001, solver = 'FAST')
                 bpy.ops.mesh.select_all(action = 'SELECT')
-                reportCount += 2
 
                 subCleanup()
 
                 bpy.ops.mesh.intersect(mode = 'SELECT', separate_mode = 'ALL')
                 bpy.ops.mesh.select_all(action = 'SELECT')
-                reportCount += 2
 
                 subCleanup()
 
                 for _ in range(10):
                     bpy.ops.mesh.fill_holes(sides = 0)
                     bpy.ops.mesh.tris_convert_to_quads(face_threshold = 0.0174533, shape_threshold = 0.0174533)
-                    reportCount += 2
 
                     subCleanup()
 
                 bpy.ops.mesh.vert_connect_nonplanar(angle_limit = 0.0174533)
-                reportCount += 1
 
                 subCleanup()
             elif extension == 'cl2':
                 bpy.ops.mesh.remove_doubles(threshold = 0.0001, use_sharp_edge_from_normals = True)
                 bpy.ops.mesh.tris_convert_to_quads(face_threshold = 0.0174533, shape_threshold = 0.0174533)
-                reportCount += 2
 
             bpy.ops.mesh.dissolve_limited(angle_limit = 0.0174533)
             bpy.ops.mesh.delete_loose(use_faces = True)
             bpy.ops.mesh.select_all(action = 'SELECT')
             bpy.ops.mesh.normals_make_consistent(inside = True)
             bpy.ops.mesh.select_all(action = 'DESELECT')
-            reportCount += 5
 
             bpy.ops.object.mode_set(mode = 'OBJECT')
+
+            deleteInfoReports(context, counts)
 
         if state.logCleanup:
             print(name)
@@ -928,12 +921,11 @@ def setupColMesh(name, collection, context, extension, state):
             with redirect_stdout(state.silentIO):
                 cleanupFunc()
 
-        deleteInfoReports(reportCount, context)
-
         blColMesh.gzrs2.meshType = 'COLLISION'
 
+    counts = countInfoReports(context)
     bpy.ops.object.select_all(action = 'DESELECT')
-    deleteInfoReports(1, context)
+    deleteInfoReports(context, counts)
 
     return blColObj
 
@@ -1254,34 +1246,47 @@ def setupRsTreeMesh(self, m, blMesh, treePolygons, treeVerts, state, *, allowLig
     if state.meshMode == 'STANDARD': return True
     elif state.meshMode == 'BAKE': return tuple(meshMatIDs)
 
-# TODO: Broken?
-def deleteInfoReports(num, context):
-    # This only works if the user has an Info area open somewhere
-    # Luckily, the Scripting layout has one by default
+# This only works if the user has an Info area open somewhere
+# Luckily, the Scripting layout has one by default
+def countInfoReports(context):
+    counts = {}
 
     for workspace in bpy.data.workspaces:
-        for screen in workspace.screens:
-            for area in screen.areas:
-                if area.ui_type != 'INFO': continue
-
-                for region in area.regions:
-                    if region.type != 'WINDOW': continue
-
+        for screen in filter(lambda x: not x.is_temporary, workspace.screens):
+            for area in filter(lambda x: x.ui_type == 'INFO', screen.areas):
+                for region in filter(lambda x: x.type == 'WINDOW', area.regions):
                     with context.temp_override(screen = screen, area = area, region = region):
-                        # Info operations don't support negative indices, so we count until select_pick() fails
-                        infoCount = 0
+                        key = (screen, area, region)
+                        count = 0
 
-                        while bpy.ops.info.select_pick(report_index = infoCount) != { 'CANCELLED' }:
-                            infoCount += 1
+                        # Info operations don't support negative indices, so we count until select_pick() fails
+                        while bpy.ops.info.select_pick(report_index = count) != { 'CANCELLED' }:
+                            count += 1
+
+                        counts[key] = count
+
+    return counts
+
+def deleteInfoReports(context, counts):
+    for workspace in bpy.data.workspaces:
+        for screen in filter(lambda x: not x.is_temporary, workspace.screens):
+            for area in filter(lambda x: x.ui_type == 'INFO', screen.areas):
+                for region in filter(lambda x: x.type == 'WINDOW', area.regions):
+                    with context.temp_override(screen = screen, area = area, region = region):
+                        key = (screen, area, region)
+                        count = 0
+
+                        # Info operations don't support negative indices, so we count until select_pick() fails
+                        while bpy.ops.info.select_pick(report_index = count) != { 'CANCELLED' }:
+                            count += 1
 
                         bpy.ops.info.select_all(action = 'DESELECT')
 
                         # Start at the last and count backward
-                        for i in range(infoCount - 1, max(-1, infoCount - 1 - num), -1):
-                            bpy.ops.info.select_pick(report_index = i, extend = True)
+                        for i in range(count, counts[key], -1):
+                            bpy.ops.info.select_pick(report_index = i - 1, extend = True)
 
                         bpy.ops.info.report_delete()
-                        return
 
 def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     meshName = eluMesh.meshName
@@ -1470,6 +1475,8 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
 
     if state.doCleanup:
         def cleanupFunc(blObj):
+            counts = countInfoReports(context)
+
             bpy.ops.object.select_all(action = 'DESELECT')
             blObj.select_set(True)
             bpy.ops.object.shade_smooth()
@@ -1486,6 +1493,8 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
 
             bpy.ops.object.mode_set(mode = 'OBJECT')
 
+            deleteInfoReports(context, counts)
+
         if state.logCleanup:
             print(meshName)
             cleanupFunc(blMeshObj)
@@ -1493,8 +1502,6 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
         else:
             with redirect_stdout(state.silentIO):
                 cleanupFunc(blMeshObj)
-
-        deleteInfoReports(9, context)
 
     state.blEluMeshes.append(blMesh)
     state.blEluMeshObjs.append(blMeshObj)
