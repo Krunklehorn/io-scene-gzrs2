@@ -352,7 +352,7 @@ class GZRS2_OT_Recalculate_Lights_Fog(Operator):
             blLight.energy = calcLightEnergy(blLightObj, context)
             blLight.shadow_soft_size = calcLightSoftSize(blLightObj, context)
 
-            blLightObj.hide_render = calcLightRender(blLightObj, context)
+            # blLightObj.hide_render = calcLightRender(blLightObj, context)
 
         return { 'FINISHED' }
 
