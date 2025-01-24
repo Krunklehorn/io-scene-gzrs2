@@ -126,10 +126,6 @@ ELU_PHYS_KEYS =                 4
 
 ELU_MAX_VERTEX =                1024 * 8
 
-ANI_TICKS_PER_SECOND =          4800
-ANI_FRAMES_PER_SECOND =         30
-ANI_TICKS_PER_FRAME =           ANI_TICKS_PER_SECOND / ANI_FRAMES_PER_SECOND
-
 ANI_ID =                        ELU_ID
 
 ANI_0012 =                      0x0012
@@ -138,6 +134,10 @@ ANI_1002 =                      0x1002
 ANI_1003 =                      0x1003
 
 ANI_VERSIONS =                  [ ANI_0012, ANI_1001, ANI_1002, ANI_1003 ]
+
+ANI_TICKS_PER_SECOND =          4800
+ANI_FRAMES_PER_SECOND =         30
+ANI_TICKS_PER_FRAME =           ANI_TICKS_PER_SECOND / ANI_FRAMES_PER_SECOND
 
 ANI_TYPE_TRANSFORM =            0
 ANI_TYPE_VERTEX =               1

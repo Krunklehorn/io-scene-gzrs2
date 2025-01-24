@@ -60,43 +60,45 @@ def readCol(self, file, path, state):
         self.report({ 'ERROR' }, f"GZRS2: Col header invalid! { hex(id) }, { hex(version) }")
         return { 'CANCELLED' }
 
-    trisRead = 0
+    trianglesRead = 0
 
     if version == COL1_VERSION:
-        nodeCount = readUInt(file)
-        totalTris = readUInt(file)
+        colNodeCount = readUInt(file)
+        colTriangleCount = readUInt(file)
         n = 0
 
         if state.logColHeaders:
-            print(f"Node Count:         { nodeCount }")
-            print(f"Total Triangles:    { totalTris }")
+            print(f"Node Count:         { colNodeCount }")
+            print(f"Total Triangles:    { colTriangleCount }")
             print()
 
         def openCol1Node():
-            nonlocal n, trisRead
+            nonlocal n, trianglesRead
 
-            if not state.logColNodes: skipBytes(file, 4 * 4) # skip plane
-            else: plane = readPlane(file, True)
+            if state.logColNodes:
+                plane = readPlane(file, True)
+            else:
+                skipBytes(file, 4 * 4) # skip plane
 
             hull = not readBool(file)
 
             if readBool(file): openCol1Node() # positive
             if readBool(file): openCol1Node() # negative
 
-            triCount = readUInt(file)
-            trisRead += triCount
+            triangleCount = readUInt(file)
+            trianglesRead += triangleCount
 
             if state.logColNodes:
                 print(f"===== Node { n } =============================")
                 print("Plane:              ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*plane))
                 print(f"Hull:               { hull }")
-                print(f"Triangle Count:     { triCount }")
+                print(f"Triangle Count:     { triangleCount }")
                 print()
 
-            for t in range(triCount):
+            for t in range(triangleCount):
                 if not state.logColTris:
                     if hull:
-                        for _ in range(3): state.colVerts.append(readCoordinate(file, state.convertUnits, True))
+                        state.colVerts += readCoordinateArray(file, 3, state.convertUnits, True)
                     else:
                         skipBytes(file, 4 * 3 * 3)
 
@@ -120,44 +122,47 @@ def readCol(self, file, path, state):
 
         openCol1Node()
     else:
-        totalTris = readUInt(file)
-        nodeCount = readUInt(file)
+        colTriangleCount = readUInt(file)
+        colNodeCount = readUInt(file)
         n = 0
 
         if state.logColHeaders:
-            print(f"Node Count:         { nodeCount }")
-            print(f"Total Triangles:    { totalTris }")
+            print(f"Node Count:         { colNodeCount }")
+            print(f"Total Triangles:    { colTriangleCount }")
             print()
 
         def openCol2Node():
-            nonlocal n, trisRead
+            nonlocal n, trianglesRead
 
-            if not state.logColNodes: skipBytes(file, 4 * 3 * 2) # skip bounding box
-            else: bounds = readBounds(file, state.convertUnits)
+            if state.logColNodes:
+                bbmin, bbmax = readBounds(file, state.convertUnits)
+            else:
+                skipBytes(file, 4 * 3 * 2) # skip bounding box
 
             if not readBool(file):
                 openCol2Node() # positive
                 openCol2Node() # negative
             else:
-                triCount = readUInt(file)
-                trisRead += triCount
+                triangleCount = readUInt(file)
+                trianglesRead += triangleCount
 
                 if state.logColNodes:
                     print(f"===== Node { n } =============================")
-                    print("Bounds:             ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*bounds[0]))
-                    print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*bounds[1]))
-                    print(f"Triangle Count:     { triCount }")
+                    print("Bounds:             ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*bbmin))
+                    print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*bbmax))
+                    print(f"Triangle Count:     { triangleCount }")
                     print()
 
-                for t in range(triCount):
+                for t in range(triangleCount):
                     if not state.logColTris:
-                        for _ in range(3): state.colVerts.append(readCoordinate(file, state.convertUnits, False))
+                        state.colVerts += readCoordinateArray(file, 3, state.convertUnits, False)
                         skipBytes(file, 4 * 2) # skip attributes and material ID
                     else:
                         vertices = readCoordinateArray(file, 3, state.convertUnits, False)
-                        for v in vertices: state.colVerts.append(v)
                         attributes = readUInt(file)
                         matID = readUInt(file)
+
+                        state.colVerts += vertices
 
                         print(f"===== Triangle { t } ===========================")
                         print("Vertices:           ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*vertices[0]))
@@ -170,8 +175,8 @@ def readCol(self, file, path, state):
 
         openCol2Node()
 
-    if trisRead != totalTris:
-        self.report({ 'ERROR' }, f"GZRS2: The number of Col triangles read did not match the recorded count! { trisRead }, { totalTris }")
+    if colTriangleCount != trianglesRead:
+        self.report({ 'ERROR' }, f"GZRS2: The number of Col triangles read did not match the recorded count! { colTriangleCount }, { trianglesRead }")
 
     if state.logColHeaders or state.logColNodes or state.logColTris:
         bytesRemaining = fileSize - file.tell()

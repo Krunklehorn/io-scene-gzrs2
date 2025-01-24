@@ -196,28 +196,6 @@ class Rs2ConvexVertex:
     oid:                int = 0
 
 @dataclass
-class Rs2BspVertex:
-    pos:                Vector = (0, 0, 0)
-    nor:                Vector = (0, 0, 0)
-    uv1:                Vector = (0, 0)
-    uv2:                Vector = (0, 0)
-
-@dataclass
-class Rs2OctreeVertex:
-    pos:                Vector = (0, 0, 0)
-    nor:                Vector = (0, 0, 0)
-    uv1:                Vector = (0, 0)
-    uv2:                Vector = (0, 0)
-
-@dataclass
-class Rs3OctreeVertex:
-    pos:                Vector = (0, 0, 0)
-    nor:                Vector = (0, 0, 0)
-    col:                Vector = (0, 0, 0, 0) # TODO: Shader support for rs3 color data and vertex alpha data
-    uv1:                Vector = (0, 0)
-    uv2:                Vector = (0, 0)
-
-@dataclass
 class RsConvexPolygon:
     matID:              int = 0
     drawFlags:          int = 0
@@ -225,7 +203,14 @@ class RsConvexPolygon:
     vertexOffset:       int = 0
 
 @dataclass
-class Rs2BspPolygon:
+class Rs2TreeVertex:
+    pos:                Vector = (0, 0, 0)
+    nor:                Vector = (0, 0, 0)
+    uv1:                Vector = (0, 0)
+    uv2:                Vector = (0, 0)
+
+@dataclass
+class Rs2TreePolygon:
     matID:              int = 0
     convexID:           int = 0
     drawFlags:          int = 0
@@ -233,42 +218,42 @@ class Rs2BspPolygon:
     vertexOffset:       int = 0
 
 @dataclass
-class Rs2OctreePolygon:
+class Rs3TreeVertex:
+    pos:                Vector = (0, 0, 0)
+    nor:                Vector = (0, 0, 0)
+    col:                Vector = (0, 0, 0, 0) # TODO: Shader support for rs3 color data and vertex alpha data
+    uv1:                Vector = (0, 0)
+    uv2:                Vector = (0, 0)
+
+@dataclass
+class Rs3TreePolygon:
     matID:              int = 0
-    convexID:           int = 0
     drawFlags:          int = 0
     vertexCount:        int = 0
     vertexOffset:       int = 0
 
 @dataclass
-class Rs3OctreePolygon:
-    matID:              int = 0
-    drawFlags:          int = 0
-    vertexCount:        int = 0
-    vertexOffset:       int = 0
-
-@dataclass
-class RsPortal:
+class Rs3Portal:
     name:               str = ""
     vertices:           tuple = field(default_factory = tuple)
     cellID1:            int = 0
     cellID2:            int = 0
 
 @dataclass
-class RsCell:
+class Rs3Cell:
     name:               str = ""
     planes:             tuple = field(default_factory = tuple)
     faces:              tuple = field(default_factory = tuple)
     geometry:           tuple = field(default_factory = tuple)
 
 @dataclass
-class RsGeometry:
+class Rs3Geometry:
     vertexCount:        int = 0
     indexCount:         int = 0
     trees:              tuple = field(default_factory = tuple)
 
 @dataclass
-class RsTree:
+class Rs3Tree:
     matCount:           int = 0
     lightmapID:         int = 0
     vertexCount:        int = 0

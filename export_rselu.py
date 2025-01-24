@@ -490,7 +490,7 @@ def exportElu(self, context):
 
             for triangle in blMesh.loop_triangles:
                 indices = tuple(reversed(triangle.vertices))
-                uv1s = tuple(reversed(tuple(uvLayer1.uv[triangle.loops[i]].vector for i in range(3)))) if hasUV1s else tuple(Vector((0, 0)) for _ in range(3))
+                uv1s = tuple(reversed(tuple(uvLayer1.uv[i].vector for i in triangle.loops))) if hasUV1s else tuple(Vector((0, 0)) for _ in range(3))
                 slotID = triangle.material_index
                 slotIDs.add(slotID)
 
@@ -499,7 +499,7 @@ def exportElu(self, context):
 
                 if version >= ELU_5005:
                     normal = triangle.normal
-                    normals = tuple(reversed(tuple(blMesh.loops[triangle.loops[i]].normal for i in range(3)))) if hasCustomNormals else tuple(normal for _ in range(3))
+                    normals = tuple(reversed(tuple(blMesh.loops[i].normal for i in triangle.loops))) if hasCustomNormals else tuple(normal for _ in range(3))
                 else:
                     normal = None
                     normals = None

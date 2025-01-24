@@ -40,7 +40,7 @@ def readRs(self, file, path, state):
     file.seek(0, os.SEEK_SET)
 
     if state.logRsHeaders or state.logRsPortals or state.logRsCells or state.logRsGeometry or state.logRsTrees or state.logRsPolygons or state.logRsVerts:
-        print("===================  Read RS  ===================")
+        print("===================  Read Rs  ===================")
         print()
 
     id = readUInt(file)
@@ -163,7 +163,7 @@ def readRs(self, file, path, state):
                     uv1 = readUV2(file)
                     uv2 = readUV2(file) # lightmap uvs are always garbled for vanilla maps, so we get them from the .lm file instead
 
-                    state.rsOctreeVerts.append(Rs2OctreeVertex(pos, nor, uv1, uv2))
+                    state.rsOctreeVerts.append(Rs2TreeVertex(pos, nor, uv1, uv2))
 
                     if state.logRsVerts:
                         print(f"===== Vertex { v }   ===========================")
@@ -188,7 +188,7 @@ def readRs(self, file, path, state):
                     self.report({ 'WARNING' }, f"GZRS2: Material ID out of bounds, setting to 0 and continuing. { matID }, { len(state.xmlRsMats) }")
                     matID = 0
 
-                state.rsOctreePolygons.append(Rs2OctreePolygon(matID, convexID, drawFlags, vertexCount, vertexOffset))
+                state.rsOctreePolygons.append(Rs2TreePolygon(matID, convexID, drawFlags, vertexCount, vertexOffset))
                 vertexOffset += vertexCount
 
                 if state.logRsPolygons:
@@ -271,7 +271,7 @@ def readRs(self, file, path, state):
             cellID1 = readInt(file)
             cellID2 = readInt(file)
 
-            state.smrPortals.append(RsPortal(name, vertices, cellID1, cellID2))
+            state.smrPortals.append(Rs3Portal(name, vertices, cellID1, cellID2))
 
             if state.logRsPortals:
                 print(f"===== Portal { p }   ===========================")
@@ -313,7 +313,7 @@ def readRs(self, file, path, state):
                     uv1 = readUV2(file)
                     uv2 = readUV2(file)
 
-                    state.rsOctreeVerts.append(Rs3OctreeVertex(pos, nor, col, uv1, uv2))
+                    state.rsOctreeVerts.append(Rs3TreeVertex(pos, nor, col, uv1, uv2))
 
                     if state.logRsVerts:
                         print(f"===== Vertex { v }   ===========================")
@@ -352,7 +352,7 @@ def readRs(self, file, path, state):
                             vertexCount = readInt(file)
                             skipBytes(file, 4) # skip vertex offset, we determine our own TODO: verify?
 
-                            state.rsOctreePolygons.append(Rs3OctreePolygon(matID, drawFlags, vertexCount, vertexOffset))
+                            state.rsOctreePolygons.append(Rs3TreePolygon(matID, drawFlags, vertexCount, vertexOffset))
                             vertexOffset += vertexCount
 
                             if state.logRsPolygons:
@@ -367,7 +367,7 @@ def readRs(self, file, path, state):
 
                     openRS3OctreeNode()
 
-                    trees.append(RsTree(matCount, lightmapID, treeVertexCount))
+                    trees.append(Rs3Tree(matCount, lightmapID, treeVertexCount))
 
                     if state.logRsTrees:
                         print(f"===== Tree { t }     =============================")
@@ -377,7 +377,7 @@ def readRs(self, file, path, state):
                         print(f"Vertex Offset:      { vertexOffset }")
                         print()
 
-                geometry.append(RsGeometry(geoVertexCount, indexCount, tuple(trees)))
+                geometry.append(Rs3Geometry(geoVertexCount, indexCount, tuple(trees)))
 
                 if state.logRsGeometry:
                     print(f"===== Geometry { g } =============================")
@@ -386,7 +386,7 @@ def readRs(self, file, path, state):
                     print(f"Trees:              { len(trees) }")
                     print()
 
-            state.smrCells.append(RsCell(name, planes, faces, tuple(geometry)))
+            state.smrCells.append(Rs3Cell(name, planes, faces, tuple(geometry)))
 
             if state.logRsCells:
                 print(f"===== Cell { c }     =============================")

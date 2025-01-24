@@ -92,7 +92,7 @@ def readBsp(self, file, path, state):
                 uv1 = readUV2(file)
                 uv2 = readUV2(file) # lightmap uvs are always garbled for vanilla maps, so we get them from the .lm file instead
 
-                state.bspTreeVerts.append(Rs2BspVertex(pos, nor, uv1, uv2))
+                state.bspTreeVerts.append(Rs2TreeVertex(pos, nor, uv1, uv2))
 
                 if state.logBspVerts:
                     print(f"===== Vertex { v }   ===========================")
@@ -113,7 +113,7 @@ def readBsp(self, file, path, state):
                 self.report({ 'WARNING' }, f"GZRS2: Material ID out of bounds, setting to 0 and continuing. { matID }, { len(state.xmlRsMats) }")
                 matID = 0
 
-            state.bspTreePolygons.append(Rs2BspPolygon(matID, convexID, drawFlags, vertexCount, vertexOffset))
+            state.bspTreePolygons.append(Rs2TreePolygon(matID, convexID, drawFlags, vertexCount, vertexOffset))
             vertexOffset += vertexCount
 
             if state.logBspPolygons:

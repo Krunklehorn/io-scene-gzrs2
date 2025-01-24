@@ -100,7 +100,7 @@ def exportLm(self, context):
 
         with open(rspath, 'rb') as file:
             if state.logLmHeaders:
-                print("===================  Read RS  ===================")
+                print("===================  Read Rs  ===================")
                 print()
 
             id = readUInt(file)

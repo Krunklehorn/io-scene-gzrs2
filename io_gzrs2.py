@@ -37,27 +37,27 @@ def readString(file, length):               return str(file.read(length), 'utf-8
 def readStringAlt(file, length):            return str(file.read(length).split(b'\x00', 1)[0], 'utf-8').strip()
 
 def readUV2(file):
-    x, y = readVec2(file)
+    uv = Vector(readVec2(file))
 
-    y = -y
+    uv.y = -uv.y
 
-    return Vector((x, y))
+    return uv
 
 def readUV3(file):
-    x, y = readVec2(file)
+    uv = Vector(readVec2(file))
     skipBytes(file, 4)
 
-    y = -y
+    uv.y = -uv.y
 
-    return Vector((x, y))
+    return uv
 
 def readUV4(file):
-    x, y = readVec2(file)
+    uv = Vector(readVec2(file))
     skipBytes(file, 8)
 
-    y = -y
+    uv.y = -uv.y
 
-    return Vector((x, y))
+    return uv
 
 def readCoordinate(file, convertUnits, flipY, *, swizzle = False):
     coord = Vector(readVec3(file))
@@ -75,69 +75,79 @@ def readCoordinate(file, convertUnits, flipY, *, swizzle = False):
 
 def readDirection(file, flipY):
     dir = Vector(readVec3(file))
+    dir.normalize()
 
     if flipY: dir.y = -dir.y
 
-    return dir.normalized()
+    return dir
 
 def readPlane(file, flipY):
-    plane = readVec4(file)
+    plane = Vector(readVec4(file))
+    plane.normalize()
 
-    dir = Vector(plane[:3])
-    dir.normalize()
-    dist = plane[3]
+    if flipY: plane.y = -plane.y
 
-    if flipY: dir.y = -dir.y
+    return plane
 
-    return Vector((dir.x, dir.y, dir.z, dist))
+def readUV2Array(file, length):
+    uvs = tuple(Vector(data) for data in readVec2Array(file, length))
+    for uv in uvs: uv.y = -uv.y
 
-def readUV2Array(file, length): return tuple(readUV2(file) for _ in range(length))
-def readUV3Array(file, length): return tuple(readUV3(file) for _ in range(length))
-def readUV4Array(file, length): return tuple(readUV4(file) for _ in range(length))
+    return uvs
+
+def readUV3Array(file, length):
+    uvs = tuple(Vector(data).to_2d() for data in readVec3Array(file, length))
+    for uv in uvs: uv.y = -uv.y
+
+    return uvs
+
+def readUV4Array(file, length):
+    uvs = tuple(Vector(data).to_2d() for data in readVec4Array(file, length))
+    for uv in uvs: uv.y = -uv.y
+
+    return uvs
 
 def readCoordinateArray(file, length, convertUnits, flipY, *, swizzle = False):
-    result = []
+    coords = tuple(Vector(data) for data in readVec3Array(file, length))
 
-    for coord in readVec3Array(file, length):
-        coord = Vector(coord)
+    # MCPlug2_Ani.cpp
+    if swizzle:
+        for coord in coords:
+            coord.xyz = coord.xzy
 
-        if swizzle:
-            # MCPlug2_Ani.cpp
-            (x, y, z) = coord.to_tuple()
-            coord.y = z
-            coord.z = y
+    if convertUnits:
+        for coord in coords:
+            coord *= 0.01
 
-        if convertUnits: coord *= 0.01
-        if flipY: coord.y = -coord.y
+    if flipY:
+        for coord in coords:
+            coord.y = -coord.y
 
-        result.append(coord)
-
-    return tuple(result)
+    return coords
 
 def readDirectionArray(file, length, flipY):
-    result = []
+    dirs = tuple(Vector(data) for data in readVec3Array(file, length))
 
-    for dir in readVec3Array(file, length):
-        dir = Vector(dir)
-        if flipY: dir.y = -dir.y
+    for dir in dirs:
+        dir.normalize()
 
-        result.append(dir.normalized())
+    if flipY:
+        for dir in dirs:
+            dir.y = -dir.y
 
-    return tuple(result)
+    return dirs
 
 def readPlaneArray(file, length, flipY):
-    result = []
+    planes = tuple(Vector(data) for data in readVec4Array(file, length))
 
-    for plane in readVec4Array(file, length):
-        dir = Vector(plane[:3])
-        dir.normalize()
-        dist = plane[3]
+    for plane in planes:
+        plane.normalize()
 
-        if flipY: dir.y = -dir.y
+    if flipY:
+        for plane in planes:
+            plane.y = -plane.y
 
-        result.append(Vector(dir.x, dir.y, dir.z, dist))
-
-    return tuple(result)
+    return planes
 
 def readTransform(file, convertUnits, flipY, *, swizzle = False):
     mat = Matrix(readVec4Array(file, 4))
@@ -219,89 +229,88 @@ def writeVec2Array(file, data):             file.write(pack(f'<{ 2 * len(data) }
 def writeVec3Array(file, data):             file.write(pack(f'<{ 3 * len(data) }f', *tuple(chain.from_iterable(data))))
 def writeVec4Array(file, data):             file.write(pack(f'<{ 4 * len(data) }f', *tuple(chain.from_iterable(data))))
 def writeString(file, data, length):        file.write(pack(f'<{ length }s', bytes(data, 'utf-8')))
+def writeStringPacked(file, data):          file.write(bytes(data, 'utf-8') + b'\x00')
 
 def writeUV2(file, uv):
     uv = uv.copy()
     uv.y = -uv.y
 
-    writeVec2(file, uv[:2])
+    writeVec2(file, uv.to_2d())
 
 def writeUV3(file, uv):
-    uv = uv.copy()
+    uv = uv.to_3d()
     uv.y = -uv.y
+    uv[2] = 0
 
-    writeVec3(file, (uv[0], uv[1], 0.0))
+    writeVec3(file, uv)
 
 def writeCoordinate(file, coord, convertUnits, flipY):
-    coord = coord.copy()
+    coord = coord.to_3d()
 
     if convertUnits: coord *= 100
     if flipY: coord.y = -coord.y
 
-    writeVec3(file, coord[:3])
+    writeVec3(file, coord)
 
 def writeDirection(file, dir, flipY):
-    dir = dir.copy()
+    dir = dir.to_3d()
+    dir.normalize()
 
     if flipY: dir.y = -dir.y
 
-    writeVec3(file, dir.normalized()[:3])
+    writeVec3(file, dir)
 
 def writePlane(file, plane, flipY):
-    dir = Vector(plane[:3])
-    dir.normalize()
-    dist = plane[3]
+    plane = plane.to_4d()
+    plane.normalize()
 
-    if flipY: dir.y = -dir.y
+    if flipY: plane.y = -plane.y
 
-    writeVec4(file, (dir.x, dir.y, dir.z, dist))
+    writeVec4(file, plane)
 
 def writeUV2Array(file, uvs):
-    uvs = tuple(uv.copy() for uv in uvs)
+    uvs = tuple(uv.to_2d() for uv in uvs)
 
     for uv in uvs:
         uv.y = -uv.y
 
-    writeVec2Array(file, tuple(uv[:2] for uv in uvs))
+    writeVec2Array(file, uvs)
 
 def writeUV3Array(file, uvs):
-    uvs = tuple(uv.copy() for uv in uvs)
+    uvs = tuple(uv.to_3d() for uv in uvs)
 
     for uv in uvs:
         uv.y = -uv.y
+        uv[2] = 0
 
-    writeVec3Array(file, tuple((uv[0], uv[1], 0.0) for uv in uvs))
+    writeVec3Array(file, uvs)
 
 def writeCoordinateArray(file, coords, convertUnits, flipY):
-    coords = tuple(coord.copy() for coord in coords)
+    coords = tuple(coord.to_3d() for coord in coords)
 
     for coord in coords:
         if convertUnits: coord *= 100
         if flipY: coord.y = -coord.y
 
-    writeVec3Array(file, tuple(coord[:3] for coord in coords))
+    writeVec3Array(file, coords)
 
 def writeDirectionArray(file, dirs, flipY):
-    dirs = tuple(dir.copy() for dir in dirs)
+    dirs = tuple(dir.to_3d() for dir in dirs)
 
     for dir in dirs:
+        dir.normalize()
         if flipY: dir.y = -dir.y
 
-    writeVec3Array(file, tuple(dir[:3] for dir in dirs))
+    writeVec3Array(file, dirs)
 
 def writePlaneArray(file, planes, flipY):
-    output = []
+    planes = tuple(plane.to_4d() for plane in planes)
 
     for plane in planes:
-        dir = Vector(plane[:3])
-        dir.normalize()
-        dist = plane[3]
+        plane.normalize()
+        if flipY: plane.y = -plane.y
 
-        if flipY: dir.y = -dir.y
-
-        output.append((dir.x, dir.y, dir.z, dist))
-
-    writeVec4Array(file, tuple(output))
+    writeVec4Array(file, planes)
 
 def writeTransform(file, transform, convertUnits, flipY):
     transform = transform.copy()
@@ -317,6 +326,6 @@ def writeTransform(file, transform, convertUnits, flipY):
 
     writeVec4Array(file, tuple(Matrix.LocRotScale(loc, rot, sca).transposed()))
 
-def writeBounds(file, bounds, convertUnits):
-    writeCoordinate(file, bounds[0], convertUnits, False)
-    writeCoordinate(file, bounds[1], convertUnits, False)
+def writeBounds(file, bbmin, bbmax, convertUnits):
+    writeCoordinate(file, bbmin, convertUnits, False)
+    writeCoordinate(file, bbmax, convertUnits, False)

@@ -936,10 +936,9 @@ def importRS2(self, context):
                 rootExtras.objects.link(blOccObj)
 
         if state.doBounds:
-            def createBBoxEmpty(name, blBBoxObjs, rootBounds):
-                p1, p2 = bounds
-                hdims = (p2 - p1) / 2
-                center = p1 + hdims
+            def createBBoxEmpty(name, bbmin, bbmax, blBBoxObjs, rootBounds):
+                hdims = (bbmax - bbmin) / 2
+                center = (bbmax + bbmin) / 2
 
                 blBBoxObj = bpy.data.objects.new(name, None)
                 blBBoxObj.empty_display_type = 'CUBE'
@@ -952,11 +951,11 @@ def importRS2(self, context):
                 return blBBoxObj
 
             if state.doBsptree:
-                for b, bounds in enumerate(state.bspTreeBounds):
-                    createBBoxEmpty(f"{ state.filename }_BspBBox{ b }", state.blBspBBoxObjs, rootBoundsBsp)
+                for b, (bbmin, bbmax) in enumerate(state.bspTreeBounds):
+                    createBBoxEmpty(f"{ state.filename }_BspBBox{ b }", bbmin, bbmax, state.blBspBBoxObjs, rootBoundsBsp)
 
-            for b, bounds in enumerate(state.rsOctreeBounds):
-                createBBoxEmpty(f"{ state.filename }_OctBBox{ b }", state.blOctBBoxObjs, rootBoundsOct)
+            for b, (bbmin, bbmax) in enumerate(state.rsOctreeBounds):
+                createBBoxEmpty(f"{ state.filename }_OctBBox{ b }", bbmin, bbmax, state.blOctBBoxObjs, rootBoundsOct)
 
         if state.doFog:
             if len(state.xmlFogs) > 1:
