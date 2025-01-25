@@ -93,14 +93,14 @@ class GZRS2_OT_Specify_Path_MRS(Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context):
-        self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
+        self.dataPath = bpy.path.abspath(self.dataPath) if self.dataPath != '' else ''
         self.dataPath = os.path.join(self.dataPath, '')
 
         layout = self.layout
         layout.prop(self, 'dataPath')
 
     def execute(self, context):
-        self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
+        self.dataPath = bpy.path.abspath(self.dataPath) if self.dataPath != '' else ''
         self.dataPath = os.path.join(self.dataPath, '')
 
         if not validateRSDataDirectory(self.dataPath, False):
@@ -133,14 +133,14 @@ class GZRS2_OT_Specify_Path_MRF(Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context):
-        self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
+        self.dataPath = bpy.path.abspath(self.dataPath) if self.dataPath != '' else ''
         self.dataPath = os.path.join(self.dataPath, '')
 
         layout = self.layout
         layout.prop(self, 'dataPath')
 
     def execute(self, context):
-        self.dataPath = os.path.abspath(self.dataPath) if self.dataPath != '' else ''
+        self.dataPath = bpy.path.abspath(self.dataPath) if self.dataPath != '' else ''
         self.dataPath = os.path.join(self.dataPath, '')
 
         if not validateRSDataDirectory(self.dataPath, True):
@@ -3055,10 +3055,10 @@ class GZRS2_PT_Realspace_Material(Panel):
             if      matProps.overrideTexpath:   texpath = os.path.join(matProps.texDir, matProps.texBase)
             elif    texture is None:            texpath = ''
             elif    matProps.writeDirectory:    texpath = makeRS2DataPath(texture.image.filepath)
-            else:                               texpath = makePathExtSingle(os.path.basename(texture.image.filepath))
+            else:                               texpath = makePathExtSingle(bpy.path.basename(texture.image.filepath))
 
             if texpath == False:
-                texBase = os.path.basename(texture.image.filepath)
+                texBase = bpy.path.basename(texture.image.filepath)
                 texDir = 'Invalid'
             else:
                 texBase, texName, _, texDir = decomposePath(texpath)

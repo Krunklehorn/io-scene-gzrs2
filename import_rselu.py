@@ -55,7 +55,7 @@ def importElu(self, context):
             self.report({ 'ERROR' }, f"GZRS2: Must specify a path to search for or select a different texture mode! Verify your path in the plugin's preferences!")
             return { 'CANCELLED' }
 
-        if not matchRSDataDirectory(self, rs2DataDir, os.path.basename(rs2DataDir), False, state):
+        if not matchRSDataDirectory(self, rs2DataDir, bpy.path.basename(rs2DataDir), False, state):
             self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory! Verify your path in the plugin's preferences!")
             return { 'CANCELLED' }
 
@@ -83,7 +83,7 @@ def importElu(self, context):
 
     elupath = self.filepath
     state.directory = os.path.dirname(elupath)
-    state.filename = os.path.basename(elupath).split(os.extsep)[0]
+    state.filename = bpy.path.basename(elupath).split(os.extsep)[0]
 
     for ext in XML_EXTENSIONS:
         eluxmlpath = pathExists(f"{ elupath }{ os.extsep }{ ext }")

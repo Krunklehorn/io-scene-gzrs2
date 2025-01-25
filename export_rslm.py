@@ -72,7 +72,7 @@ def exportLm(self, context):
 
     lmpath = self.filepath
     directory = os.path.dirname(lmpath)
-    basename = os.path.basename(lmpath)
+    basename = bpy.path.basename(lmpath)
     splitname = basename.split(os.extsep)
     filename = splitname[0]
 

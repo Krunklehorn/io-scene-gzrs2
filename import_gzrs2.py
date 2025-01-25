@@ -59,7 +59,7 @@ def importRS2(self, context):
             self.report({ 'ERROR' }, f"GZRS2: Must specify a path to search for or select a different texture mode! Verify your path in the plugin's preferences!")
             return { 'CANCELLED' }
 
-        if not matchRSDataDirectory(self, rs2DataDir, os.path.basename(rs2DataDir), False, state):
+        if not matchRSDataDirectory(self, rs2DataDir, bpy.path.basename(rs2DataDir), False, state):
             self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory! Verify your path in the plugin's preferences!")
             return { 'CANCELLED' }
 
@@ -117,7 +117,7 @@ def importRS2(self, context):
 
     rspath = self.filepath
     state.directory = os.path.dirname(rspath)
-    state.filename = os.path.basename(rspath).split(os.extsep)[0]
+    state.filename = bpy.path.basename(rspath).split(os.extsep)[0]
 
     xmlRs = False
     for ext in XML_EXTENSIONS:
@@ -846,7 +846,7 @@ def importRS2(self, context):
     if doExtras:
         if state.doCollision:
             colName = f"{ state.filename }_Collision"
-            colExt = os.path.basename(colpath).split(os.extsep)[-1].lower()
+            colExt = bpy.path.basename(colpath).split(os.extsep)[-1].lower()
             blColObj = setupColMesh(colName, rootExtras, context, colExt, state)
             blColObj.hide_render = True
 

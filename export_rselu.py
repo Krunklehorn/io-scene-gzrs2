@@ -66,7 +66,7 @@ def exportElu(self, context):
 
     elupath = self.filepath
     directory = os.path.dirname(elupath)
-    basename = os.path.basename(elupath)
+    basename = bpy.path.basename(elupath)
     splitname = basename.split(os.extsep)
     filename = splitname[0]
 
@@ -314,7 +314,7 @@ def exportElu(self, context):
         if      props.overrideTexpath:  texpath = os.path.join(props.texDir, props.texBase)
         elif    texture is None:        texpath = ''
         elif    props.writeDirectory:   texpath = makeRS2DataPath(texture.image.filepath)
-        else:                           texpath = makePathExtSingle(os.path.basename(texture.image.filepath))
+        else:                           texpath = makePathExtSingle(bpy.path.basename(texture.image.filepath))
 
         alphapath = texpath if useopacity else ''
 

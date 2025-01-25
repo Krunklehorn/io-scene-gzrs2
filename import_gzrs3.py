@@ -56,7 +56,7 @@ def importRS3(self, context):
             self.report({ 'ERROR' }, f"GZRS2: Must specify a path to search for or select a different texture mode! Verify your path in the plugin's preferences!")
             return { 'CANCELLED' }
 
-        if not matchRSDataDirectory(self, rs3DataDir, os.path.basename(rs3DataDir), True, state):
+        if not matchRSDataDirectory(self, rs3DataDir, bpy.path.basename(rs3DataDir), True, state):
             self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory! Verify your path in the plugin's preferences!")
             return { 'CANCELLED' }
 
@@ -87,7 +87,7 @@ def importRS3(self, context):
 
     xmlpath = self.filepath
     state.directory = os.path.dirname(xmlpath)
-    splitname = os.path.basename(xmlpath).split(os.extsep)
+    splitname = bpy.path.basename(xmlpath).split(os.extsep)
     state.filename = splitname[0]
     xmltype = splitname[-2].lower()
 
@@ -131,7 +131,7 @@ def importRS3(self, context):
 
             if nodeType in ('SCENEINSTANCE', 'SCENEOBJECT'):
                 if resourcepath.endswith('.elu'):
-                    resourcebase = os.path.basename(resourcepath)
+                    resourcebase = bpy.path.basename(resourcepath)
 
                     childnode = {
                         'type': 'ACTOR',

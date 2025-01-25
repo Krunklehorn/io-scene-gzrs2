@@ -271,7 +271,7 @@ def textureSearchLoadFake(self, texBase, texDir, isRS3, state):
     if texpath is None:
         return False, texBase, True
 
-    texpath = os.path.abspath(texpath)
+    texpath = bpy.path.abspath(texpath)
 
     return True, texpath, False
 
@@ -489,7 +489,7 @@ def decomposePath(path):
     if not path:
         return None, None, None, None
 
-    basename = os.path.basename(path)
+    basename = bpy.path.basename(path)
     filename, extension = os.path.splitext(basename)
     directory = os.path.dirname(path)
 
@@ -1542,7 +1542,7 @@ def createBackupFile(path):
         return
 
     directory = os.path.dirname(path)
-    splitname = os.path.basename(path).split(os.extsep)
+    splitname = bpy.path.basename(path).split(os.extsep)
     filename = splitname[0]
     extension = '.' + splitname[1]
 
@@ -1746,7 +1746,7 @@ def isValidEluImageNode(node):
 
 def makePathExtSingle(path):
     dir = os.path.dirname(path)
-    base = os.path.basename(path)
+    base = bpy.path.basename(path)
     name1, ext1 = os.path.splitext(base)
     name2, ext2 = os.path.splitext(name1)
 

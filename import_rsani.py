@@ -48,7 +48,7 @@ def importAni(self, context):
 
     anipath = self.filepath
     state.directory = os.path.dirname(anipath)
-    state.filename = os.path.basename(anipath).split(os.extsep)[0]
+    state.filename = bpy.path.basename(anipath).split(os.extsep)[0]
 
     with open(anipath, 'rb') as file:
         if readAni(self, file, anipath, state):
