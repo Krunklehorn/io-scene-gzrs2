@@ -425,10 +425,6 @@ def getValidArmature(self, object, state):
     if modObj is None or modObj.type != 'ARMATURE':
         return None, None
 
-    if (state.selectedOnly  and not modObj.select_get() or
-        state.visibleOnly   and not modObj.visible_get()):
-            return None, None
-
     return modObj, modObj.data
 
 def getEluExportConstants():
@@ -1253,7 +1249,7 @@ def countInfoReports(context):
 
     for workspace in bpy.data.workspaces:
         for screen in filter(lambda x: not x.is_temporary, workspace.screens):
-            for area in filter(lambda x: x.ui_type == 'INFO', screen.areas):
+            for area in filter(lambda x: x.type == 'INFO', screen.areas):
                 for region in filter(lambda x: x.type == 'WINDOW', area.regions):
                     with context.temp_override(screen = screen, area = area, region = region):
                         key = (screen, area, region)
@@ -1270,7 +1266,7 @@ def countInfoReports(context):
 def deleteInfoReports(context, counts):
     for workspace in bpy.data.workspaces:
         for screen in filter(lambda x: not x.is_temporary, workspace.screens):
-            for area in filter(lambda x: x.ui_type == 'INFO', screen.areas):
+            for area in filter(lambda x: x.type == 'INFO', screen.areas):
                 for region in filter(lambda x: x.type == 'WINDOW', area.regions):
                     with context.temp_override(screen = screen, area = area, region = region):
                         key = (screen, area, region)
@@ -1798,22 +1794,28 @@ def calcEtcData(worldMat, parentWorld):
 
     return apScale, rotAA, stretchAA, etcMatrix
 
+def getSelectedObjects(context):
+    objects = set()
+
+    for area in filter(lambda x: x.type == 'OUTLINER', context.screen.areas):
+        for region in filter(lambda x: x.type == 'WINDOW', area.regions):
+            with context.temp_override(area = area, region = region):
+                for object in context.selected_ids:
+                    objects.add(object)
+
+                break
+
+    return objects
+
 def getFilteredObjects(context, state):
-    if state.selectedOnly:
-        if state.includeChildren:
-            objects = set()
+    filterMode = state.filterMode
 
-            for object in context.selected_objects:
-                objects.add(object)
+    if      filterMode == 'ALL':        objects = set(context.scene.objects)
+    elif    filterMode == 'SELECTED':   objects = getSelectedObjects(context)
+    elif    filterMode == 'VISIBLE':    objects = set(context.visible_objects)
 
-                for child in object.children_recursive:
-                    objects.add(child)
-        else:
-            objects = context.selected_objects
-    else:
-        objects = context.scene.objects
-
-    objects = tuple(object for object in objects if object.visible_get()) if state.visibleOnly else tuple(objects)
+    if state.includeChildren:
+        objects |= set(child for object in objects for child in object.children_recursive)
 
     return objects
 

@@ -40,10 +40,10 @@ def exportNav(self, context):
     id = NAV_ID
     version = NAV_VERSION
 
-    blObj = context.active_object if context.active_object in context.selected_objects else None
+    blObj = context.active_object if context.active_object in getSelectedObjects(context) else None
 
     if blObj is None or blObj.type != 'MESH':
-        self.report({ 'ERROR' }, f"GZRS2: NAV export requires a selected mesh as a reference!")
+        self.report({ 'ERROR' }, f"GZRS2: NAV export requires an active mesh as a reference!")
         return { 'CANCELLED' }
 
     blObj.update_from_editmode()

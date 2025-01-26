@@ -44,11 +44,10 @@ from .lib_gzrs2 import *
 def exportElu(self, context):
     state = RSELUExportState()
 
-    state.convertUnits = self.convertUnits
-    state.uncapLimits = self.uncapLimits
-    state.selectedOnly = self.selectedOnly
-    state.includeChildren = self.includeChildren and self.selectedOnly
-    state.visibleOnly = self.visibleOnly
+    state.convertUnits      = self.convertUnits
+    state.uncapLimits       = self.uncapLimits
+    state.filterMode        = self.filterMode
+    state.includeChildren   = self.includeChildren and self.filterMode == 'SELECTED'
 
     if self.panelLogging:
         print()

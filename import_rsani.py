@@ -28,11 +28,10 @@ from .lib_gzrs2 import *
 def importAni(self, context):
     state = GZRS2State()
 
-    state.convertUnits = self.convertUnits
-    state.overwriteAction = self.overwriteAction
-    state.selectedOnly = self.selectedOnly
-    state.includeChildren = self.includeChildren and self.selectedOnly
-    state.visibleOnly = self.visibleOnly
+    state.convertUnits      = self.convertUnits
+    state.overwriteAction   = self.overwriteAction
+    state.filterMode        = self.filterMode
+    state.includeChildren   = self.includeChildren and self.filterMode == 'SELECTED'
 
     if self.panelLogging:
         print()
@@ -76,7 +75,7 @@ def importAni(self, context):
 
     if aniType is AniNodeVertex:
         nodeMeshNames = tuple(node.meshName for node in state.aniNodes)
-        blValidObjs = { object.name: object for object in getFilteredObjects(context, state) if object.name in nodeMeshNames and object.type == 'MESH'}
+        blValidObjs = { object.name: object for object in getFilteredObjects(context, state) if object.name in nodeMeshNames and object.type == 'MESH' }
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
 
@@ -253,10 +252,10 @@ def importAni(self, context):
     else:
         blObjs = { object.name: object for object in context.scene.objects }
 
-        blArmatureObj = context.active_object if context.active_object in context.selected_objects else None
+        blArmatureObj = context.active_object if context.active_object in getSelectedObjects(context) else None
 
         if blArmatureObj is None or blArmatureObj.type != 'ARMATURE':
-            self.report({ 'ERROR' }, f"GZRS2: ANI import of type { aniTypePretty } requires a selected armature as a reference!")
+            self.report({ 'ERROR' }, f"GZRS2: ANI import of type { aniTypePretty } requires an active armature as a reference!")
             return { 'CANCELLED' }
 
         blArmatureObjAnimData = blArmatureObj.animation_data or blArmatureObj.animation_data_create()

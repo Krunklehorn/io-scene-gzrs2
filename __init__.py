@@ -1146,22 +1146,17 @@ class ImportRSANI(Operator, ImportHelper):
         default = True
     )
 
-    selectedOnly: BoolProperty(
-        name = 'Selected Only',
-        description = "Limit import to selected objects only. Does not apply to TRANSFORM or BONE types",
-        default = False
+    filterMode: EnumProperty(
+        name = 'Filter Mode',
+        items = (('ALL',        'All',          "Import considers all relevant objects. Only applies to VERTEX and TM type animations"),
+                 ('SELECTED',   'Selected',     "Limit import to selected objects. Only applies to VERTEX and TM type animations"),
+                 ('VISIBLE',    'Visible',      "Limit import to visible objects. Only applies to VERTEX and TM type animations"))
     )
 
     includeChildren: BoolProperty(
         name = 'Include Children',
-        description = "Include children of selected objects.  Does not apply to TRANSFORM or BONE types",
+        description = "Include children of selected objects. Only applies to VERTEX and TM type animations",
         default = True
-    )
-
-    visibleOnly: BoolProperty(
-        name = 'Visible Only',
-        description = "Limit import to visible objects only.  Does not apply to TRANSFORM or BONE types",
-        default = False
     )
 
     logAniHeaders: BoolProperty(
@@ -1202,13 +1197,11 @@ class RSANI_PT_Import_Main(Panel):
 
         layout.prop(operator, 'convertUnits')
         layout.prop(operator, 'overwriteAction')
-        layout.prop(operator, 'selectedOnly')
+        layout.prop(operator, 'filterMode')
 
         column = layout.column()
         column.prop(operator, 'includeChildren')
-        column.enabled = operator.selectedOnly
-
-        layout.prop(operator, 'visibleOnly')
+        column.enabled = operator.filterMode == 'SELECTED'
 
 class RSANI_PT_Import_Logging(Panel):
     bl_space_type = 'FILE_BROWSER'
@@ -1522,22 +1515,17 @@ class ExportRSELU(Operator, ExportHelper):
         default = False
     )
 
-    selectedOnly: BoolProperty(
-        name = 'Selected Only',
-        description = "Limit export to selected objects only",
-        default = False
+    filterMode: EnumProperty(
+        name = 'Filter Mode',
+        items = (('ALL',        'All',          "Exports all relevant objects"),
+                 ('SELECTED',   'Selected',     "Limit export to selected objects"),
+                 ('VISIBLE',    'Visible',      "Limit export to visible objects"))
     )
 
     includeChildren: BoolProperty(
         name = 'Include Children',
         description = "Include children of selected objects",
         default = True
-    )
-
-    visibleOnly: BoolProperty(
-        name = 'Visible Only',
-        description = "Limit export to visible objects only",
-        default = False
     )
 
     logEluHeaders: BoolProperty(
@@ -1596,13 +1584,11 @@ class RSELU_PT_Export_Main(Panel):
 
         layout.prop(operator, 'convertUnits')
         layout.prop(operator, 'uncapLimits')
-        layout.prop(operator, 'selectedOnly')
+        layout.prop(operator, 'filterMode')
 
         column = layout.column()
         column.prop(operator, 'includeChildren')
-        column.enabled = operator.selectedOnly
-
-        layout.prop(operator, 'visibleOnly')
+        column.enabled = operator.filterMode == 'SELECTED'
 
 class RSELU_PT_Export_Logging(Panel):
     bl_space_type = 'FILE_BROWSER'

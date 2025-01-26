@@ -405,9 +405,8 @@ class LmImage:
 class RSELUExportState:
     convertUnits:           bool = False
     uncapLimits:            bool = False
-    selectedOnly:           bool = False
+    filterMode:             str = 'ALL'
     includeChildren:        bool = False
-    visibleOnly:            bool = False
 
     logEluHeaders:          bool = False
     logEluMats:             bool = False
