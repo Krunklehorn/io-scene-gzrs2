@@ -404,6 +404,7 @@ class LmImage:
 @dataclass
 class RSELUExportState:
     convertUnits:           bool = False
+    uncapLimits:            bool = False
     selectedOnly:           bool = False
     includeChildren:        bool = False
     visibleOnly:            bool = False

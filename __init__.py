@@ -1516,6 +1516,12 @@ class ExportRSELU(Operator, ExportHelper):
         default = True
     )
 
+    uncapLimits: BoolProperty(
+        name = 'Uncap Limits',
+        description = "Removes the check for a triangle count limit. (MAX_VERTEX)",
+        default = False
+    )
+
     selectedOnly: BoolProperty(
         name = 'Selected Only',
         description = "Limit export to selected objects only",
@@ -1589,6 +1595,7 @@ class RSELU_PT_Export_Main(Panel):
         layout.enabled = operator.panelMain
 
         layout.prop(operator, 'convertUnits')
+        layout.prop(operator, 'uncapLimits')
         layout.prop(operator, 'selectedOnly')
 
         column = layout.column()

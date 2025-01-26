@@ -124,7 +124,7 @@ ELU_NAME_LENGTH =               40
 ELU_PATH_LENGTH =               256
 ELU_PHYS_KEYS =                 4
 
-ELU_MAX_VERTEX =                1024 * 8
+ELU_MAX_TRIS =                  int(1024 * 8 / 3)
 
 ANI_ID =                        ELU_ID
 

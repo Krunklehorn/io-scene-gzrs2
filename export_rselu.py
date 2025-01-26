@@ -45,6 +45,7 @@ def exportElu(self, context):
     state = RSELUExportState()
 
     state.convertUnits = self.convertUnits
+    state.uncapLimits = self.uncapLimits
     state.selectedOnly = self.selectedOnly
     state.includeChildren = self.includeChildren and self.selectedOnly
     state.visibleOnly = self.visibleOnly
@@ -482,8 +483,8 @@ def exportElu(self, context):
             faces = []
             slotIDs = set()
 
-            if vertexCount >= ELU_MAX_VERTEX or faceCount * 3 >= ELU_MAX_VERTEX:
-                self.report({ 'ERROR' }, f"GZRS2: Mesh with too many vertices, maximum is { ELU_MAX_VERTEX }, must split mesh before continuing: { meshName }")
+            if not state.uncapLimits and faceCount > ELU_MAX_TRIS:
+                self.report({ 'ERROR' }, f"GZRS2: Mesh with too many triangles, maximum is { ELU_MAX_TRIS }, must split mesh before continuing: { meshName }")
                 return { 'CANCELLED' }
 
             hasCustomNormals = blMesh.has_custom_normals
