@@ -76,6 +76,8 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 <!-- -->
 
+* Requires mesh objects be of type 'Prop'
+* Requires empties be of type 'Attachment'
 * Requires valid materials in each slot, if present (see below)
 * Requires bones be contained in an Armature object
 * Requires Armatures be linked using an Armature modifier (not parented!)

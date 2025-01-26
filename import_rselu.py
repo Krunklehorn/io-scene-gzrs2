@@ -125,11 +125,17 @@ def importElu(self, context):
             state.gzrsValidBones.add(meshName)
 
         if eluMesh.isDummy:
+            _, attachmentFilename, _, _ = decomposePath(eluMesh.elupath)
+
             blDummyObj = bpy.data.objects.new(meshName, None)
 
             blDummyObj.empty_display_type = 'ARROWS'
             blDummyObj.empty_display_size = 0.1
             blDummyObj.matrix_world = eluMesh.transform
+
+            props = blDummyObj.gzrs2
+            props.dummyType = 'ATTACHMENT'
+            props.attachmentFilename = attachmentFilename
 
             rootMesh.objects.link(blDummyObj)
 

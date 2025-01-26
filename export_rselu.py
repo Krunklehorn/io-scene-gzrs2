@@ -102,8 +102,7 @@ def exportElu(self, context):
         objProps    = object.gzrs2          if object.type == 'EMPTY'   else None
         meshProps   = object.data.gzrs2     if object.type == 'MESH'    else None
 
-        # TODO: Need a new dummy type to specify a prop association
-        validEmpty  = objProps is not None      and objProps.dummyType == 'NONE'
+        validEmpty  = objProps is not None      and objProps.dummyType == 'ATTACHMENT'
         validMesh   = meshProps is not None     and meshProps.meshType == 'PROP'
 
         if validEmpty or validMesh:
@@ -136,7 +135,7 @@ def exportElu(self, context):
             invalidCount += 1
 
     if not foundValid:
-        self.report({ 'ERROR' }, "GZRS2: ELU export requires objects of type EMPTY or MESH!")
+        self.report({ 'ERROR' }, "GZRS2: ELU export requires empties of type 'Attachment' or mesh objects of type 'Prop'!")
         return { 'CANCELLED' }
 
     if invalidCount > 0:

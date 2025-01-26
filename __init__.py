@@ -2037,7 +2037,8 @@ class GZRS2ObjectProperties(PropertyGroup):
         ('SOUND',       'Sound',        "Ambient sound, based on proximity to a sphere or axis-aligned bounding box center"),
         ('ITEM',        'Item',         "Health, armor, ammo etc"),
         ('SMOKE',       'Smoke',        "Smoke particle generator"),
-        ('OCCLUSION',   'Occlusion',    "Occlusion plane, not visible, used to improve performance by skipping world and detail geometry")
+        ('OCCLUSION',   'Occlusion',    "Occlusion plane, not visible, used to improve performance by skipping world and detail geometry"),
+        ('ATTACHMENT',  'Attachment',   "Attachment point for weapon, equipment, particle effect, etc")
     )
 
     spawnTypeEnumItems = SPAWN_TYPE_DATA
@@ -2302,6 +2303,11 @@ class GZRS2ObjectProperties(PropertyGroup):
         set = onSetSmokeToggleMinTime
     )
 
+    attachmentFilename: StringProperty(
+        name = 'Filename',
+        default = '',
+        subtype = 'FILE_NAME'
+    )
 
     @classmethod
     def register(cls):
@@ -2367,6 +2373,8 @@ class GZRS2_PT_Realspace_Object(Panel):
                 column.prop(props, 'smokeToggleMinTime')
         elif props.dummyType == 'OCCLUSION':
             column.label(text = "Tip: Keep size at 1m, use scale instead.")
+        elif props.dummyType == 'ATTACHMENT':
+            column.prop(props, 'attachmentFilename')
 
 class GZRS2MeshProperties(PropertyGroup):
     def onUpdate(self, context):
