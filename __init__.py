@@ -356,6 +356,61 @@ class GZRS2_OT_Recalculate_Lights_Fog(Operator):
 
         return { 'FINISHED' }
 
+class GZRS2_OT_Prepare_Bake(Operator):
+    bl_idname = 'gzrs2.prepare_bake'
+    bl_label = "Prepare for Bake"
+    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_description = "Applies the current world lightmap to all world materials and sets it as the active bake target"
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        world = ensureWorld(context)
+        worldProps = world.gzrs2
+
+        blWorldObjs = tuple(blObj for blObj in context.scene.objects if blObj.type == 'MESH' and blObj.data.gzrs2.meshType == 'WORLD')
+
+        if checkMeshesEmptySlots(blWorldObjs, self):
+            return { 'CANCELLED' }
+
+        blWorldMats = set(matSlot.material for blWorldObj in blWorldObjs for matSlot in blWorldObj.material_slots)
+
+        for blWorldMat in blWorldMats:
+            tree, links, nodes = getMatTreeLinksNodes(blWorldMat)
+
+            shader, output, info, transparent, mix, clip, add, lightmix = getRelevantShaderNodes(nodes)
+            shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
+
+            if any((shaderValid         == False,   infoValid   == False,
+                    transparentValid    == False,   mixValid    == False,
+                    clipValid           == False,   addValid    == False,
+                    lightmixValid       == False)):
+                self.report({ 'ERROR' }, f"GZRS2: Bake requires all world materials conform to a preset! { blWorldMat.name }")
+                return { 'CANCELLED' }
+
+            nodes.active = None
+
+            for node in nodes:
+                node.select = False
+
+            _, _, _, lightmap = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid, validOnly = False)
+
+            if lightmap is not None:
+                tree.nodes.active = lightmap
+                lightmap.image = worldProps.lightmapImage
+                lightmap.select = True
+
+        group = ensureLmMixGroup()
+        nodes = group.nodes
+
+        for node in nodes:
+            if node.type == 'MIX_RGB' and node.label.lower() == 'lightmap':
+                node.inputs[0].default_value = 0.0
+
+        return { 'FINISHED' }
+
 class GZRS2Preferences(AddonPreferences):
     bl_idname = __package__
 
@@ -1749,8 +1804,8 @@ class ExportRSLM(Operator, ExportHelper):
     )
 
     mod4Fix: BoolProperty(
-        name = 'MOD4 Fix',
-        description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag. Disable if re-exporting an existing lightmap",
+        name = 'MOD4',
+        description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag. Disable if re-exporting a vanilla lightmap",
         default = True
     )
 
@@ -1815,6 +1870,15 @@ class RSLM_PT_Export_Logging(Panel):
         layout.prop(operator, 'logLmHeaders')
 
 class GZRS2WorldProperties(PropertyGroup):
+    def onPollLightmapImage(self, object):
+        return object.type == 'IMAGE' and object.source in ('FILE', 'GENERATED') and not object.is_multiview
+
+    lightmapImage: PointerProperty(
+        type = bpy.types.Image,
+        name = 'Image',
+        poll = onPollLightmapImage
+    )
+
     lightIntensity: FloatProperty(
         name = 'Light Intensity',
         default = 1.0,
@@ -1926,6 +1990,7 @@ class GZRS2_PT_Realspace_World(Panel):
         layout.use_property_split = True
 
         worldProps = ensureWorld(context).gzrs2
+        lightmapImage = worldProps.lightmapImage
 
         box = layout.box()
         column = box.column()
@@ -1946,11 +2011,40 @@ class GZRS2_PT_Realspace_World(Panel):
         column.prop(worldProps, 'fogMax')
         column.enabled = worldProps.fogEnable
 
+        box = layout.box()
+        column = box.column()
+        column.label(text = "Lightmap")
+        column.prop(worldProps, 'lightmapImage')
+
+        if lightmapImage is not None:
+            imageWidth, imageHeight = lightmapImage.size
+            mipCount = math.log2(imageWidth)
+
+            if imageWidth == 0 or imageWidth != imageHeight or not mipCount.is_integer():
+                row = column.row()
+                row.alert = True
+                row.label(text = "Image must be a square, power of two texture!")
+            else:
+                row = column.row()
+                row.label(text = "Size:")
+                row.label(text = str(imageWidth))
+                row = column.row()
+                row.label(text = "Mip Count:")
+                row.label(text = str(int(mipCount)))
+        else:
+            row = column.row()
+            row.label(text = "Size:")
+            row.label(text = '')
+            row = column.row()
+            row.label(text = "Mip Count:")
+            row.label(text = '')
+
         column = layout.column()
         row = column.row()
         row.operator(GZRS2_OT_Toggle_Lightmap_Mix.bl_idname, text = "Lightmap Mix")
         row.operator(GZRS2_OT_Toggle_Lightmap_Mod4.bl_idname, text = "Lightmap Mod4")
         column.operator(GZRS2_OT_Recalculate_Lights_Fog.bl_idname, text = "Recalculate Lights & Fog")
+        column.operator(GZRS2_OT_Prepare_Bake.bl_idname, text = "Prepare for Bake")
 
         box = layout.box()
         column = box.column()
@@ -2629,6 +2723,7 @@ class GZRS2_PT_Realspace_Light(Panel):
         row.operator(GZRS2_OT_Toggle_Lightmap_Mix.bl_idname, text = "Lightmap Mix")
         row.operator(GZRS2_OT_Toggle_Lightmap_Mod4.bl_idname, text = "Lightmap Mod4")
         column.operator(GZRS2_OT_Recalculate_Lights_Fog.bl_idname, text = "Recalculate Lights & Fog")
+        column.operator(GZRS2_OT_Prepare_Bake.bl_idname, text = "Prepare for Bake")
 
 class GZRS2CameraProperties(PropertyGroup):
     cameraIndex: IntProperty(
@@ -2943,7 +3038,7 @@ class GZRS2_PT_Realspace_Material(Panel):
         swizzledNames,      hasSwizzled     = checkSubMatsSwizzles(subIDsByMat)
         collidingNames,     hasColliding    = checkSubMatsCollisions(subIDsByMat)
 
-        # Associate & sort materials
+        # Associate materials
         blPropMatGraph = generateMatGraph(blBaseMats, blSubMats, subIDsByMat, uniqueMatLists)
 
         # Report errors
@@ -3049,8 +3144,7 @@ class GZRS2_PT_Realspace_Material(Panel):
         shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
 
         if shaderValid:
-            # TODO: Display lightmap information
-            texture, emission, alpha, lightmap = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
+            texture, emission, alpha, _ = getLinkedImageNodes(shader, shaderValid, links, clip, clipValid, lightmix, lightmixValid)
             twosided, additive, alphatest, usealphatest, useopacity = getMatFlagsRender(blMat, clip, addValid, clipValid, emission, alpha)
 
             if      matProps.overrideTexpath:   texpath = os.path.join(matProps.texDir, matProps.texBase)
@@ -3171,6 +3265,7 @@ classes = (
     GZRS2_OT_Toggle_Lightmap_Mix,
     GZRS2_OT_Toggle_Lightmap_Mod4,
     GZRS2_OT_Recalculate_Lights_Fog,
+    GZRS2_OT_Prepare_Bake,
     GZRS2Preferences,
     ImportGZRS2,
     GZRS2_PT_Import_Main,

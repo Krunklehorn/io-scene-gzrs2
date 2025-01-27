@@ -56,8 +56,9 @@ def writeBMPHeader(file, imageSize, bmpSize):
 def exportLm(self, context):
     state = RSLMExportState()
 
-    state.doUVs = self.doUVs
-    state.lmVersion4 = self.lmVersion4
+    state.doUVs         = self.doUVs
+    state.lmVersion4    = self.lmVersion4
+    state.mod4Fix       = self.mod4Fix and not self.lmVersion4
 
     if self.panelLogging:
         print()
@@ -141,63 +142,47 @@ def exportLm(self, context):
 
     imageDatas = []
 
-    imageTarget = f"{ filename }_LmImage"
-    atlasTarget = f"{ filename }_LmAtlas"
-    found = False
+    worldProps = ensureWorld(context).gzrs2
+    lightmapImage = worldProps.lightmapImage
 
-    for image in bpy.data.images:
-        imageName = image.name
-
-        if image.size[0] == 0 or image.size[0] != image.size[1]:
-            continue
-
-        mipCount = math.log2(image.size[0])
-
-        if not mipCount.is_integer():
-            continue
-
-        mipCount = int(mipCount)
-
-        # Never atlas, we increase the lightmap resolution instead
-        # if imageName == imageTarget:
-        if True:
-            imageSize = image.size[0]
-            floats = image.pixels[:]
-
-            imageDatas.append(packLmImageData(self, imageSize, floats))
-
-            found = True
-            break
-        '''
-        elif imageName.startswith(atlasTarget):
-            numCells = imageName[-1]
-
-            if not numCells.isdigit():
-                continue
-
-            numCells = int(numCells)
-
-            if numCells < 2:
-                continue
-
-            cellSpan = int(math.sqrt(nextSquare(numCells)))
-            atlasSize = image.size[0]
-            imageSize = atlasSize // cellSpan
-            floats = image.pixels[:]
-
-            for c in range(numCells):
-                cx = c % cellSpan
-                cy = cellSpan - 1 - c // cellSpan
-
-                imageDatas.append(packLmImageData(self, imageSize, floats, True, atlasSize, cx, cy))
-
-            found = True
-            break
-        '''
-
-    if not found:
-        self.report({ 'ERROR' }, "GZRS2: No valid lightmap found! Image must be a square, power of two texture and the name must match \'<mapname>_LmImage\' or \'<mapname>_LmAtlas<# of cells>\'")
+    if lightmapImage is None:
+        self.report({ 'ERROR' }, "GZRS2: No lightmap assigned! Check the World tab!")
         return { 'CANCELLED' }
+
+    imageName = lightmapImage.name
+    imageWidth, imageHeight = lightmapImage.size
+    mipCount = math.log2(imageWidth)
+
+    if imageWidth == 0 or imageWidth != imageHeight or not mipCount.is_integer():
+        self.report({ 'ERROR' }, "GZRS2: Lightmap is not valid! Image must be a square, power of two texture!")
+        return { 'CANCELLED' }
+
+    mipCount = int(mipCount)
+
+    # Never atlas, we increase the lightmap resolution instead
+    # numCells = worldProps.lightmapNumCells
+    numCells = 1
+
+    if numCells < 2:
+        imageSize = imageWidth
+        floats = image.pixels[:]
+
+        imageDatas.append(packLmImageData(self, imageSize, floats, state))
+    '''
+    else:
+        cellSpan = int(math.sqrt(nextSquare(numCells)))
+        atlasSize = imageWidth
+        imageSize = atlasSize // cellSpan
+        floats = image.pixels[:]
+
+        for c in range(numCells):
+            cx = c % cellSpan
+            cy = cellSpan - 1 - c // cellSpan
+
+            imageDatas.append(packLmImageData(self, imageSize, floats, state, fromAtlas = True, atlasSize = atlasSize, cx = cx, cy = cy))
+    '''
+
+    imageDatas = tuple(imageDatas)
 
     # Read LM
     createBackupFile(lmpath)

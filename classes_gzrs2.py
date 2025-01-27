@@ -484,6 +484,7 @@ class RSNAVExportState:
 class RSLMExportState:
     doUVs:              bool = False
     lmVersion4:         bool = False
+    mod4Fix:            bool = False
 
     logLmHeaders:       bool = False
     logLmImages:        bool = False

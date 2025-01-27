@@ -36,6 +36,6 @@ def importLm(self, context):
         if readLm(self, file, lmpath, state):
             return { 'CANCELLED' }
 
-    unpackLmImages(state)
+    unpackLmImages(context, state)
 
     return { 'FINISHED' }

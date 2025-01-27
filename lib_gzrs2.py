@@ -1827,7 +1827,7 @@ def nextSquare(x):
 
     return int(result ** 2)
 
-def unpackLmImages(state):
+def unpackLmImages(context, state):
     numCells = len(state.lmImages)
 
     if numCells == 0:
@@ -1865,9 +1865,12 @@ def unpackLmImages(state):
 
     blLmImage.pack()
 
+    worldProps = ensureWorld(context).gzrs2
+    worldProps.lightmapImage = blLmImage
+
     state.blLmImage = blLmImage
 
-def packLmImageData(self, imageSize, floats, fromAtlas = False, atlasSize = 0, cx = 0, cy = 0):
+def packLmImageData(self, imageSize, floats, state, *, fromAtlas = False, atlasSize = 0, cx = 0, cy = 0):
     sopath = os.path.join(os.path.dirname(__file__), 'clib_gzrs2', 'clib_gzrs2.x86_64-w64-mingw32.so')
     success = True
 
@@ -1882,15 +1885,15 @@ def packLmImageData(self, imageSize, floats, fromAtlas = False, atlasSize = 0, c
         clib.packLmImageData.argtypes = [c_uint, py_object, c_bool, c_bool, c_bool, c_uint, c_uint, c_uint]
 
         try:
-            return clib.packLmImageData(imageSize, floats, self.lmVersion4, self.mod4Fix, fromAtlas, atlasSize, cx, cy)
+            return clib.packLmImageData(imageSize, floats, state.lmVersion4, state.mod4Fix, fromAtlas, atlasSize, cx, cy)
         except (ValueError, ctypes.ArgumentError) as ex:
             print(f"GZRS2: Failed to call C function, defaulting to pure Python: { ex }")
 
     pixelCount = imageSize ** 2
 
-    if not self.lmVersion4:
+    if not state.lmVersion4:
         imageData = bytearray(pixelCount * 3)
-        exportRange = (255 / 4) if self.mod4Fix else 255
+        exportRange = (255 / 4) if state.mod4Fix else 255
 
         if not fromAtlas:
             for p in range(pixelCount):

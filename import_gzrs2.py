@@ -258,7 +258,7 @@ def importRS2(self, context):
             state.doLightmap = False
             self.report({ 'INFO' }, "GZRS2: Lightmaps requested but .lm file not found, no lightmaps to generate.")
         else:
-            unpackLmImages(state)
+            unpackLmImages(context, state)
 
     if state.doProps:
         for p, prop in enumerate(state.xmlObjs):
