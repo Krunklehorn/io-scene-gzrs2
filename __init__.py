@@ -372,10 +372,25 @@ class GZRS2_OT_Prepare_Bake(Operator):
 
         blWorldObjs = tuple(blObj for blObj in context.scene.objects if blObj.type == 'MESH' and blObj.data.gzrs2.meshType == 'WORLD')
 
+        if len(blWorldObjs) == 0:
+            self.report({ 'ERROR' }, f"GZRS2: Bake requires at least one world mesh! Set mesh types in the Object Data tab!")
+            return { 'CANCELLED' }
+
+        for blWorldObj in blWorldObjs:
+            if len(blWorldObj.data.uv_layers) < 2:
+                self.report({ 'ERROR' }, f"GZRS2: Bake requires a second UV channel in all world meshes! { blWorldObj.name }")
+                return { 'CANCELLED' }
+
+            blWorldObj.data.uv_layers.active_index = 1
+
         if checkMeshesEmptySlots(blWorldObjs, self):
             return { 'CANCELLED' }
 
         blWorldMats = set(matSlot.material for blWorldObj in blWorldObjs for matSlot in blWorldObj.material_slots)
+
+        if len(blWorldMats) == 0:
+            self.report({ 'ERROR' }, f"GZRS2: Bake requires at least one world material!")
+            return { 'CANCELLED' }
 
         for blWorldMat in blWorldMats:
             tree, links, nodes = getMatTreeLinksNodes(blWorldMat)
@@ -383,10 +398,11 @@ class GZRS2_OT_Prepare_Bake(Operator):
             shader, output, info, transparent, mix, clip, add, lightmix = getRelevantShaderNodes(nodes)
             shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
 
-            if any((shaderValid         == False,   infoValid   == False,
-                    transparentValid    == False,   mixValid    == False,
-                    clipValid           == False,   addValid    == False,
-                    lightmixValid       == False)):
+            if any((not shaderValid,        not infoValid,
+                    not transparentValid,   not mixValid,
+                    clipValid       == False,
+                    addValid        == False,
+                    lightmixValid   == False)):
                 self.report({ 'ERROR' }, f"GZRS2: Bake requires all world materials conform to a preset! { blWorldMat.name }")
                 return { 'CANCELLED' }
 
