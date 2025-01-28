@@ -14,45 +14,6 @@ from .classes_gzrs2 import *
 from .io_gzrs2 import *
 from .lib_gzrs2 import *
 
-def writeDDSHeader(file, imageSize, pixelCount, ddsSize):
-    writeBytes(file, b'DDS ')
-    writeUInt(file, ddsSize)
-    # writeUInt(file, DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_MIPMAPCOUNT | DDSD_LINEARSIZE)
-    writeUInt(file, DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_LINEARSIZE)
-    writeInt(file, imageSize)
-    writeInt(file, imageSize)
-    writeUInt(file, pixelCount // 2)
-    writeUInt(file, 0)
-    writeUInt(file, 0) # writeUInt(file, mipCount)
-    for _ in range(11):
-        writeUInt(file, 0)
-
-    writeUInt(file, 32)
-    writeUInt(file, DDPF_FOURCC)
-    writeBytes(file, b'DXT1')
-    for _ in range(5):
-        writeUInt(file, 0)
-
-    # writeUInt(file, DDSCAPS_COMPLEX | DDSCAPS_TEXTURE | DDSCAPS_MIPMAP)
-    writeUInt(file, DDSCAPS_TEXTURE)
-    for _ in range(4):
-        writeUInt(file, 0)
-
-def writeBMPHeader(file, imageSize, bmpSize):
-    writeBytes(file, b'BM')
-    writeUInt(file, bmpSize)
-    writeShort(file, 0)
-    writeShort(file, 0)
-    writeUInt(file, 14 + 40)
-
-    writeUInt(file, 40)
-    writeUInt(file, imageSize)
-    writeUInt(file, imageSize)
-    writeShort(file, 1)
-    writeShort(file, 24)
-    for _ in range(6):
-        writeUInt(file, 0)
-
 def exportLm(self, context):
     state = RSLMExportState()
 
@@ -140,49 +101,18 @@ def exportLm(self, context):
                 self.report({ 'ERROR' }, f"GZRS2: RS file must be for GunZ 1! { hex(id) }, { hex(version) }")
                 return { 'CANCELLED' }
 
-    imageDatas = []
-
+    # Gather lightmap data
     worldProps = ensureWorld(context).gzrs2
     lightmapImage = worldProps.lightmapImage
-
-    if lightmapImage is None:
-        self.report({ 'ERROR' }, "GZRS2: No lightmap assigned! Check the World tab!")
-        return { 'CANCELLED' }
-
-    imageName = lightmapImage.name
-    imageWidth, imageHeight = lightmapImage.size
-    mipCount = math.log2(imageWidth)
-
-    if imageWidth == 0 or imageWidth != imageHeight or not mipCount.is_integer():
-        self.report({ 'ERROR' }, "GZRS2: Lightmap is not valid! Image must be a square, power of two texture!")
-        return { 'CANCELLED' }
-
-    mipCount = int(mipCount)
-
     # Never atlas, we increase the lightmap resolution instead
     # numCells = worldProps.lightmapNumCells
     numCells = 1
 
-    if numCells < 2:
-        imageSize = imageWidth
-        floats = image.pixels[:]
+    imageDatas, imageSizes = generateLightmapData(self, lightmapImage, numCells, state)
+    imageCount = len(imageDatas)
 
-        imageDatas.append(packLmImageData(self, imageSize, floats, state))
-    '''
-    else:
-        cellSpan = int(math.sqrt(nextSquare(numCells)))
-        atlasSize = imageWidth
-        imageSize = atlasSize // cellSpan
-        floats = image.pixels[:]
-
-        for c in range(numCells):
-            cx = c % cellSpan
-            cy = cellSpan - 1 - c // cellSpan
-
-            imageDatas.append(packLmImageData(self, imageSize, floats, state, fromAtlas = True, atlasSize = atlasSize, cx = cx, cy = cy))
-    '''
-
-    imageDatas = tuple(imageDatas)
+    if not imageDatas or not imageSizes:
+        return { 'CANCELLED' }
 
     # Read LM
     createBackupFile(lmpath)
@@ -196,7 +126,6 @@ def exportLm(self, context):
         version = readUInt(file)
         lmCPolygonCount = readUInt(file) # CONVEX polygon count!
         lmONodeCount = readUInt(file) # OCTREE node count!
-        imageCount = readUInt(file)
 
         if id != LM_ID or version not in (LM_VERSION, LM_VERSION_EXT):
             self.report({ 'ERROR' }, f"GZRS2: LM header invalid! { hex(id) }, { hex(version) }")
@@ -207,7 +136,7 @@ def exportLm(self, context):
                 self.report({ 'ERROR' }, f"GZRS2: LM topology does not match! { lmCPolygonCount }, { state.rsCPolygonCount }, { lmONodeCount }, { state.rsONodeCount }")
                 return { 'CANCELLED' }
 
-        for _ in range(imageCount):
+        for _ in range(readUInt(file)):
             skipBytes(file, readUInt(file)) # skip image data
 
         if state.doUVs:
@@ -223,42 +152,46 @@ def exportLm(self, context):
             print()
 
         writeUInt(file, LM_VERSION_EXT if state.lmVersion4 else LM_VERSION)
-        skipBytes(file, 4 + 4) # skip octree polygon count and node count
-        writeUInt(file, len(imageDatas))
+        skipBytes(file, 4 + 4) # skip convex polygon count and octree node count
+        writeUInt(file, imageCount)
 
         if state.logLmHeaders:
             print(f"Path:               { lmpath }")
             print(f"ID:                 { hex(id) }")
             print(f"Version:            { hex(version) }")
-            print(f"Image Count:        { len(imageDatas) }")
+            print(f"Image Count:        { imageCount }")
             print()
 
-        pixelCount = imageSize ** 2
+        for i in range(imageCount):
+            imageData = imageDatas[i]
+            imageSize = imageSizes[i]
 
-        ddsSize = 76 + 32 + 20 + pixelCount // 2
-        bmpSize = 14 + 40 + pixelCount * 3
+            pixelCount = imageSize ** 2
 
-        for d, imageData in enumerate(imageDatas):
-            writeUInt(file, ddsSize if state.lmVersion4 else bmpSize)
-
-            if state.lmVersion4:    writeDDSHeader(file, imageSize, pixelCount, bmpSize)
-            else:                   writeBMPHeader(file, imageSize, bmpSize)
+            if state.lmVersion4:
+                ddsSize = 76 + 32 + 20 + pixelCount // 2
+                writeUInt(file, ddsSize)
+                writeDDSHeader(file, imageSize, pixelCount, ddsSize)
+            else:
+                bmpSize = 14 + 40 + pixelCount * 3
+                writeUInt(file, bmpSize)
+                writeBMPHeader(file, imageSize, bmpSize)
 
             file.write(imageData)
 
+        # Never atlas, we increase the lightmap resolution instead
         if state.doUVs:
-            # TODO: During .rs export we can determine our own polygon order, otherwise we have to infer it
-            # newPolyIDs = bytearray(state.rsOPolygonCount * 4)
-            newIndices = bytearray(state.rsOPolygonCount * 4)
+            # newPolyOrder = bytearray(state.rsOPolygonCount * 4)
+            newLmIDs = bytearray(state.rsOPolygonCount * 4)
             newUVs = bytearray(state.rsOVertexCount * 2 * 4)
 
-            # newPolyIDInts = memoryview(newPolyIDs).cast('I')
-            newIndexInts = memoryview(newIndices).cast('I')
+            # newPolyOrderInts = memoryview(newPolyOrder).cast('I')
+            newLmIDInts = memoryview(newLmIDs).cast('I')
             newUVFloats = memoryview(newUVs).cast('f')
 
             for p in range(state.rsOPolygonCount):
-                # newPolyIDInts[p] = p
-                newIndexInts[p] = 0 # Never atlas, we increase the lightmap resolution instead
+                # newPolyOrderInts[p] = p
+                newLmIDInts[p] = 0
 
             for v in range(state.rsOVertexCount):
                 uv2 = uvLayer2.data[v].uv
@@ -266,12 +199,13 @@ def exportLm(self, context):
                 newUVFloats[v * 2 + 0] = uv2.x
                 newUVFloats[v * 2 + 1] = 1 - uv2.y
 
-            # newPolyIDInts.release()
-            newIndexInts.release()
+            # newPolyOrderInts.release()
+            newLmIDInts.release()
             newUVFloats.release()
 
-            file.write(lmDataBackup) # file.write(newPolyIDs)
-            file.write(newIndices)
+            # file.write(newPolyOrder)
+            file.write(lmDataBackup)
+            file.write(newLmIDs)
             file.write(newUVs)
         else:
             file.write(lmDataBackup)
@@ -279,12 +213,6 @@ def exportLm(self, context):
         file.truncate()
 
     # Dump Images
-    for d, imageData in enumerate(imageDatas):
-        imgpath = os.path.join(directory, filename) + f"_LmImage{ d }" + ('.dds' if state.lmVersion4 else '.bmp')
-        with open(imgpath, 'wb') as file:
-            if state.lmVersion4:    writeDDSHeader(file, imageSize, pixelCount, ddsSize)
-            else:                   writeBMPHeader(file, imageSize, bmpSize)
-
-            file.write(imageData)
+    dumpImageData(imageDatas, imageSizes, imageCount, directory, filename, state)
 
     return { 'FINISHED' }

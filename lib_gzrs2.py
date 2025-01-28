@@ -7,6 +7,7 @@ from mathutils import Vector, Matrix, Euler
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
+from .io_gzrs2 import *
 
 def getOrNone(list, i):
     try:        return list[i]
@@ -1123,7 +1124,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
 
 # TODO: Improve performance of convex id matching
 '''
-def setupRsConvexMesh(self, _, blMesh, state, *, allowLightmapUVs = True):
+def setupRsConvexMesh(self, _, blMesh, _, _, state, *, allowLightmapUVs = True):
     meshVerts = []
     meshNorms = []
     meshFaces = []
@@ -2038,6 +2039,110 @@ def rgb565ToVector(rgb):
     b = ((rgb >>  0) & 0b11111 ) / 31.0
 
     return Vector((r, g, b))
+
+def writeDDSHeader(file, imageSize, pixelCount, ddsSize):
+    writeBytes(file, b'DDS ')
+    writeUInt(file, ddsSize)
+    # writeUInt(file, DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_MIPMAPCOUNT | DDSD_LINEARSIZE)
+    writeUInt(file, DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_LINEARSIZE)
+    writeInt(file, imageSize)
+    writeInt(file, imageSize)
+    writeUInt(file, pixelCount // 2)
+    writeUInt(file, 0)
+    writeUInt(file, 0) # writeUInt(file, mipCount)
+    for _ in range(11):
+        writeUInt(file, 0)
+
+    writeUInt(file, 32)
+    writeUInt(file, DDPF_FOURCC)
+    writeBytes(file, b'DXT1')
+    for _ in range(5):
+        writeUInt(file, 0)
+
+    # writeUInt(file, DDSCAPS_COMPLEX | DDSCAPS_TEXTURE | DDSCAPS_MIPMAP)
+    writeUInt(file, DDSCAPS_TEXTURE)
+    for _ in range(4):
+        writeUInt(file, 0)
+
+def writeBMPHeader(file, imageSize, bmpSize):
+    writeBytes(file, b'BM')
+    writeUInt(file, bmpSize)
+    writeShort(file, 0)
+    writeShort(file, 0)
+    writeUInt(file, 14 + 40)
+
+    writeUInt(file, 40)
+    writeUInt(file, imageSize)
+    writeUInt(file, imageSize)
+    writeShort(file, 1)
+    writeShort(file, 24)
+    for _ in range(6):
+        writeUInt(file, 0)
+
+def generateLightmapData(self, image, numCells, state):
+    if image is None:
+        self.report({ 'ERROR' }, "GZRS2: No lightmap assigned! Check the World tab!")
+        return False, False
+
+    imageWidth, imageHeight = image.size
+    mipCount = math.log2(imageWidth)
+
+    if imageWidth == 0 or imageWidth != imageHeight or not mipCount.is_integer():
+        self.report({ 'ERROR' }, f"GZRS2: Lightmap is not valid! Image must be a square, power of two texture! { image.name }")
+        return False, False
+
+    mipCount = int(mipCount)
+
+    # Never atlas, we increase the lightmap resolution instead
+    imageDatas = []
+    imageSizes = []
+
+    if numCells < 2:
+        imageSize = imageWidth
+        floats = image.pixels[:]
+
+        imageDatas.append(packLmImageData(self, imageSize, floats, state))
+        imageSizes.append(imageSize)
+    '''
+    else:
+        cellSpan = int(math.sqrt(nextSquare(numCells)))
+        atlasSize = imageWidth
+        imageSize = atlasSize // cellSpan
+        floats = image.pixels[:]
+
+        for c in range(numCells):
+            cx = c % cellSpan
+            cy = cellSpan - 1 - c // cellSpan
+
+            imageDatas.append(packLmImageData(self, imageSize, floats, state, fromAtlas = True, atlasSize = atlasSize, cx = cx, cy = cy))
+            imageSizes.append(imageSize)
+    '''
+
+    return tuple(imageDatas), tuple(imageSizes)
+
+def dumpImageData(imageDatas, imageSizes, imageCount, directory, filename, state):
+    basename = os.path.join(directory, filename)
+    ext = '.dds' if state.lmVersion4 else '.bmp'
+
+    for i in range(imageCount):
+        imageData = imageDatas[i]
+        imageSize = imageSizes[i]
+
+        imgpath = basename + f"_LmImage{ i }" + ext
+
+        pixelCount = imageSize ** 2
+
+        with open(imgpath, 'wb') as file:
+            if state.lmVersion4:
+                ddsSize = 76 + 32 + 20 + pixelCount // 2
+                writeUInt(file, ddsSize)
+                writeDDSHeader(file, imageSize, pixelCount, ddsSize)
+            else:
+                bmpSize = 14 + 40 + pixelCount * 3
+                writeUInt(file, bmpSize)
+                writeBMPHeader(file, imageSize, bmpSize)
+
+            file.write(imageData)
 
 def ensureLmMixGroup():
     group = bpy.data.node_groups.get('Lightmap Mix')

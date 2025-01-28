@@ -420,13 +420,13 @@ def importRS2(self, context):
 
         deleteInfoReports(context, counts)
 
-    def setupUnifiedMesh(name, setupFunc, isBakeMesh = False):
+    def setupUnifiedMesh(name, setupFunc, *, treePolygons = -1, treeVerts = -1, allowLightmapUVs = True, isBakeMesh = False):
         blMesh = bpy.data.meshes.new(name)
         blObj = bpy.data.objects.new(name, blMesh)
 
         blMesh.gzrs2.meshType = 'RAW'
 
-        meshMatIDs = setupFunc(self, -1, blMesh, state)
+        meshMatIDs = setupFunc(self, -1, blMesh, treePolygons, treeVerts, state, allowLightmapUVs = allowLightmapUVs)
 
         for blXmlRsMat in state.blXmlRsMats:
             blMesh.materials.append(blXmlRsMat)
@@ -480,7 +480,7 @@ def importRS2(self, context):
         setupStandardMeshes(state.blBspMeshes, state.blBspMeshObjs, state.bspTreePolygons, state.bspTreeVerts, rootMeshesBsp, allowLightmapUVs = False) # TODO: Improve performance of convex id matching
         setupStandardMeshes(state.blOctMeshes, state.blOctMeshObjs, state.rsOctreePolygons, state.rsOctreeVerts, rootMeshesOct)
     elif state.meshMode == 'BAKE':
-        blBakeMesh, blBakeObj = setupUnifiedMesh(f"{ state.filename }_Bake", setupRsTreeMesh, state.rsOctreePolygons, state.rsOctreeVerts, isBakeMesh = True)
+        blBakeMesh, blBakeObj = setupUnifiedMesh(f"{ state.filename }_Bake", setupRsTreeMesh, treePolygons = state.rsOctreePolygons, treeVerts = state.rsOctreeVerts, isBakeMesh = True)
 
     if state.doLights:
         for light in state.xmlLits:

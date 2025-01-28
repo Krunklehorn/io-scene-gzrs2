@@ -16,7 +16,7 @@ from .lib_gzrs2 import *
 def importLm(self, context):
     state = GZRS2State()
 
-    if self.logLmHeaders or self.logLmImages:
+    if self.panelLogging:
         print()
         print("=======================================================================")
         print("===========================  RSLM Import  =============================")

@@ -1496,10 +1496,16 @@ class ImportRSLM(Operator, ImportHelper):
         options = { 'HIDDEN' }
     )
 
+    panelLogging: BoolProperty(
+        name = 'Logging',
+        description = "Log details to the console",
+        default = False
+    )
+
     logLmHeaders: BoolProperty(
         name = 'Lm Headers',
         description = "Log Lm header data",
-        default = False
+        default = True
     )
 
     logLmImages: BoolProperty(
@@ -1524,12 +1530,16 @@ class RSLM_PT_Import_Logging(Panel):
     def poll(cls, context):
         return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_rslm'
 
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
+
     def draw(self, context):
         layout = self.layout
         operator = context.space_data.active_operator
 
         layout.use_property_split = True
         layout.use_property_decorate = False
+        layout.enabled = operator.panelLogging
 
         layout.prop(operator, 'logLmHeaders')
         layout.prop(operator, 'logLmImages')
@@ -1871,7 +1881,7 @@ class RSLM_PT_Export_Logging(Panel):
 
 class GZRS2WorldProperties(PropertyGroup):
     def onPollLightmapImage(self, object):
-        return object.type == 'IMAGE' and object.source in ('FILE', 'GENERATED') and not object.is_multiview
+        return object.type in ('IMAGE', 'UV_TEST') and object.source in ('FILE', 'GENERATED') and not object.is_multiview
 
     lightmapImage: PointerProperty(
         type = bpy.types.Image,
