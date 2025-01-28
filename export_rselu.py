@@ -91,9 +91,6 @@ def exportElu(self, context):
     foundValid = False
     invalidCount = 0
 
-    reorientLocal = Matrix.Rotation(math.radians(90.0), 4, 'Y') @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
-    reorientWorld = Matrix.Rotation(math.radians(90.0), 4, 'X')
-
     for object in objects:
         if object is None:
             continue
@@ -179,9 +176,8 @@ def exportElu(self, context):
     eluMeshObjs = []
     eluEmptyBones = []
 
-    worldMatrices = []
-    worldInvMatrices = []
     worldMatrixByName = {}
+    worldInvMatrices = []
 
     eluBoneIDs = {}
 
@@ -198,10 +194,9 @@ def exportElu(self, context):
 
         eluMeshObjs.append(blObj)
 
-        matrixWorld = reorientWorld @ blObj.matrix_world
-        worldMatrices.append(matrixWorld)
-        worldInvMatrices.append(matrixWorld.inverted())
-        worldMatrixByName[objName] = matrixWorld
+        worldMatrix = blObj.matrix_world
+        worldMatrixByName[objName] = worldMatrix
+        worldInvMatrices.append(worldMatrix.inverted())
 
         meshCount += 1
 
@@ -216,14 +211,15 @@ def exportElu(self, context):
 
         eluMeshObjs.append(blObj)
 
-        matrixWorld = reorientWorld @ blObj.matrix_world
-        worldMatrices.append(matrixWorld)
-        worldInvMatrices.append(matrixWorld.inverted())
-        worldMatrixByName[objName] = matrixWorld
+        worldMatrix = blObj.matrix_world
+        worldMatrixByName[objName] = worldMatrix
+        worldInvMatrices.append(worldMatrix.inverted())
 
         eluBoneIDs[objName] = meshCount
 
         meshCount += 1
+
+    reorientBone = Matrix.Rotation(math.radians(90.0), 4, 'Y') @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
 
     # Remaining bones last
     for blArmatureObj in blArmatureObjs:
@@ -240,10 +236,9 @@ def exportElu(self, context):
 
             eluEmptyBones.append(blBone)
 
-            matrixWorld = reorientWorld @ blArmatureObj.matrix_world @ blBone.matrix_local @ reorientLocal
-            worldMatrices.append(matrixWorld)
-            worldInvMatrices.append(matrixWorld.inverted())
-            worldMatrixByName[boneName] = matrixWorld
+            worldMatrix = blArmatureObj.matrix_world @ blBone.matrix_local @ reorientBone
+            worldMatrixByName[boneName] = worldMatrix
+            worldInvMatrices.append(worldMatrix.inverted())
 
             eluBoneIDs[boneName] = meshCount
 
@@ -252,7 +247,6 @@ def exportElu(self, context):
     eluMeshObjs = tuple(eluMeshObjs)
     eluEmptyBones = tuple(eluEmptyBones)
 
-    worldMatrices = tuple(worldMatrices)
     worldInvMatrices = tuple(worldInvMatrices)
 
     # Check for error, early exit
@@ -791,7 +785,7 @@ def exportElu(self, context):
             writeString(file, eluMesh.meshName, ELU_NAME_LENGTH)
             writeString(file, eluMesh.parentName, ELU_NAME_LENGTH)
 
-            writeTransform(file, eluMesh.transform, state.convertUnits, True) # TODO: swizzle
+            writeTransform(file, eluMesh.transform, state.convertUnits, False, swizzle = True)
 
             if version >= ELU_5001:
                 writeVec3(file, eluMesh.apScale) # TODO: swizzle
@@ -799,10 +793,10 @@ def exportElu(self, context):
             if version >= ELU_5003:
                 writeVec4(file, eluMesh.rotAA) # TODO: swizzle
                 writeVec4(file, eluMesh.stretchAA) # TODO: swizzle
-                writeTransform(file, eluMesh.etcMatrix, state.convertUnits, True) # TODO: swizzle
+                writeTransform(file, eluMesh.etcMatrix, state.convertUnits, False, swizzle = True)
 
             writeUInt(file, eluMesh.vertexCount)
-            writeCoordinateArray(file, eluMesh.vertices, state.convertUnits, True)
+            writeCoordinateArray(file, eluMesh.vertices, state.convertUnits, False, swizzle = True)
             writeUInt(file, eluMesh.faceCount)
 
             if eluMesh.faceCount > 0:
@@ -821,8 +815,8 @@ def exportElu(self, context):
 
                 if version >= ELU_5005:
                     for face in eluMesh.faces:
-                        writeDirection(file, face.normal, True)
-                        writeDirectionArray(file, face.normals, True)
+                        writeDirection(file, face.normal, False, swizzle = True)
+                        writeDirectionArray(file, face.normals, False, swizzle = True)
 
             if version >= ELU_5005:
                 writeUInt(file, eluMesh.colorCount)
@@ -839,6 +833,6 @@ def exportElu(self, context):
 
                 writeUIntArray(file, weight.meshIDs)
                 writeUInt(file, weight.degree)
-                writeCoordinateArray(file, weight.offsets, state.convertUnits, True)
+                writeCoordinateArray(file, weight.offsets, state.convertUnits, False, swizzle = True)
 
     return { 'FINISHED' }

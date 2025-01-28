@@ -162,7 +162,7 @@ def importElu(self, context):
         bpy.ops.object.mode_set(mode = 'EDIT')
         deleteInfoReports(context, counts)
 
-        reorientLocal = Matrix.Rotation(math.radians(-90.0), 4, 'Z') @ Matrix.Rotation(math.radians(-90.0), 4, 'Y')
+        reorientBone = Matrix.Rotation(math.radians(-90.0), 4, 'Z') @ Matrix.Rotation(math.radians(-90.0), 4, 'Y')
 
         for eluMesh, blMeshOrDummyObj in state.blObjPairs:
             if eluMesh.meshName not in state.gzrsValidBones:
@@ -170,7 +170,7 @@ def importElu(self, context):
 
             editBone = state.blArmature.edit_bones.new(eluMesh.meshName)
             editBone.tail = (0.0, 0.0, 0.1)
-            editBone.matrix = blMeshOrDummyObj.matrix_world @ reorientLocal
+            editBone.matrix = blMeshOrDummyObj.matrix_world @ reorientBone
 
             if eluMesh.isDummy and 'Nub' in eluMesh.meshName:
                 for collection in blMeshOrDummyObj.users_collection:

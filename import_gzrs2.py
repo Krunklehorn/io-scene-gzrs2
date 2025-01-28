@@ -562,7 +562,7 @@ def importRS2(self, context):
         self.report({ 'INFO' }, f"GZRS2: Valid bones were found in some props: { len(state.gzrsValidBones) }")
 
     if state.doDummies:
-        reorientLocal = Matrix.Rotation(math.radians(90.0), 4, 'X')
+        reorientCamera = Matrix.Rotation(math.radians(90.0), 4, 'X')
 
         sp = 1
         ca = 1
@@ -624,7 +624,7 @@ def importRS2(self, context):
                 blCamera = bpy.data.cameras.new(objName)
                 blObj = bpy.data.objects.new(objName, blCamera)
                 blObj.location = dummy['POSITION']
-                blObj.rotation_euler = (rot.to_4x4() @ reorientLocal).to_euler()
+                blObj.rotation_euler = (rot.to_4x4() @ reorientCamera).to_euler()
 
                 props = blObj.data.gzrs2
             else:
@@ -865,7 +865,7 @@ def importRS2(self, context):
                 blNavLinksObj.hide_set(True, view_layer = viewLayer)
 
         if state.doOcclusion:
-            reorientLocal = Matrix.Rotation(math.radians(90.0), 4, 'X')
+            reorientOcclusion = Matrix.Rotation(math.radians(90.0), 4, 'X')
 
             for o, occlusion in enumerate(state.xmlOccs):
                 occName = f"{ state.filename }_Occlusion{ o }"
@@ -887,7 +887,7 @@ def importRS2(self, context):
 
                 # Convert to local space
                 center = (p1 + p2 + p3 + p4) / 4
-                rot = n1.lerp(n2, 0.5).to_track_quat('Y', 'Z').to_matrix().to_4x4() @ reorientLocal
+                rot = n1.lerp(n2, 0.5).to_track_quat('Y', 'Z').to_matrix().to_4x4() @ reorientOcclusion
                 rotInv = rot.inverted()
 
                 v1 = rotInv @ (p1 - center)

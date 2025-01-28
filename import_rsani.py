@@ -163,8 +163,6 @@ def importAni(self, context):
 
                 blKeys.eval_time = frame * 10
                 blKeys.keyframe_insert(data_path = 'eval_time', frame = frame, group = meshName)
-
-        print()
     elif aniType is AniNodeTM:
         blObjs = { object.name: object for object in getFilteredObjects(context, state) }
 
@@ -184,8 +182,6 @@ def importAni(self, context):
                 continue
 
             blValidObjs[meshName] = blObj
-
-        reorientWorld = Matrix.Rotation(math.radians(-90.0), 4, 'X')
 
         for node in state.aniNodes:
             meshName = node.meshName
@@ -223,10 +219,7 @@ def importAni(self, context):
 
                 for k in range(node.tmKeyCount):
                     frame = int(round(node.tmTicks[k] / ANI_TICKS_PER_FRAME))
-                    worldMat = node.tmMats[k] @ reorientWorld
-                    loc, rot, sca = worldMat.decompose()
-
-                    print(rot)
+                    loc, rot, sca = node.tmMats[k].decompose()
 
                     for i in range(3): locCurves[i].keyframe_points[k].co = Vector((frame + 1, loc[i]))
                     for i in range(4): rotCurves[i].keyframe_points[k].co = Vector((frame + 1, rot[i]))
@@ -236,7 +229,7 @@ def importAni(self, context):
                 for i in range(4): rotCurves[i].update()
                 for i in range(3): scaCurves[i].update()
 
-                blObj.matrix_world = node.firstMat @ reorientWorld
+                blObj.matrix_world = node.firstMat.copy()
 
             if node.visKeyCount > 0:
                 visCurve = blObjAnimData.action.fcurves.new('color', index = 3)
@@ -303,7 +296,7 @@ def importAni(self, context):
 
             blValidObjs[meshName] = blObj
 
-        reorientPose = Matrix.Rotation(math.radians(180.0), 4, 'Y') @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
+        reorientBone = Matrix.Rotation(math.radians(-90.0), 4, 'Z') @ Matrix.Rotation(math.radians(-90.0), 4, 'Y')
 
         poseMats = {}
 
@@ -329,7 +322,7 @@ def importAni(self, context):
             def applyPoseMat(frame, poseMat):
                 nonlocal blArmatureObj, meshName, blPoseBone, locPath, rotPath
 
-                blPoseBone.matrix = poseMat @ reorientPose
+                blPoseBone.matrix = poseMat @ reorientBone
                 context.view_layer.update()
 
                 blArmatureObj.keyframe_insert(data_path = locPath, frame = frame, group = meshName)

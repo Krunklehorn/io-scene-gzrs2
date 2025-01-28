@@ -666,7 +666,7 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
     success, texpath, loadFake = textureSearchLoadFake(self, texBase, texDir, False, state)
 
     if not success:
-        self.report({ 'WARNING' }, f"GZRS2: Texture not found for .rs.xml material: { blMat.name }, { texDir }, { texBase }")
+        self.report({ 'WARNING' }, f"GZRS2: Texture not found for .rs.xml material: { blMat.name }, { texBase }")
 
     texture = getMatImageTextureNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, loadFake, state)
 
@@ -1027,7 +1027,7 @@ def setupEluMat(self, m, eluMat, state):
         success, texpath, loadFake = textureSearchLoadFake(self, texBase, texDir, False, state)
 
         if not success:
-            self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu material: { blMat.name }, { texDir }, { texBase }")
+            self.report({ 'WARNING' }, f"GZRS2: Texture not found for .elu material: { blMat.name }, { texBase }")
 
         texture = getMatImageTextureNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, loadFake, state)
 

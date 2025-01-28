@@ -147,7 +147,7 @@ def readAni(self, file, path, state):
             tmTicks = [0 for _ in range(tmKeyCount)]
 
             for k in range(tmKeyCount):
-                tmMats[k] = readTransform(file, state.convertUnits, False, swizzle = True)
+                tmMats[k] = readTransform(file, state.convertUnits, swizzle = True)
                 tmTicks[k] = readInt(file)
 
             tmMats = tuple(tmMats)
@@ -181,7 +181,7 @@ def readAni(self, file, path, state):
     else:
         for n in range(nodeCount):
             meshName = readStringAlt(file, ELU_NAME_LENGTH) # t_mesh_name
-            baseMat = readTransform(file, state.convertUnits, False, swizzle = True)
+            baseMat = readTransform(file, state.convertUnits, swizzle = True)
 
             if state.logAniNodes:
                 print(f"===== Node { n } =====")

@@ -62,22 +62,18 @@ def readUV4(file):
 def readCoordinate(file, convertUnits, flipY, *, swizzle = False):
     coord = Vector(readVec3(file))
 
-    if swizzle:
-        # MCPlug2_Ani.cpp
-        (x, y, z) = coord.to_tuple()
-        coord.y = z
-        coord.z = y
-
-    if convertUnits: coord *= 0.01
-    if flipY: coord.y = -coord.y
+    if convertUnits:    coord *= 0.01
+    if flipY:           coord.y = -coord.y
+    if swizzle:         coord.xyz = coord.xzy
 
     return coord
 
-def readDirection(file, flipY):
+def readDirection(file, flipY, *, swizzle = False):
     dir = Vector(readVec3(file))
     dir.normalize()
 
-    if flipY: dir.y = -dir.y
+    if flipY:       dir.y = -dir.y
+    if swizzle:     dir.xyz = dir.xzy
 
     return dir
 
@@ -110,11 +106,6 @@ def readUV4Array(file, length):
 def readCoordinateArray(file, length, convertUnits, flipY, *, swizzle = False):
     coords = tuple(Vector(data) for data in readVec3Array(file, length))
 
-    # MCPlug2_Ani.cpp
-    if swizzle:
-        for coord in coords:
-            coord.xyz = coord.xzy
-
     if convertUnits:
         for coord in coords:
             coord *= 0.01
@@ -123,9 +114,13 @@ def readCoordinateArray(file, length, convertUnits, flipY, *, swizzle = False):
         for coord in coords:
             coord.y = -coord.y
 
+    if swizzle:
+        for coord in coords:
+            coord.xyz = coord.xzy
+
     return coords
 
-def readDirectionArray(file, length, flipY):
+def readDirectionArray(file, length, flipY, *, swizzle = False):
     dirs = tuple(Vector(data) for data in readVec3Array(file, length))
 
     for dir in dirs:
@@ -134,6 +129,10 @@ def readDirectionArray(file, length, flipY):
     if flipY:
         for dir in dirs:
             dir.y = -dir.y
+
+    if swizzle:
+        for dir in dirs:
+            dir.xyz = dir.xzy
 
     return dirs
 
@@ -149,43 +148,38 @@ def readPlaneArray(file, length, flipY):
 
     return planes
 
-def readTransform(file, convertUnits, flipY, *, swizzle = False):
-    mat = Matrix(readVec4Array(file, 4))
+def readTransform(file, convertUnits, *, swizzle = False):
+    transform = Matrix(readVec4Array(file, 4))
 
     # MCPlug2_Ani.cpp
     if swizzle:
-        temp = mat.copy()
+        temp = transform.copy()
 
         row = temp.row[0]
-        mat[0][0] = row.x
-        mat[0][1] = row.z
-        mat[0][2] = row.y
+        transform[0][0] = row.x
+        transform[0][1] = row.z
+        transform[0][2] = row.y
 
         row = temp.row[1]
-        mat[2][0] = row.x
-        mat[2][1] = row.z
-        mat[2][2] = row.y
+        transform[2][0] = row.x
+        transform[2][1] = row.z
+        transform[2][2] = row.y
 
         row = temp.row[2]
-        mat[1][0] = row.x
-        mat[1][1] = row.z
-        mat[1][2] = row.y
+        transform[1][0] = row.x
+        transform[1][1] = row.z
+        transform[1][2] = row.y
 
         row = temp.row[3]
-        mat[3][0] = row.x
-        mat[3][1] = row.z
-        mat[3][2] = row.y
+        transform[3][0] = row.x
+        transform[3][1] = row.z
+        transform[3][2] = row.y
 
-    mat.transpose()
+    transform.transpose()
 
-    loc, rot, sca = mat.decompose()
+    loc, rot, sca = transform.decompose()
 
     if convertUnits: loc *= 0.01
-    if flipY:
-        loc.y = -loc.y
-
-        rot.x = -rot.x
-        rot.z = -rot.z
 
     return Matrix.LocRotScale(loc, rot, sca)
 
@@ -244,19 +238,21 @@ def writeUV3(file, uv):
 
     writeVec3(file, uv)
 
-def writeCoordinate(file, coord, convertUnits, flipY):
+def writeCoordinate(file, coord, convertUnits, flipY, *, swizzle = False):
     coord = coord.to_3d()
 
-    if convertUnits: coord *= 100
-    if flipY: coord.y = -coord.y
+    if swizzle:         coord.xyz = coord.xzy
+    if flipY:           coord.y = -coord.y
+    if convertUnits:    coord *= 100
 
     writeVec3(file, coord)
 
-def writeDirection(file, dir, flipY):
+def writeDirection(file, dir, flipY, *, swizzle = False):
     dir = dir.to_3d()
     dir.normalize()
 
-    if flipY: dir.y = -dir.y
+    if swizzle:     dir.xyz = dir.xzy
+    if flipY:       dir.y = -dir.y
 
     writeVec3(file, dir)
 
@@ -285,21 +281,23 @@ def writeUV3Array(file, uvs):
 
     writeVec3Array(file, uvs)
 
-def writeCoordinateArray(file, coords, convertUnits, flipY):
+def writeCoordinateArray(file, coords, convertUnits, flipY, *, swizzle = False):
     coords = tuple(coord.to_3d() for coord in coords)
 
     for coord in coords:
-        if convertUnits: coord *= 100
-        if flipY: coord.y = -coord.y
+        if swizzle:         coord.xyz = coord.xzy
+        if flipY:           coord.y = -coord.y
+        if convertUnits:    coord *= 100
 
     writeVec3Array(file, coords)
 
-def writeDirectionArray(file, dirs, flipY):
+def writeDirectionArray(file, dirs, flipY, *, swizzle = False):
     dirs = tuple(dir.to_3d() for dir in dirs)
 
     for dir in dirs:
         dir.normalize()
-        if flipY: dir.y = -dir.y
+        if swizzle:     dir.xyz = dir.xzy
+        if flipY:       dir.y = -dir.y
 
     writeVec3Array(file, dirs)
 
@@ -312,10 +310,8 @@ def writePlaneArray(file, planes, flipY):
 
     writeVec4Array(file, planes)
 
-def writeTransform(file, transform, convertUnits, flipY):
-    transform = transform.copy()
-
-    loc, rot, sca = transform.decompose()
+def writeTransform(file, transform, convertUnits, flipY, *, swizzle = False):
+    loc, rot, sca = transform.to_4x4().decompose()
 
     if convertUnits: loc *= 100
     if flipY:
@@ -324,7 +320,35 @@ def writeTransform(file, transform, convertUnits, flipY):
         rot.x = -rot.x
         rot.z = -rot.z
 
-    writeVec4Array(file, tuple(Matrix.LocRotScale(loc, rot, sca).transposed()))
+    transform = Matrix.LocRotScale(loc, rot, sca)
+
+    # MCPlug2_Ani.cpp
+    transform.transpose()
+
+    if swizzle:
+        temp = transform.copy()
+
+        row = temp.row[0]
+        transform[0][0] = row.x
+        transform[0][1] = row.z
+        transform[0][2] = row.y
+
+        row = temp.row[1]
+        transform[2][0] = row.x
+        transform[2][1] = row.z
+        transform[2][2] = row.y
+
+        row = temp.row[2]
+        transform[1][0] = row.x
+        transform[1][1] = row.z
+        transform[1][2] = row.y
+
+        row = temp.row[3]
+        transform[3][0] = row.x
+        transform[3][1] = row.z
+        transform[3][2] = row.y
+
+    writeVec4Array(file, tuple(transform))
 
 def writeBounds(file, bbmin, bbmax, convertUnits):
     writeCoordinate(file, bbmin, convertUnits, False)

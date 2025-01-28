@@ -267,19 +267,17 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
             print(f"Mesh Count:         { meshCount }")
             print()
 
-    reorientWorld = Matrix.Rotation(math.radians(-90.0), 4, 'X')
-
     for m in range(meshCount):
         if version == ELU_0:
             meshName = readString(file, readUShort(file))
             parentName = readString(file, readUShort(file))
             skipBytes(file, 4 * 3 + 4 * 4 * 4 * 3 + 4) # skip precalculated transform information
-            worldMatrix = reorientWorld @ readTransform(file, state.convertUnits, True)
+            worldMatrix = readTransform(file, state.convertUnits, swizzle = True)
             skipBytes(file, 4 * 4 * 4 + 4 * 3 + 4 + 4 * 4 * 4 * 3 + 4 * 3 + 4 * 4 * 4) # skip precalculated transform information
         else:
             meshName = readString(file, ELU_NAME_LENGTH)
             parentName = readString(file, ELU_NAME_LENGTH)
-            worldMatrix = reorientWorld @ readTransform(file, state.convertUnits, True)
+            worldMatrix = readTransform(file, state.convertUnits, swizzle = True)
 
             if version >= ELU_5001: skipBytes(file, 4 * 3) # skip ap scale
             if version >= ELU_5003: skipBytes(file, 4 * 4 + 4 * 4 + 4 * 4 * 4) # skip rotation aa, scale aa and etc matrix
@@ -294,7 +292,7 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
             print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*worldMatrix[3]))
             print()
 
-        vertices = readCoordinateArray(file, readUInt(file), state.convertUnits, True)
+        vertices = readCoordinateArray(file, readUInt(file), state.convertUnits, False, swizzle = True)
         if state.logEluMeshNodes:
             output = "Vertices:           {:<6d}".format(len(vertices))
             output += "      Min: ({:>5.02f}, {:>5.02f}, {:>5.02f})     Max: ({:>5.02f}, {:>5.02f}, {:>5.02f})".format(*vecArrayMinMax(vertices, 3)) if len(vertices) > 0 else ''
@@ -344,9 +342,9 @@ def readEluRS2Meshes(self, path, file, version, meshCount, state):
 
                 for f, face in enumerate(faces):
                     skipBytes(file, 4 * 3) # skip face normal
-                    normals[f * 3 + 0] = readDirection(file, True)
-                    normals[f * 3 + 1] = readDirection(file, True)
-                    normals[f * 3 + 2] = readDirection(file, True)
+                    normals[f * 3 + 0] = readDirection(file, False, swizzle = True)
+                    normals[f * 3 + 1] = readDirection(file, False, swizzle = True)
+                    normals[f * 3 + 2] = readDirection(file, False, swizzle = True)
 
                     face.inor = tuple(i for i in range(f * 3, f * 3 + 3))
 
@@ -533,7 +531,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             if version <= ELU_5009:
                 skipBytes(file, 4 * 3) # skip unused bodypart info
 
-            localMatrix = readTransform(file, state.convertUnits, False)
+            localMatrix = readTransform(file, state.convertUnits)
 
             if version >= ELU_500A:
                 skipBytes(file, 4) # skip visibility
@@ -541,7 +539,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
             if version == ELU_5012:
                 skipBytes(file, 4) # skip unknown, always zero
         else:
-            localMatrix = readTransform(file, state.convertUnits, False)
+            localMatrix = readTransform(file, state.convertUnits)
             skipBytes(file, 4) # skip visibility
             drawFlags = readUInt(file)
             skipBytes(file, 4 + 4) # skip mesh align and unknown index, thought to be for LOD projection
