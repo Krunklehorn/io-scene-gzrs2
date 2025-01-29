@@ -173,6 +173,9 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         if blObj is None or blObj.type != 'MESH':
             return
 
+        if blObj.mode != 'OBJECT':
+            return
+
         blMesh = blObj.data
 
         if blMesh is None or blMesh.gzrs2.meshType not in ('WORLD', 'PROP'):
@@ -364,7 +367,7 @@ class GZRS2_OT_Prepare_Bake(Operator):
 
     @classmethod
     def poll(cls, context):
-        return True
+        return context.active_object.mode == 'OBJECT'
 
     def execute(self, context):
         world = ensureWorld(context)
@@ -753,6 +756,10 @@ class ImportGZRS2(Operator, ImportHelper):
         default = False
     )
 
+    @classmethod
+    def poll(cls, context):
+        return context.active_object.mode == 'OBJECT'
+
     def draw(self, context):
         pass
 
@@ -963,6 +970,10 @@ class ImportGZRS3(Operator, ImportHelper):
         default = False
     )
 
+    @classmethod
+    def poll(cls, context):
+        return context.active_object.mode == 'OBJECT'
+
     def draw(self, context):
         pass
 
@@ -1115,6 +1126,10 @@ class ImportRSELU(Operator, ImportHelper):
         default = False
     )
 
+    @classmethod
+    def poll(cls, context):
+        return context.active_object.mode == 'OBJECT'
+
     def draw(self, context):
         pass
 
@@ -1242,6 +1257,10 @@ class ImportRSANI(Operator, ImportHelper):
         default = True
     )
 
+    @classmethod
+    def poll(cls, context):
+        return context.active_object.mode == 'OBJECT'
+
     def draw(self, context):
         pass
 
@@ -1357,6 +1376,10 @@ class ImportRSCOL(Operator, ImportHelper):
         default = False
     )
 
+    @classmethod
+    def poll(cls, context):
+        return context.active_object.mode == 'OBJECT'
+
     def draw(self, context):
         pass
 
@@ -1451,6 +1474,10 @@ class ImportRSNAV(Operator, ImportHelper):
         default = True
     )
 
+    @classmethod
+    def poll(cls, context):
+        return context.active_object.mode == 'OBJECT'
+
     def draw(self, context):
         pass
 
@@ -1529,6 +1556,10 @@ class ImportRSLM(Operator, ImportHelper):
         description = "Log Lm image data",
         default = False
     )
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object.mode == 'OBJECT'
 
     def draw(self, context):
         pass
@@ -1639,6 +1670,10 @@ class ExportRSELU(Operator, ExportHelper):
         default = False
     )
 
+    @classmethod
+    def poll(cls, context):
+        return context.active_object.mode == 'OBJECT'
+
     def draw(self, context):
         pass
 
@@ -1743,6 +1778,10 @@ class ExportRSNAV(Operator, ExportHelper):
         default = True
     )
 
+    @classmethod
+    def poll(cls, context):
+        return context.active_object.mode == 'OBJECT'
+
     def draw(self, context):
         pass
 
@@ -1840,6 +1879,10 @@ class ExportRSLM(Operator, ExportHelper):
         description = "Log Lm header data",
         default = True
     )
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object.mode == 'OBJECT'
 
     def draw(self, context):
         pass
@@ -2101,7 +2144,7 @@ class GZRS2ObjectProperties(PropertyGroup):
         if 'smokeToggleMinTime' not in self: self['smokeToggleMinTime'] = 2.0
 
     def onUpdate(self, context):
-        blObj = context.active_object
+        blObj = self.id_data
 
         if blObj is None or blObj.data is not None:
             return
