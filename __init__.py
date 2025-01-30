@@ -367,7 +367,7 @@ class GZRS2_OT_Prepare_Bake(Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.mode == 'OBJECT'
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
 
     def execute(self, context):
         world = ensureWorld(context)
@@ -758,7 +758,7 @@ class ImportGZRS2(Operator, ImportHelper):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.mode == 'OBJECT'
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
 
     def draw(self, context):
         pass
@@ -972,7 +972,7 @@ class ImportGZRS3(Operator, ImportHelper):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.mode == 'OBJECT'
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
 
     def draw(self, context):
         pass
@@ -1128,7 +1128,7 @@ class ImportRSELU(Operator, ImportHelper):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.mode == 'OBJECT'
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
 
     def draw(self, context):
         pass
@@ -1259,7 +1259,7 @@ class ImportRSANI(Operator, ImportHelper):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.mode == 'OBJECT'
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
 
     def draw(self, context):
         pass
@@ -1378,7 +1378,7 @@ class ImportRSCOL(Operator, ImportHelper):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.mode == 'OBJECT'
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
 
     def draw(self, context):
         pass
@@ -1476,7 +1476,7 @@ class ImportRSNAV(Operator, ImportHelper):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.mode == 'OBJECT'
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
 
     def draw(self, context):
         pass
@@ -1559,7 +1559,7 @@ class ImportRSLM(Operator, ImportHelper):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.mode == 'OBJECT'
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
 
     def draw(self, context):
         pass
@@ -1672,7 +1672,7 @@ class ExportRSELU(Operator, ExportHelper):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.mode == 'OBJECT'
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
 
     def draw(self, context):
         pass
@@ -1780,7 +1780,7 @@ class ExportRSNAV(Operator, ExportHelper):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.mode == 'OBJECT'
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
 
     def draw(self, context):
         pass
@@ -1882,7 +1882,7 @@ class ExportRSLM(Operator, ExportHelper):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.mode == 'OBJECT'
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
 
     def draw(self, context):
         pass
