@@ -75,15 +75,14 @@ def readCol(self, file, path, state):
         def openCol1Node():
             nonlocal n, trianglesRead
 
-            if state.logColNodes:
-                plane = readPlane(file, True)
-            else:
-                skipBytes(file, 4 * 4) # skip plane
+            plane = readPlane(file, state.convertUnits, True)
+            solid = readBool(file)
 
-            hull = not readBool(file)
+            positive = None
+            negative = None
 
-            if readBool(file): openCol1Node() # positive
-            if readBool(file): openCol1Node() # negative
+            if readBool(file): positive = openCol1Node() # positive
+            if readBool(file): negative = openCol1Node() # negative
 
             triangleCount = readUInt(file)
             trianglesRead += triangleCount
@@ -91,36 +90,34 @@ def readCol(self, file, path, state):
             if state.logColNodes:
                 print(f"===== Node { n } =============================")
                 print("Plane:              ({:>6.03f}, {:>6.03f}, {:>6.03f}, {:>6.03f})".format(*plane))
-                print(f"Hull:               { hull }")
+                print(f"Solid:              { solid }")
                 print(f"Triangle Count:     { triangleCount }")
                 print()
 
+            triangles = []
+
             for t in range(triangleCount):
-                if not state.logColTris:
-                    if hull:
-                        state.colVerts += readCoordinateArray(file, 3, state.convertUnits, True)
-                    else:
-                        skipBytes(file, 4 * 3 * 3)
+                vertices = readCoordinateArray(file, 3, state.convertUnits, True)
+                normal = readDirection(file, True)
+                triangle = ColTriangle(vertices, normal)
+                triangles.append(triangle)
 
-                    skipBytes(file, 4 * 3) # skip normal
-                else:
-                    vertices = readCoordinateArray(file, 3, state.convertUnits, True)
+                if not solid:   state.colTrisHull.append(triangle)
+                else:           state.colTrisSolid.append(triangle)
 
-                    if hull:
-                        state.colVerts.extend(vertices)
-
-                    nor = readDirection(file, True)
-
+                if state.logColTris:
                     print(f"===== Triangle { t } ===========================")
                     print("Vertices:           ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*vertices[0]))
                     print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*vertices[1]))
                     print("                    ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*vertices[2]))
-                    print("Normal:             ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*nor))
+                    print("Normal:             ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*normal))
                     print()
+
+            return Col1TreeNode(plane, solid, positive, negative, tuple(triangles))
 
             n += 1
 
-        openCol1Node()
+        state.col1Root = openCol1Node()
     else:
         colTriangleCount = readUInt(file)
         colNodeCount = readUInt(file)
@@ -134,12 +131,10 @@ def readCol(self, file, path, state):
         def openCol2Node():
             nonlocal n, trianglesRead
 
-            if state.logColNodes:
-                bbmin, bbmax = readBounds(file, state.convertUnits)
-            else:
-                skipBytes(file, 4 * 3 * 2) # skip bounding box
+            bbmin, bbmax = readBounds(file, state.convertUnits)
+            leaf = readBool(file)
 
-            if not readBool(file):
+            if not leaf:
                 openCol2Node() # positive
                 openCol2Node() # negative
             else:
@@ -154,15 +149,17 @@ def readCol(self, file, path, state):
                     print()
 
                 for t in range(triangleCount):
-                    if not state.logColTris:
-                        state.colVerts += readCoordinateArray(file, 3, state.convertUnits, False)
-                        skipBytes(file, 4 * 2) # skip attributes and material ID
-                    else:
-                        vertices = readCoordinateArray(file, 3, state.convertUnits, False)
+                    vertices = readCoordinateArray(file, 3, state.convertUnits, False)
+
+                    sideA = vertices[1] - vertices[0]
+                    sideC = vertices[2] - vertices[0]
+
+                    normal = sideC.cross(sideA)
+                    normal.normalize()
+
+                    if state.logColTris:
                         attributes = readUInt(file)
                         matID = readUInt(file)
-
-                        state.colVerts += vertices
 
                         print(f"===== Triangle { t } ===========================")
                         print("Vertices:           ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*vertices[0]))
@@ -171,12 +168,16 @@ def readCol(self, file, path, state):
                         print(f"Attributes:         { attributes }")
                         print(f"Material ID:        { matID }")
                         print()
+                    else:
+                        skipBytes(file, 4 * 2) # skip attributes and material ID
+
+                    state.colTrisHull.append(ColTriangle(vertices, normal))
             n += 1
 
         openCol2Node()
 
-    if colTriangleCount != trianglesRead:
-        self.report({ 'ERROR' }, f"GZRS2: The number of Col triangles read did not match the recorded count! { colTriangleCount }, { trianglesRead }")
+    if trianglesRead != colTriangleCount:
+        self.report({ 'ERROR' }, f"GZRS2: The number of Col triangles read did not match the recorded count! { trianglesRead }, { colTriangleCount }")
 
     if state.logColHeaders or state.logColNodes or state.logColTris:
         bytesRemaining = fileSize - file.tell()

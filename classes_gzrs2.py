@@ -107,7 +107,9 @@ class GZRS2State:
     bspTreeVerts:       list = field(default_factory = list)
     bspTreePolygons:    list = field(default_factory = list)
     bspTreeBounds:      list = field(default_factory = list)
-    colVerts:           list = field(default_factory = list)
+    col1Root:           'Col1TreeNode' = None
+    colTrisHull:        list = field(default_factory = list)
+    colTrisSolid:       list = field(default_factory = list)
     navVerts:           list = field(default_factory = list)
     navFaces:           list = field(default_factory = list)
     navLinks:           list = field(default_factory = list)
@@ -141,8 +143,10 @@ class GZRS2State:
     blBakeObj:          Object      = None
 
     blColMat:           Material    = None
-    blColMesh:          Mesh        = None
-    blColObj:           Object      = None
+    blColMeshHull:      Mesh        = None
+    blColMeshSolid:     Mesh        = None
+    blColObjHull:       Object      = None
+    blColObjSolid:      Object      = None
 
     blNavMat:           Material    = None
     blNavFaces:         Mesh        = None
@@ -396,6 +400,23 @@ ANI_TYPES_ENUM = {
 class LmImage:
     size:               int = 0
     data:               tuple = field(default_factory = tuple)
+
+#########################
+####   COL  IMPORT   ####
+#########################
+
+@dataclass
+class ColTriangle:
+    vertices:           tuple = field(default_factory = tuple)
+    normal:             Vector = (0, 0, 0)
+
+@dataclass
+class Col1TreeNode:
+    plane:              Vector = (0, 0, 0, 0)
+    solid:              bool = False
+    positive:           'Col1TreeNode' = None
+    negative:           'Col1TreeNode' = None
+    triangles:          tuple = field(default_factory = tuple)
 
 ##########################
 ####    ELU EXPORT    ####

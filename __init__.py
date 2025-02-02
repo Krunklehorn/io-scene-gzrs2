@@ -1346,6 +1346,12 @@ class ImportRSCOL(Operator, ImportHelper):
         default = True
     )
 
+    doPlanes: BoolProperty(
+        name = 'Planes (slow)',
+        description = "Import cutting planes for debugging",
+        default = False
+    )
+
     doCleanup: BoolProperty(
         name = 'Cleanup',
         description = "A combination of knife intersection, three types of dissolve, merge by distance, tris-to-quads, and hole filling",
@@ -1405,6 +1411,8 @@ class RSCOL_PT_Import_Main(Panel):
         layout.enabled = operator.panelMain
 
         layout.prop(operator, 'convertUnits')
+        layout.prop(operator, 'doPlanes')
+
         layout.prop(operator, 'doCleanup')
 
 class RSCOL_PT_Import_Logging(Panel):

@@ -44,8 +44,9 @@ from .lib_gzrs2 import *
 def importCol(self, context):
     state = GZRS2State()
 
-    state.convertUnits = self.convertUnits
-    state.doCleanup = self.doCleanup
+    state.convertUnits      = self.convertUnits
+    state.doCleanup         = self.doCleanup
+    state.doPlanes          = self.doPlanes
 
     if self.panelLogging:
         print()
@@ -72,10 +73,13 @@ def importCol(self, context):
             return { 'CANCELLED' }
 
     colName = f"{ state.filename }_Collision"
-    blColObj = setupColMesh(colName, context.collection, context, extension, state)
+
+    if state.doPlanes and extension == 'col':
+        colPlaneRoot = setupColPlanes(context.collection, context, state)
+
+    blColObjHull, blColObjSolid = setupColMesh(colName, context.collection, context, extension, state)
 
     for viewLayer in context.scene.view_layers:
-        blColObj.hide_set(False, view_layer = viewLayer)
-        viewLayer.objects.active = blColObj
+        viewLayer.objects.active = blColObjHull
 
     return { 'FINISHED' }

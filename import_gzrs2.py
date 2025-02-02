@@ -847,11 +847,14 @@ def importRS2(self, context):
         if state.doCollision:
             colName = f"{ state.filename }_Collision"
             colExt = bpy.path.basename(colpath).split(os.extsep)[-1].lower()
-            blColObj = setupColMesh(colName, rootExtras, context, colExt, state)
-            blColObj.hide_render = True
+            blColObjHull, blColObjSolid = setupColMesh(colName, rootExtras, context, colExt, state)
+
+            blColObjHull.hide_render = True
+            blColObjSolid.hide_render = True
 
             for viewLayer in context.scene.view_layers:
-                blColObj.hide_set(True, view_layer = viewLayer)
+                blColObjHull.hide_set(True, view_layer = viewLayer)
+                blColObjSolid.hide_set(True, view_layer = viewLayer)
 
         if state.doNavigation:
             blNavFacesObj, blNavLinksObj = setupNavMesh(state)

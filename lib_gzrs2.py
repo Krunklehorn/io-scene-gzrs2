@@ -64,6 +64,17 @@ def vecArrayMinMax(vectors, size):
 
     return *minVector, *maxVector
 
+def vec3IsClose(v1, v2, threshold):
+    return all((math.isclose(v1.x, v2.x, abs_tol = threshold),
+                math.isclose(v1.y, v2.y, abs_tol = threshold),
+                math.isclose(v1.z, v2.z, abs_tol = threshold)))
+
+def vec4IsClose(v1, v2, threshold):
+    return all((math.isclose(v1.x, v2.x, abs_tol = threshold),
+                math.isclose(v1.y, v2.y, abs_tol = threshold),
+                math.isclose(v1.z, v2.z, abs_tol = threshold),
+                math.isclose(v1.w, v2.w, abs_tol = threshold)))
+
 def pathExists(path):
     if os.path.exists(path): return path
     elif path == '': return False
@@ -819,33 +830,115 @@ def getErrorMat(state):
 
     return blErrorMat
 
+def setupColPlanes(rootExtras, context, state):
+    reorientPlane = Matrix.Rotation(math.radians(90.0), 4, 'X')
+    p = 0
+
+    def processCol1Hierarchy(node):
+        nonlocal p
+
+        # Forks & bevels only
+        if len(node.triangles) > 0:
+            return None
+
+        plane = node.plane
+        planeNormal = node.plane.xyz
+        planeDistance = node.plane.w
+
+        # Useful planes only
+        if vec3IsClose(planeNormal, Vector((0, 0, 0)), RS_DIR_THRESHOLD):
+            return None
+
+        if math.isclose(planeDistance, 0, abs_tol = RS_COORD_THRESHOLD):
+            return None
+
+        planeName = f"{ state.filename }_Plane{ p }"
+        p += 1
+
+        blPlaneObj = bpy.data.objects.new(planeName, None)
+
+        rotation = planeNormal.to_track_quat('Y', 'Z').to_matrix().to_4x4() @ reorientPlane
+        translation = Matrix.Translation(planeNormal * -planeDistance)
+
+        blPlaneObj.matrix_world = translation @ rotation
+        blPlaneObj.empty_display_type = 'IMAGE'
+        blPlaneObj.empty_image_side = 'FRONT'
+        blPlaneObj.use_empty_image_alpha = True
+        blPlaneObj.color[3] = 0.5
+        # TODO: Custom image or sprite gizmo?
+        # TODO: Duplicate the empty panel to appear for image data as well
+
+        rootExtras.objects.link(blPlaneObj)
+
+        blPlaneObjNeg = processCol1Hierarchy(node.negative) if node.negative else None
+        blPlaneObjPos = processCol1Hierarchy(node.positive) if node.positive else None
+
+        if blPlaneObjNeg is not None:
+            transform = blPlaneObjNeg.matrix_world
+            blPlaneObjNeg.parent = blPlaneObj
+            blPlaneObjNeg.matrix_world = transform
+
+        if blPlaneObjPos is not None:
+            transform = blPlaneObjPos.matrix_world
+            blPlaneObjPos.parent = blPlaneObj
+            blPlaneObjPos.matrix_world = transform
+
+        return blPlaneObj
+
+    return processCol1Hierarchy(state.col1Root)
+
 def setupColMesh(name, collection, context, extension, state):
     blColMat = setupDebugMat(name, (1.0, 0.0, 1.0, 0.25))
 
-    blColMesh = bpy.data.meshes.new(name)
-    blColObj = bpy.data.objects.new(name, blColMesh)
+    hullName = name + "_Hull"
+    solidName = name + "_Solid"
 
-    blColMesh.gzrs2.meshType = 'RAW'
+    blColMeshHull = bpy.data.meshes.new(hullName)
+    blColMeshSolid = bpy.data.meshes.new(solidName)
 
-    colFaces = tuple(tuple(range(i, i + 3)) for i in range(0, len(state.colVerts), 3))
+    blColObjHull = bpy.data.objects.new(hullName, blColMeshHull)
+    blColObjSolid = bpy.data.objects.new(solidName, blColMeshSolid)
 
-    blColMesh.from_pydata(state.colVerts, (), colFaces)
-    blColMesh.validate()
-    blColMesh.update()
+    blColMeshHull.gzrs2.meshType = 'RAW'
+    blColMeshSolid.gzrs2.meshType = 'RAW'
 
-    setObjFlagsDebug(blColObj)
+    colVertsHull = tuple(vertex for triangle in state.colTrisHull for vertex in triangle.vertices)
+    colVertsSolid = tuple(vertex for triangle in state.colTrisSolid for vertex in triangle.vertices)
+
+    colNormsHull = tuple(triangle.normal for triangle in state.colTrisHull for _ in range(3))
+    colNormsSolid = tuple(triangle.normal for triangle in state.colTrisSolid for _ in range(3))
+
+    colFacesHull = tuple(tuple(range(i, i + 3)) for i in range(0, len(colVertsHull), 3))
+    colFacesSolid = tuple(tuple(range(i, i + 3)) for i in range(0, len(colVertsSolid), 3))
+
+    blColMeshHull.from_pydata(colVertsHull, (), colFacesHull)
+    blColMeshSolid.from_pydata(colVertsSolid, (), colFacesSolid)
+
+    blColMeshHull.normals_split_custom_set_from_vertices(colNormsHull)
+    blColMeshSolid.normals_split_custom_set_from_vertices(colNormsSolid)
+
+    blColMeshHull.validate()
+    blColMeshSolid.validate()
+
+    blColMeshHull.update()
+    blColMeshSolid.update()
+
+    setObjFlagsDebug(blColObjHull)
+    setObjFlagsDebug(blColObjSolid)
 
     state.blColMat = blColMat
-    state.blColMesh = blColMesh
-    state.blColObj = blColObj
+    state.blColMeshHull = blColMeshHull
+    state.blColMeshSolid = blColMeshSolid
+    state.blColObjHull = blColObjHull
+    state.blColObjSolid = blColObjSolid
 
-    blColObj.data.materials.append(blColMat)
+    blColObjHull.data.materials.append(blColMat)
+    blColObjSolid.data.materials.append(blColMat)
 
-    collection.objects.link(blColObj)
+    collection.objects.link(blColObjHull)
+    collection.objects.link(blColObjSolid)
 
-    for viewLayer in context.scene.view_layers:
-        blColObj.hide_set(False, view_layer = viewLayer)
-        viewLayer.objects.active = blColObj
+    counts = countInfoReports(context)
 
     if state.doCleanup and state.logCleanup:
         print()
@@ -853,19 +946,7 @@ def setupColMesh(name, collection, context, extension, state):
         print()
 
     if state.doCleanup:
-        counts = countInfoReports(context)
-
-        bpy.ops.object.select_all(action = 'DESELECT')
-        blColObj.select_set(True)
-        bpy.ops.object.select_all(action = 'DESELECT')
-
-        bpy.ops.object.mode_set(mode = 'EDIT')
-
-        bpy.ops.mesh.select_mode(type = 'VERT')
-        bpy.ops.mesh.select_all(action = 'SELECT')
-
-        deleteInfoReports(context, counts)
-
+        # TODO: convertUnits should affect thresholds
         def subCleanup():
             for _ in range(10):
                 bpy.ops.mesh.dissolve_degenerate()
@@ -873,8 +954,15 @@ def setupColMesh(name, collection, context, extension, state):
                 bpy.ops.mesh.select_all(action = 'SELECT')
                 bpy.ops.mesh.remove_doubles(threshold = 0.0001)
 
-        def cleanupFunc():
-            counts = countInfoReports(context)
+        # TODO: convertUnits should affect thresholds
+        def cleanupFunc(blObj):
+            for viewLayer in context.scene.view_layers:
+                viewLayer.objects.active = blObj
+
+            bpy.ops.object.select_all(action = 'DESELECT')
+            blObj.select_set(True)
+
+            bpy.ops.object.mode_set(mode = 'EDIT')
 
             if extension == 'col':
                 bpy.ops.mesh.intersect(mode = 'SELECT', separate_mode = 'ALL', threshold = 0.0001, solver = 'FAST')
@@ -908,23 +996,17 @@ def setupColMesh(name, collection, context, extension, state):
 
             bpy.ops.object.mode_set(mode = 'OBJECT')
 
-            deleteInfoReports(context, counts)
-
         if state.logCleanup:
-            print(name)
-            cleanupFunc()
+            print(hullName)
+            cleanupFunc(blColObjHull)
             print()
         else:
             with redirect_stdout(state.silentIO):
-                cleanupFunc()
+                cleanupFunc(blColObjHull)
 
-        blColMesh.gzrs2.meshType = 'COLLISION'
-
-    counts = countInfoReports(context)
-    bpy.ops.object.select_all(action = 'DESELECT')
     deleteInfoReports(context, counts)
 
-    return blColObj
+    return blColObjHull, blColObjSolid
 
 def setupNavMesh(state):
     facesName = f"{ state.filename }_Navmesh"
