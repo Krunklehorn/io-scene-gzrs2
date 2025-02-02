@@ -38,6 +38,16 @@ RS_PATH_LENGTH =                256
 BSP_ID =                        0x35849298
 BSP_VERSION =                   2
 
+TREE_MAX_DEPTH =                10
+TREE_MIN_NODE_SIZE =            1.5
+TREE_MAX_NODE_POLYGON_COUNT =   200
+
+FACING_POSITIVE                 = 0
+FACING_NEGATIVE                 = 1
+FACING_BOTH                     = 2
+FACING_POS_COP                  = 3
+FACING_NEG_COP                  = 4
+
 PAT_ID =                        0x09784348
 PAT_VERSION =                   0
 
@@ -152,14 +162,13 @@ ANI_TYPES_PRETTY =              {
                                 }
 ANI_IMPORT_TYPES =              [ ANI_TYPE_TRANSFORM, ANI_TYPE_VERTEX, ANI_TYPE_BONE, ANI_TYPE_TM ]
 
-RS_VERTEX_THRESHOLD =           0.0001
-RS_VERTEX_THRESHOLD_SQUARED =   RS_VERTEX_THRESHOLD * RS_VERTEX_THRESHOLD
+RS_COORD_THRESHOLD =            0.00001
+RS_COORD_THRESHOLD_SQUARED =    RS_COORD_THRESHOLD * RS_COORD_THRESHOLD
+RS_DIR_THRESHOLD =              0.0001
 RS_COLOR_THRESHOLD =            0.0001
 RS_LIGHT_THRESHOLD =            0.0001
-RS_SOUND_THRESHOLD =            0.000001
-RS_OCCLUSION_THRESHOLD =        0.0001
 ELU_VALUE_THRESHOLD =           0.01
-ANI_VERTEX_THRESHOLD =          0.0001
+ANI_COORD_THRESHOLD =           0.00001
 
 SPAWN_TYPE_DATA = (
     ('SOLO',        'Solo',         "Free-for-all and Quest spawn for players"),

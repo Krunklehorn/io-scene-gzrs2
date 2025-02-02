@@ -399,6 +399,7 @@ def importRS2(self, context):
         print("=== RS Mesh Cleanup ===")
         print()
 
+    # TODO: convertUnits should affect thresholds
     def cleanupFunc(blObj):
         counts = countInfoReports(context)
 
@@ -883,9 +884,7 @@ def importRS2(self, context):
                 n1 = (p4 - p1).cross(p2 - p1).normalized()
                 n2 = (p2 - p3).cross(p4 - p3).normalized()
 
-                if not all((math.isclose(n1.x, n2.x, abs_tol = RS_OCCLUSION_THRESHOLD),
-                            math.isclose(n1.y, n2.y, abs_tol = RS_OCCLUSION_THRESHOLD),
-                            math.isclose(n1.z, n2.z, abs_tol = RS_OCCLUSION_THRESHOLD))):
+                if not vec3IsClose(n1, n2, RS_DIR_THRESHOLD):
                     self.report({ 'WARNING' }, f"GZRS2: Occlusion points aren't coplanar, resulting dummy may not be oriented correctly: { occName }")
 
                 # Convert to local space
@@ -907,8 +906,8 @@ def importRS2(self, context):
                 xMid = xMax + xMin
                 yMid = yMax + yMin
 
-                xMidZero = math.isclose(xMid, 0.0, abs_tol = RS_OCCLUSION_THRESHOLD)
-                yMidZero = math.isclose(yMid, 0.0, abs_tol = RS_OCCLUSION_THRESHOLD)
+                xMidZero = math.isclose(xMid, 0.0, abs_tol = RS_COORD_THRESHOLD)
+                yMidZero = math.isclose(yMid, 0.0, abs_tol = RS_COORD_THRESHOLD)
 
                 if not xMidZero or not yMidZero:
                     self.report({ 'WARNING' }, f"GZRS2: Occlusion points don't form a rectangle, midpoint not zero, resulting dummy may not be oriented correctly: { occName }, { xMid }, { yMid }")
@@ -928,7 +927,7 @@ def importRS2(self, context):
                 blOccObj.use_empty_image_alpha = True
                 blOccObj.color[3] = 0.5
                 # TODO: 'wall_' vs 'wall_partition_'?
-                # TODO: Custom occlusion image or sprite gizmo?
+                # TODO: Custom image or sprite gizmo?
                 # TODO: Duplicate the empty panel to appear for image data as well
 
                 props = blOccObj.gzrs2

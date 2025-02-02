@@ -77,11 +77,12 @@ def readDirection(file, flipY, *, swizzle = False):
 
     return dir
 
-def readPlane(file, flipY):
+def readPlane(file, convertUnits, flipY):
     plane = Vector(readVec4(file))
     plane.normalize()
 
-    if flipY: plane.y = -plane.y
+    if convertUnits:    plane.w *= 0.01
+    if flipY:           plane.y = -plane.y
 
     return plane
 
@@ -256,11 +257,12 @@ def writeDirection(file, dir, flipY, *, swizzle = False):
 
     writeVec3(file, dir)
 
-def writePlane(file, plane, flipY):
+def writePlane(file, plane, convertUnits, flipY):
     plane = plane.to_4d()
     plane.normalize()
 
-    if flipY: plane.y = -plane.y
+    if flipY:           plane.y = -plane.y
+    if convertUnits:    plane.w *= 100
 
     writeVec4(file, plane)
 

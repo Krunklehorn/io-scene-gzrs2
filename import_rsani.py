@@ -139,7 +139,7 @@ def importAni(self, context):
                 _, i, d = kdTree.find(worldPositions[kZero + v])
 
                 if i in vertexRange:            warnDuplicateIndex = True
-                elif d > ANI_VERTEX_THRESHOLD:  warnDistanceThreshold = True
+                elif d > ANI_COORD_THRESHOLD:  warnDistanceThreshold = True
 
                 vertexRange.append((v, i))
                 maxDist = max(maxDist, d)

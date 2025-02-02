@@ -242,12 +242,10 @@ def readRs(self, file, path, state):
                 octreeVertex = state.rsOctreeVerts[octreeMatch[0]]
                 octreeNormal = octreeVertex.nor
 
-                if octreeMatch[1] > RS_VERTEX_THRESHOLD_SQUARED:
+                if octreeMatch[1] > RS_COORD_THRESHOLD_SQUARED:
                     warnDistanceThreshold = True
 
-                if not all((math.isclose(convexNormal.x, octreeNormal.x, abs_tol = RS_VERTEX_THRESHOLD),
-                            math.isclose(convexNormal.y, octreeNormal.y, abs_tol = RS_VERTEX_THRESHOLD),
-                            math.isclose(convexNormal.z, octreeNormal.z, abs_tol = RS_VERTEX_THRESHOLD))):
+                if not vec3IsClose(convexNormal, octreeNormal, RS_COORD_THRESHOLD):
                     warnNormalThreshold = True
 
                 convexVertex.uv1 = octreeVertex.uv1

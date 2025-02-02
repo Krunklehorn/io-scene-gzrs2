@@ -31,6 +31,13 @@ def tokenizeDistance(data, convertUnits):
 
     return data
 
+def tokenizeVec3(data, nodeName, convertUnits, flipY):
+    data = data.copy()
+    if nodeName in ('POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT') and convertUnits: data /= 0.01
+    if flipY and nodeName in ('POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT'): data.y = -data.y
+
+    return data[:3]
+
 def parseXYZ(node, nodeName, convertUnits, flipY):
     vec = Vector((float(node.getAttribute('x')), float(node.getAttribute('y')), float(node.getAttribute('z'))))
     if nodeName in ('POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT') and convertUnits: vec *= 0.01

@@ -418,6 +418,90 @@ class Col1TreeNode:
     negative:           'Col1TreeNode' = None
     triangles:          tuple = field(default_factory = tuple)
 
+#########################
+####    RS EXPORT    ####
+#########################
+
+@dataclass
+class GZRS2ExportState:
+    convertUnits:           bool = False
+    filterMode:             str = 'ALL'
+    includeChildren:        bool = False
+
+    lmVersion4:             bool = False
+    mod4Fix:                bool = False
+
+    logRsHeaders:           bool = False
+    logRsTrees:             bool = False
+    logRsPolygons:          bool = False
+    logRsVerts:             bool = False
+    logBspHeaders:          bool = False
+    logBspPolygons:         bool = False
+    logBspVerts:            bool = False
+    logColHeaders:          bool = False
+    logColNodes:            bool = False
+    logColTris:             bool = False
+    logVerboseIndices:      bool = False
+    logVerboseWeights:      bool = False
+    logLmHeaders:           bool = False
+    logLmImages:            bool = False
+
+    treeDepthLimit:         int = 0
+
+@dataclass
+class RsConvexPolygonExport:
+    matID:              int = 0
+    drawFlags:          int = 0
+    plane:              Vector = (0, 0, 0, 0)
+    area:               float = 0.0
+    vertexCount:        int = 0
+    positions:          tuple = field(default_factory = tuple)
+    normals:            tuple = field(default_factory = tuple)
+
+@dataclass
+class RsWorldPolygon:
+    normal:             Vector = (0, 0, 0)
+    vertexCount:        int = 0
+    positions:          tuple = field(default_factory = tuple)
+    normals:            tuple = field(default_factory = tuple)
+    uv1s:               tuple = field(default_factory = tuple)
+    uv2s:               tuple = field(default_factory = tuple)
+    matID:              int = 0
+    drawFlags:          int = 0
+    area:               float = 0.0
+
+@dataclass
+class Rs2TreePolygonExport:
+    matID:              int = 0
+    convexID:           int = 0
+    drawFlags:          int = 0
+    vertexCount:        int = 0
+    vertices:           tuple = field(default_factory = tuple)
+    normal:             Vector = (0, 0, 0)
+    used:               bool = False
+
+@dataclass
+class Rs2TreeNodeExport:
+    bbmin:              Vector = (0, 0, 0)
+    bbmax:              Vector = (0, 0, 0)
+    plane:              Vector = (0, 0, 0, 0)
+    positive:           'Rs2TreeNodeExport' = None
+    negative:           'Rs2TreeNodeExport' = None
+    polygons:           tuple = field(default_factory = tuple)
+
+@dataclass
+class Col1HullPolygon:
+    vertexCount:        int = 0
+    vertices:           tuple = field(default_factory = tuple)
+    normal:             Vector = (0, 0, 0)
+    used:               bool = False
+
+@dataclass
+class Col1BoundaryPolygon:
+    vertexCount:        int = 0
+    vertices:           tuple = field(default_factory = tuple)
+    normal:             Vector = (0, 0, 0)
+
 ##########################
 ####    ELU EXPORT    ####
 ##########################

@@ -3,7 +3,7 @@ import os
 from mathutils import Vector, Matrix
 
 from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rsnav, import_rslm, import_rsani
-from . import export_rselu, export_rsnav, export_rslm
+from . import export_gzrs2, export_rselu, export_rsnav, export_rslm
 
 from .constants_gzrs2 import *
 from .lib_gzrs2 import *
@@ -1744,6 +1744,281 @@ class RSELU_PT_Export_Logging(Panel):
         column.prop(operator, 'logVerboseWeights')
         column.enabled = operator.logEluMeshNodes
 
+class ExportGZRS2(Operator, ExportHelper):
+    bl_idname = 'export_scene.gzrs2'
+    bl_label = 'Export RS2'
+    bl_options = { 'UNDO', 'PRESET' }
+    bl_description = "Save an RS file"
+
+    filename_ext = ".rs"
+    filter_glob: StringProperty(
+        default = "*.rs",
+        options = { 'HIDDEN' }
+    )
+
+    panelMain: BoolProperty(
+        name = 'Main',
+        description = "Main panel of options",
+        default = True
+    )
+
+    panelLogging: BoolProperty(
+        name = 'Logging',
+        description = "Log details to the console",
+        default = False
+    )
+
+    convertUnits: BoolProperty(
+        name = 'Convert Units',
+        description = "Convert measurements from meters to centimeters",
+        default = True
+    )
+
+    filterMode: EnumProperty(
+        name = 'Filter Mode',
+        items = (('ALL',        'All',          "Exports all relevant objects"),
+                 ('SELECTED',   'Selected',     "Limit export to selected objects"),
+                 ('VISIBLE',    'Visible',      "Limit export to visible objects"))
+    )
+
+    includeChildren: BoolProperty(
+        name = 'Include Children',
+        description = "Include children of selected objects",
+        default = True
+    )
+
+    lmVersion4: BoolProperty(
+        name = 'Version 4',
+        description = "Fixes bit depth issues and makes use of DXT1 compression, not compatible with vanilla GunZ",
+        default = False
+    )
+
+    mod4Fix: BoolProperty(
+        name = 'MOD4',
+        description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag.",
+        default = True
+    )
+
+    logRsHeaders: BoolProperty(
+        name = 'RS Headers',
+        description = "Log RS header data",
+        default = True
+    )
+
+    logRsTrees: BoolProperty(
+        name = 'RS Trees',
+        description = "Log RS tree data",
+        default = True
+    )
+
+    logRsPolygons: BoolProperty(
+        name = 'RS Polygons',
+        description = "Log RS polygon data",
+        default = False
+    )
+
+    logRsVerts: BoolProperty(
+        name = 'RS Vertices',
+        description = "Log RS vertex data",
+        default = False
+    )
+
+    logBspHeaders: BoolProperty(
+        name = 'BSP Headers',
+        description = "Log BSP header data",
+        default = True
+    )
+
+    logBspPolygons: BoolProperty(
+        name = 'BSP Polygons',
+        description = "Log BSP polygon data",
+        default = False
+    )
+
+    logBspVerts: BoolProperty(
+        name = 'BSP Vertices',
+        description = "Log BSP vertex data",
+        default = False
+    )
+
+    logColHeaders: BoolProperty(
+        name = 'Col Headers',
+        description = "Log Col header data",
+        default = True
+    )
+
+    logColNodes: BoolProperty(
+        name = 'Col Nodes',
+        description = "Log Col node data",
+        default = False
+    )
+
+    logColTris: BoolProperty(
+        name = 'Col Triangles',
+        description = "Log Col triangle data",
+        default = False
+    )
+
+    logNavHeaders: BoolProperty(
+        name = 'Nav Headers',
+        description = "Log Nav header data",
+        default = True
+    )
+
+    logNavData: BoolProperty(
+        name = 'Nav Data',
+        description = "Log Nav data",
+        default = True
+    )
+
+    logLmHeaders: BoolProperty(
+        name = 'Lm Headers',
+        description = "Log Lm header data",
+        default = True
+    )
+
+    logLmImages: BoolProperty(
+        name = 'Lm Images',
+        description = "Log Lm image data",
+        default = False
+    )
+
+    logEluHeaders: BoolProperty(
+        name = 'Elu Headers',
+        description = "Log ELU header data",
+        default = True
+    )
+
+    logEluMats: BoolProperty(
+        name = 'Elu Materials',
+        description = "Log ELU material data",
+        default = True
+    )
+
+    logEluMeshNodes: BoolProperty(
+        name = 'Elu Mesh Nodes',
+        description = "Log ELU mesh node data",
+        default = True
+    )
+
+    logVerboseIndices: BoolProperty(
+        name = 'Verbose Indices',
+        description = "Log ELU indices verbosely",
+        default = False
+    )
+
+    logVerboseWeights: BoolProperty(
+        name = 'Verbose Weights',
+        description = "Log ELU weights verbosely",
+        default = False
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
+
+    def draw(self, context):
+        pass
+
+    def execute(self, context):
+        return export_gzrs2.exportRS2(self, context)
+
+class GZRS2_PT_Export_Main(Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Main'
+    bl_parent_id = 'FILE_PT_operator'
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelMain
+
+        layout.prop(operator, 'convertUnits')
+        layout.prop(operator, 'filterMode')
+
+        column = layout.column()
+        column.prop(operator, 'includeChildren')
+        column.enabled = operator.filterMode == 'SELECTED'
+
+class GZRS2_PT_Export_Lightmap(Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Lightmap'
+    bl_parent_id = 'FILE_PT_operator'
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
+
+    # def draw_header(self, context):
+        # self.layout.prop(context.space_data.active_operator, 'panelLightmap', text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        # layout.enabled = operator.panelLightmap
+
+        layout.prop(operator, 'lmVersion4')
+
+        column = layout.column()
+        column.prop(operator, 'mod4Fix')
+        column.enabled = not operator.lmVersion4
+
+class GZRS2_PT_Export_Logging(Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
+
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelLogging
+
+        layout.prop(operator, "logRsHeaders")
+        layout.prop(operator, "logRsTrees")
+        layout.prop(operator, "logRsPolygons")
+        layout.prop(operator, "logRsVerts")
+        layout.prop(operator, "logBspHeaders")
+        layout.prop(operator, "logBspPolygons")
+        layout.prop(operator, "logBspVerts")
+        layout.prop(operator, "logColHeaders")
+        layout.prop(operator, "logColNodes")
+        layout.prop(operator, "logColTris")
+        layout.prop(operator, "logNavHeaders")
+        layout.prop(operator, "logNavData")
+        layout.prop(operator, "logLmHeaders")
+        layout.prop(operator, "logLmImages")
+        layout.prop(operator, "logEluHeaders")
+        layout.prop(operator, "logEluMats")
+        layout.prop(operator, "logEluMeshNodes")
+
+        column = layout.column()
+        column.prop(operator, 'logVerboseIndices')
+        column.prop(operator, 'logVerboseWeights')
+        column.enabled = operator.logEluMeshNodes
+
 class ExportRSNAV(Operator, ExportHelper):
     bl_idname = 'export_scene.rsnav'
     bl_label = 'Export NAV'
@@ -1878,7 +2153,7 @@ class ExportRSLM(Operator, ExportHelper):
 
     mod4Fix: BoolProperty(
         name = 'MOD4',
-        description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag. Disable if re-exporting a vanilla lightmap",
+        description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag.",
         default = True
     )
 
@@ -2180,7 +2455,7 @@ class GZRS2ObjectProperties(PropertyGroup):
                 blObj.empty_display_size = int(blObj.empty_display_size * 100) / 100
         elif dummyType == 'OCCLUSION':
             # TODO: 'wall_' vs 'wall_partition_'?
-            # TODO: Custom occlusion image or sprite gizmo?
+            # TODO: Custom image or sprite gizmo?
             # TODO: Duplicate the empty panel to appear for image data as well
             blObj.empty_display_type = 'IMAGE'
             blObj.empty_image_side = 'FRONT'
@@ -3365,6 +3640,10 @@ classes = (
     RSNAV_PT_Import_Logging,
     ImportRSLM,
     RSLM_PT_Import_Logging,
+    ExportGZRS2,
+    GZRS2_PT_Export_Main,
+    GZRS2_PT_Export_Lightmap,
+    GZRS2_PT_Export_Logging,
     ExportRSELU,
     RSELU_PT_Export_Main,
     RSELU_PT_Export_Logging,
@@ -3398,6 +3677,7 @@ def menu_func_import(self, context):
     self.layout.operator(ImportRSLM.bl_idname, text = 'GunZ LM Image (.lm)')
 
 def menu_func_export(self, context):
+    self.layout.operator(ExportGZRS2.bl_idname, text = 'GunZ RS2 (.rs) (Beta)')
     self.layout.operator(ExportRSELU.bl_idname, text = 'GunZ ELU (.elu)')
     self.layout.operator(ExportRSNAV.bl_idname, text = 'GunZ NAV (.nav)')
     self.layout.operator(ExportRSLM.bl_idname, text = 'GunZ LM Overwrite (.lm)')

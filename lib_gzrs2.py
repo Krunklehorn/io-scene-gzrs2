@@ -64,6 +64,27 @@ def vecArrayMinMax(vectors, size):
 
     return *minVector, *maxVector
 
+def calcCoordinateBounds(coords):
+    minX = float('inf')
+    minY = float('inf')
+    minZ = float('inf')
+    maxX = float('-inf')
+    maxY = float('-inf')
+    maxZ = float('-inf')
+
+    for coord in coords:
+        minX = min(minX, coord.x)
+        minY = min(minY, coord.y)
+        minZ = min(minZ, coord.z)
+        maxX = max(maxX, coord.x)
+        maxY = max(maxY, coord.y)
+        maxZ = max(maxZ, coord.z)
+
+    return Vector((minX, minY, minZ)), Vector((maxX, maxY, maxZ))
+
+def calcPolygonBounds(polygons):
+    return calcCoordinateBounds(tuple(vertex.pos for polygon in polygons for vertex in polygon.vertices))
+
 def vec3IsClose(v1, v2, threshold):
     return all((math.isclose(v1.x, v2.x, abs_tol = threshold),
                 math.isclose(v1.y, v2.y, abs_tol = threshold),
@@ -1553,6 +1574,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
         viewLayer.objects.active = blMeshObj
 
     if state.doCleanup:
+        # TODO: convertUnits should affect thresholds
         def cleanupFunc(blObj):
             counts = countInfoReports(context)
 
@@ -1909,6 +1931,543 @@ def nextSquare(x):
         result += 1
 
     return int(result ** 2)
+
+def simpleSign(x):
+    if math.isclose(x, 0, abs_tol = RS_COORD_THRESHOLD): return 0
+    else: return -1 if x < 0 else 1
+
+def calcDepthLimit(bbmin, bbmax):
+    span = bbmax - bbmin
+
+    limit = 0
+    length = float('inf')
+
+    while length > TREE_MIN_NODE_SIZE and limit < TREE_MAX_DEPTH:
+        axis = (0 if span.x > span.z else 2) if span.x > span.y else (1 if span.y > span.z else 2)
+
+        length = span[axis]
+        span[axis] /= 2
+
+        limit += 1
+
+    return limit
+
+def calcPlanePointDistance(plane, point):
+    return point.dot(plane) + plane.w
+
+def calcPlaneEdgeIntersection(plane, p1, p2):
+    delta = p2 - p1
+    t = -calcPlanePointDistance(plane, p1) / delta.dot(plane)
+
+    assert t >= 0 and t <= 1, f"calcPlaneEdgeIntersection() created a t value outside the 0-1 range: { t }"
+
+    return p1 + delta * t, t
+
+def calcVertexPlaneInfo(polygon, plane, *, getter = lambda x: x):
+    distances = tuple(calcPlanePointDistance(plane, getter(vertex)) for vertex in polygon.vertices)
+    signs = tuple(simpleSign(distance) for distance in distances)
+
+    posCount = sum(int(sign > 0) for sign in signs)
+    negCount = sum(int(sign < 0) for sign in signs)
+
+    return signs, posCount, negCount
+
+# Y-forward, counter-clockwise, -pi to pi
+def calcVertexPlaneAngle(vertex, worldMatrixInv):
+    local = worldMatrixInv @ vertex
+
+    return math.atan2(local.x, -local.y)
+
+def classifyFacing(polygon, plane, *, getter = lambda x: x):
+    _, posCount, negCount = calcVertexPlaneInfo(polygon, plane, getter = getter)
+
+    if posCount == 0 and negCount == 0:
+        normDot = polygon.normal.dot(plane)
+
+        if normDot >= 0:    return FACING_POS_COP
+        else:               return FACING_NEG_COP
+    elif negCount == 0:     return FACING_POSITIVE
+    elif posCount == 0:     return FACING_NEGATIVE
+    else:                   return FACING_BOTH
+
+def splitPolygon(polygon, plane, *, markUsed = True, getter = lambda x: x):
+    signs, posCount, negCount = calcVertexPlaneInfo(polygon, plane, getter = getter)
+
+    if posCount == 0 and negCount == 0:
+        if markUsed:
+            polygon.used = True
+
+        normDot = polygon.normal.dot(plane)
+
+        if normDot >= 0:    return polygon, None
+        else:               return None, polygon
+    elif negCount == 0:     return polygon, None
+    elif posCount == 0:     return None, polygon
+
+    posVertices = []
+    negVertices = []
+
+    # Group vertices into two sides
+    for i in range(polygon.vertexCount):
+        o = (i + 1) % polygon.vertexCount
+
+        v1 = polygon.vertices[i]
+        v2 = polygon.vertices[o]
+
+        sign1 = signs[i]
+        sign2 = signs[o]
+
+        if isinstance(v1, Vector):
+            if sign1 >= 0: posVertices.append(v1.copy())
+            if sign1 <= 0: negVertices.append(v1.copy())
+            if sign1 != 0 and sign2 != 0 and sign1 != sign2:
+                pos, _ = calcPlaneEdgeIntersection(plane, v1, v2)
+
+                posVertices.append(pos.copy())
+                negVertices.append(pos.copy())
+        elif isinstance(v1, Rs2TreeVertex):
+            if sign1 >= 0: posVertices.append(Rs2TreeVertex(v1.pos.copy(), v1.nor.normalized(), v1.uv1.copy(), v1.uv2.copy()))
+            if sign1 <= 0: negVertices.append(Rs2TreeVertex(v1.pos.copy(), v1.nor.normalized(), v1.uv1.copy(), v1.uv2.copy()))
+            if sign1 != 0 and sign2 != 0 and sign1 != sign2:
+                pos, t  = calcPlaneEdgeIntersection(plane, v1.pos, v2.pos)
+                nor     = v1.nor.lerp(v2.nor, t)
+                uv1     = v1.uv1.lerp(v2.uv1, t)
+                uv2     = v1.uv2.lerp(v2.uv2, t)
+
+                posVertices.append(Rs2TreeVertex(pos.copy(), nor.normalized(), uv1.copy(), uv2.copy()))
+                negVertices.append(Rs2TreeVertex(pos.copy(), nor.normalized(), uv1.copy(), uv2.copy()))
+
+    posVertices = tuple(posVertices)
+    negVertices = tuple(negVertices)
+
+    posCount = len(posVertices)
+    negCount = len(negVertices)
+
+    if isinstance(polygon, Col1HullPolygon):
+        posPolygon = Col1HullPolygon(posCount, posVertices, polygon.normal.normalized(), polygon.used)
+        negPolygon = Col1HullPolygon(negCount, negVertices, polygon.normal.normalized(), polygon.used)
+    elif isinstance(polygon, Col1BoundaryPolygon):
+        posPolygon = Col1BoundaryPolygon(posCount, posVertices, polygon.normal.normalized())
+        negPolygon = Col1BoundaryPolygon(negCount, negVertices, polygon.normal.normalized())
+    elif isinstance(polygon, Rs2TreePolygonExport):
+        posPolygon = Rs2TreePolygonExport(polygon.matID, polygon.convexID, polygon.drawFlags, posCount, posVertices, polygon.normal.normalized(), polygon.used)
+        negPolygon = Rs2TreePolygonExport(polygon.matID, polygon.convexID, polygon.drawFlags, negCount, negVertices, polygon.normal.normalized(), polygon.used)
+
+    return posPolygon, negPolygon
+
+def partitionPolygons(polygons, plane, *, markUsed = True, tuplize = True, getter = lambda x: x):
+    posPolygons = []
+    negPolygons = []
+
+    for polygon in polygons:
+        posPolygon, negPolygon = splitPolygon(polygon, plane, markUsed = markUsed, getter = getter)
+
+        if posPolygon is not None:  posPolygons.append(posPolygon)
+        if negPolygon is not None:  negPolygons.append(negPolygon)
+
+    if tuplize:
+        posPolygons = tuple(posPolygons)
+        negPolygons = tuple(negPolygons)
+
+    return posPolygons, negPolygons
+
+def choosePlane(polygons, *, checkCounts = False, getter = lambda x: x):
+    chosenCost = float('inf')
+    chosenPolygon = None
+    chosenPlane = None
+
+    for polygon1 in polygons:
+        if polygon1.used:
+            continue
+
+        counts = [0 for _ in range(5)]
+
+        normal = polygon1.normal.normalized()
+        plane = normal.to_4d()
+        plane.w = -normal.dot(getter(polygon1.vertices[0]))
+
+        for polygon2 in polygons:
+            counts[classifyFacing(polygon2, plane, getter = getter)] += 1
+
+        # Always prioritize balance
+        cost = abs(counts[FACING_POSITIVE] - counts[FACING_NEGATIVE])
+        cost += counts[FACING_BOTH] / 2
+        cost += (counts[FACING_POS_COP] + counts[FACING_NEG_COP]) / 10
+
+        # Prioritize balance, then cuts
+        '''
+        if depth < 4:
+            cost = abs(counts[FACING_POSITIVE] - counts[FACING_NEGATIVE])
+            cost += counts[FACING_BOTH] / 2
+        else:
+            cost = abs(counts[FACING_POSITIVE] - counts[FACING_NEGATIVE]) / 2
+            cost += counts[FACING_BOTH]
+
+        cost += (counts[FACING_POS_COP] + counts[FACING_NEG_COP]) / 10
+        '''
+
+        if cost >= chosenCost:
+            continue
+
+        if checkCounts:
+            posCount = counts[FACING_POSITIVE] + counts[FACING_POS_COP]
+            negCount = counts[FACING_NEGATIVE] + counts[FACING_NEG_COP]
+
+            if posCount == 0 or negCount == 0:
+                continue
+
+        chosenCost = cost
+        chosenPolygon = polygon1
+        chosenPlane = plane
+
+    if chosenPolygon:
+        chosenPolygon.used = True
+
+    return chosenPlane
+
+def createOctreeNode(octPolygons, bbmin, bbmax, depthLimit, *, depth = 0):
+    if depth < depthLimit and len(octPolygons) > TREE_MAX_NODE_POLYGON_COUNT:
+        # if depth < len(partitionPlanes): # TODO: New empty type for "Partition" planes
+        if False:
+            plane = partitionPlanes[depth]
+        else:
+            span = bbmax - bbmin
+            center = (bbmax + bbmin) / 2
+            axis = (0 if span.x > span.z else 2) if span.x > span.y else (1 if span.y > span.z else 2)
+
+            dir = Vector((0, 0, 0))
+            dir[axis] = -1
+
+            plane = dir.to_4d()
+            plane.w = -dir.dot(center)
+
+        posOctPolygons, negOctPolygons = partitionPolygons(octPolygons, plane, getter = lambda x: x.pos)
+
+        posbbmin, posbbmax = calcPolygonBounds(posOctPolygons)
+        negbbmin, negbbmax = calcPolygonBounds(negOctPolygons)
+
+        if len(posOctPolygons) > 0: positive = createOctreeNode(posOctPolygons, posbbmin, posbbmax, depthLimit, depth = depth + 1)
+        if len(negOctPolygons) > 0: negative = createOctreeNode(negOctPolygons, negbbmin, negbbmax, depthLimit, depth = depth + 1)
+
+        return Rs2TreeNodeExport(bbmin, bbmax, plane, positive, negative, ())
+
+    return Rs2TreeNodeExport(bbmin, bbmax, Vector((0, 0, 0, 0)), None, None, octPolygons)
+
+def createBsptreeNode(bspPolygons, bbmin, bbmax, *, depth = 0):
+    if (plane := choosePlane(bspPolygons, checkCounts = True, getter = lambda x: x.pos)) is not None:
+        posBspPolygons, negBspPolygons = partitionPolygons(bspPolygons, plane, getter = lambda x: x.pos)
+
+        posbbmin, posbbmax = calcPolygonBounds(posBspPolygons)
+        negbbmin, negbbmax = calcPolygonBounds(negBspPolygons)
+
+        if len(posBspPolygons) > 0: positive = createBsptreeNode(posBspPolygons, posbbmin, posbbmax, depth = depth + 1)
+        if len(negBspPolygons) > 0: negative = createBsptreeNode(negBspPolygons, negbbmin, negbbmax, depth = depth + 1)
+
+        return Rs2TreeNodeExport(bbmin, bbmax, plane, positive, negative, ())
+
+    return Rs2TreeNodeExport(bbmin, bbmax, Vector((0, 0, 0, 0)), None, None, bspPolygons)
+
+# Counter-clockwise, normals face away
+def createBoundsQuad(bbmin, bbmax, side):
+    side = int(side)
+    odd = bool(side % 2)
+    a0 = side // 2
+    a1 = (a0 + 1) % 3
+    a2 = (a0 + 2) % 3
+    axis = bbmin[a0] if odd else bbmax[a0]
+
+    vertices = [Vector((0, 0, 0)) for _ in range(4)]
+
+    vertices[0][a0] = axis
+    vertices[0][a1] = bbmin[a1]
+    vertices[0][a2] = bbmin[a2]
+
+    vertices[1][a0] = axis
+    vertices[1][a1] = bbmin[a1]
+    vertices[1][a2] = bbmax[a2]
+
+    vertices[2][a0] = axis
+    vertices[2][a1] = bbmax[a1]
+    vertices[2][a2] = bbmax[a2]
+
+    vertices[3][a0] = axis
+    vertices[3][a1] = bbmax[a1]
+    vertices[3][a2] = bbmin[a2]
+
+    vertices = tuple(vertices) if odd else tuple(reversed(vertices))
+
+    normal = Vector((0, 0, 0))
+    normal[a0] = -1 if odd else 1
+
+    return Col1BoundaryPolygon(4, vertices, normal)
+
+def createColTriangles(polygons):
+    triangles = []
+
+    for polygon in polygons:
+        vertexPairs = enumerate(polygon.vertices)
+        vertexPairs = tuple((v1, v2, vertex1, vertex2) for v1, vertex1 in vertexPairs for v2, vertex2 in vertexPairs if v1 != v2)
+
+        for v1, v2, vertex1, vertex2 in vertexPairs:
+            if vec3IsClose(vertex1, vertex2, RS_COORD_THRESHOLD):
+                assert False, "createColTriangles() found a degenerate polygon!"
+
+    for polygon in polygons:
+        for v in range(polygon.vertexCount - 2):
+            v1 = polygon.vertices[0].copy()
+            v2 = polygon.vertices[v + 1].copy()
+            v3 = polygon.vertices[v + 2].copy()
+            normal = polygon.normal.normalized()
+
+            triangles.append(ColTriangle((v1, v2, v3), normal))
+
+    return tuple(triangles)
+
+def createVertexIndex(list, new):
+    for i, item in enumerate(list):
+        if vec3IsClose(item, new, RS_COORD_THRESHOLD):
+            return i
+
+    list.append(new)
+
+    return len(list) - 1
+
+def getPartitionPolygon(plane, boundsPolygons):
+    vertices = []
+    outputPolygons = []
+
+    # Record points of intersection
+    for polygon in boundsPolygons:
+        signs, posCount, negCount = calcVertexPlaneInfo(polygon, plane)
+
+        # Ignore and delete coplanar polygons
+        if posCount == 0 and negCount == 0:
+            continue
+
+        for i in range(polygon.vertexCount):
+            o = (i + 1) % polygon.vertexCount
+
+            v1 = polygon.vertices[i]
+            v2 = polygon.vertices[o]
+
+            sign1 = signs[i]
+            sign2 = signs[o]
+
+            if sign1 == 0: createVertexIndex(vertices, v1)
+            elif sign2 != 0 and sign1 != sign2:
+                pos, _ = calcPlaneEdgeIntersection(plane, v1, v2)
+
+                createVertexIndex(vertices, pos)
+
+        outputPolygons.append(polygon)
+
+    vertices = tuple(vertices)
+    outputPolygons = tuple(outputPolygons)
+
+    vertexCount = len(vertices)
+
+    if vertexCount < 3:
+        return False, None, None, outputPolygons
+
+    # Sort points by angle
+    center = Vector((0, 0, 0))
+    for vertex in vertices: center += vertex
+    center /= vertexCount
+
+    up = plane.xyz.copy()
+    forward = vertices[0] - center
+    right = forward.cross(up)
+
+    up.normalize()
+    forward.normalize()
+    right.normalize()
+
+    translation = Matrix.Translation(-center)
+    rotation = Matrix((right, forward, up)).to_4x4()
+    matrix = rotation @ translation
+
+    vertices = sorted(vertices, key = lambda x: calcVertexPlaneAngle(x, matrix))
+
+    # TODO: Try importing planes to check if yours are buggy
+
+    # Positive must face away
+    posVertices = tuple(vertex.copy() for vertex in reversed(vertices))
+    negVertices = tuple(vertex.copy() for vertex in vertices)
+
+    return True, Col1BoundaryPolygon(vertexCount, posVertices, -up.copy()), Col1BoundaryPolygon(vertexCount, negVertices, up.copy()), outputPolygons
+
+def createColtreeNode(colPolygons, boundsPolygons, *, depth = 0):
+    colPolygonCount = len(colPolygons)
+    boundsPolygonCount = len(boundsPolygons)
+
+    # print("\t" * depth, "Create:", colPolygonCount, boundsPolygonCount)
+
+    if colPolygonCount == 0:
+        if boundsPolygonCount == 0:
+            # print("\t" * depth, "Empty!")
+            return None
+
+        boundsVertices = []
+        boundsIndices = tuple(tuple(createVertexIndex(boundsVertices, vertex) for vertex in polygon.vertices) for polygon in boundsPolygons)
+        boundsVertices = tuple(boundsVertices)
+
+        bevelPlanes = []
+
+        polygonPairs = enumerate(boundsPolygons)
+        polygonPairs = tuple((p1, p2, polygon1, polygon2) for p1, polygon1 in polygonPairs for p2, polygon2 in polygonPairs if p1 != p2)
+
+        # Create planes for convex edges sharper than a specified threshold
+        for p1, p2, polygon1, polygon2 in polygonPairs:
+            indexList1 = boundsIndices[p1]
+            indexList2 = boundsIndices[p2]
+
+            indexCount1 = len(indexList1)
+            indexCount2 = len(indexList2)
+
+            indices1 = tuple((i, (i + 1) % indexCount1) for i in range(indexCount1))
+            indices2 = tuple((i, (i + 1) % indexCount2) for i in range(indexCount2))
+
+            indices = tuple((indexList1[i1], indexList1[i2], indexList2[i3], indexList2[i4]) for i1, i2 in indices1 for i3, i4 in indices2)
+
+            for i1, i2, i3, i4 in indices:
+                if (i1 == i2 and i3 == i4) or (i1 == i4 and i2 == i3):
+                    normal1 = polygon1.normal
+                    normal2 = polygon2.normal
+
+                    if normal1.dot(normal2) < math.cos(math.radians(110)):
+                        halfNormal = normal1 + normal2
+                        halfNormal.normalize()
+
+                        plane = halfNormal.to_4d()
+                        plane.w = -halfNormal.dot(boundsVertices[i1])
+
+                        bevelPlanes.append(plane)
+
+        # Create planes for convex vertices
+        for i, vertex1 in enumerate(boundsVertices):
+            normals = []
+            averageNormal = Vector((0, 0, 0))
+
+            # Consider the normal of each polygon this vertex is connected to
+            for p, polygon in enumerate(boundsPolygons):
+                indices = boundsIndices[p]
+                indexCount = polygon.vertexCount
+
+                for v, vertex2 in enumerate(polygon.vertices):
+                    if indices[v] != i:
+                        continue
+
+                    normals.append(polygon.normal)
+
+                    # Weight the accumulation based on the angle between the edges
+                    e1 = polygon.vertices[(v + 1 + indexCount) % indexCount] - vertex2
+                    e2 = polygon.vertices[(v - 1 + indexCount) % indexCount] - vertex2
+
+                    len1 = e1.length
+                    len2 = e2.length
+
+                    if math.isclose(len1, 0, abs_tol = RS_COORD_THRESHOLD): continue
+                    if math.isclose(len2, 0, abs_tol = RS_COORD_THRESHOLD): continue
+
+                    costheta = e1.dot(e2) / (len1 * len2)
+
+                    if costheta > 1 or costheta < -1: continue
+
+                    theta = math.acos(costheta)
+
+                    averageNormal += polygon.normal * theta
+
+                    break
+
+            # Verify convexity
+            normalPairs = enumerate(normals)
+            normalPairs = tuple((normal1, normal2) for n1, normal1 in normalPairs for n2, normal2 in normalPairs if n1 != n2)
+
+            if all((normal1.dot(normal2) >= 0 for normal1, normal2 in normalPairs)):
+                continue
+
+            averageNormal.normalize()
+
+            plane = averageNormal.to_4d()
+            plane.w = -averageNormal.dot(vertex1)
+
+            bevelPlanes.append(plane)
+
+        bevelPlanes = tuple(bevelPlanes)
+
+        # print("\t" * depth, "Export solid:", len(boundsPolygons))
+        result = Col1TreeNode(Vector((0, 0, 0, 0)), True, None, None, createColTriangles(boundsPolygons))
+
+        for plane in bevelPlanes:
+            # print("\t" * depth, "Export bevel:", plane)
+            result = Col1TreeNode(plane, False, None, result, ())
+
+        return result
+
+    if (plane := choosePlane(colPolygons)):
+        # print("\t" * depth, "Plane:", plane)
+        posColPolygons, negColPolygons = partitionPolygons(colPolygons, plane)
+
+        append, posPolygon, negPolygon, boundsPolygons = getPartitionPolygon(plane, boundsPolygons)
+        posBoundsPolygons, negBoundsPolygons = partitionPolygons(boundsPolygons, plane, markUsed = False, tuplize = False)
+
+        if append:
+            posBoundsPolygons.append(posPolygon)
+            negBoundsPolygons.append(negPolygon)
+
+        posBoundsPolygons = tuple(posBoundsPolygons)
+        negBoundsPolygons = tuple(negBoundsPolygons)
+
+        # print("\t" * depth, "Positive:", len(posColPolygons), len(posBoundsPolygons))
+        positive = createColtreeNode(posColPolygons, posBoundsPolygons, depth = depth + 1)
+        # print("\t" * depth, "Negative:", len(negColPolygons), len(negBoundsPolygons))
+        negative = createColtreeNode(negColPolygons, negBoundsPolygons, depth = depth + 1)
+
+        # print("\t" * depth, "Export fork:", bool(positive), bool(negative))
+        return Col1TreeNode(plane, False, positive, negative, ())
+
+    # print("\t" * depth, "Export hull:", colPolygonCount)
+    return Col1TreeNode(Vector((0, 0, 0, 0)), False, None, None, createColTriangles(colPolygons))
+
+def getTreeNodeCount(tree):
+    count = 1
+
+    if tree.negative: count += getTreeNodeCount(tree.negative)
+    if tree.positive: count += getTreeNodeCount(tree.positive)
+
+    return count
+
+def getTreePolygonCount(tree):
+    count = sum(polygon.vertexCount for polygon in tree.polygons)
+
+    if tree.negative: count += getTreePolygonCount(tree.negative)
+    if tree.positive: count += getTreePolygonCount(tree.positive)
+
+    return count
+
+def getTreeTriangleCount(tree):
+    count = len(tree.triangles)
+
+    if tree.negative: count += getTreeTriangleCount(tree.negative)
+    if tree.positive: count += getTreeTriangleCount(tree.positive)
+
+    return count
+
+def getTreeVertexCount(tree):
+    count = sum(polygon.vertexCount for polygon in tree.polygons)
+
+    if tree.negative: count += getTreeVertexCount(tree.negative)
+    if tree.positive: count += getTreeVertexCount(tree.positive)
+
+    return count
+
+def getTreeIndicesCount(tree):
+    count = sum(polygon.vertexCount - 2 for polygon in tree.polygons) * 3
+
+    if tree.negative: count += getTreeIndicesCount(tree.negative)
+    if tree.positive: count += getTreeIndicesCount(tree.positive)
+
+    return count
 
 def unpackLmImages(context, state):
     numCells = len(state.lmImages)
@@ -2358,14 +2917,12 @@ def calcLightRender(blLightObj, context):
     return hide
 
 def compareColors(color1, color2):
-    return all((math.isclose(color1[0], color2[0], abs_tol = RS_COLOR_THRESHOLD),
-                math.isclose(color1[1], color2[1], abs_tol = RS_COLOR_THRESHOLD),
-                math.isclose(color1[2], color2[2], abs_tol = RS_COLOR_THRESHOLD)))
+    return vec3IsClose(color1, color2, RS_COLOR_THRESHOLD)
 
 def compareLights(light1, light2):
-    return all((math.isclose(light1.color[0],            light2.color[0],            abs_tol = RS_LIGHT_THRESHOLD),
-                math.isclose(light1.color[1],            light2.color[1],            abs_tol = RS_LIGHT_THRESHOLD),
-                math.isclose(light1.color[2],            light2.color[2],            abs_tol = RS_LIGHT_THRESHOLD),
+    return all((math.isclose(light1.color[0],            light2.color[0],            abs_tol = RS_COLOR_THRESHOLD),
+                math.isclose(light1.color[1],            light2.color[1],            abs_tol = RS_COLOR_THRESHOLD),
+                math.isclose(light1.color[2],            light2.color[2],            abs_tol = RS_COLOR_THRESHOLD),
                 math.isclose(light1.energy,              light2.energy,              abs_tol = RS_LIGHT_THRESHOLD),
                 math.isclose(light1.shadow_soft_size,    light2.shadow_soft_size,    abs_tol = RS_LIGHT_THRESHOLD)))
 
