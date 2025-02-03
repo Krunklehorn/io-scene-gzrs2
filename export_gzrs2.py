@@ -184,6 +184,9 @@ def exportRS2(self, context):
                     elif    propSubtype == 'FLAG':  blPropFlagObjs.append(object)
                 elif    meshType == 'COLLISION':    blColObjs.append(object)
                 elif    meshType == 'NAVIGATION':   blNavObjs.append(object)
+
+                if meshType == 'WORLD' and props.plusCollision:
+                    blColObjs.append(object)
             elif objType == 'LIGHT':
                 props = object.data.gzrs2
                 lightType =props.lightType

@@ -2834,6 +2834,11 @@ class GZRS2MeshProperties(PropertyGroup):
         update = onUpdate
     )
 
+    plusCollision: BoolProperty(
+        name = '+Collision',
+        default = False
+    )
+
     propSubtype: EnumProperty(
         name = 'Subtype',
         items = PROP_SUBTYPE_DATA,
@@ -2939,7 +2944,9 @@ class GZRS2_PT_Realspace_Mesh(Panel):
 
         column = layout.column()
 
-        if props.meshType == 'PROP':
+        if props.meshType == 'WORLD':
+            column.prop(props, 'plusCollision')
+        elif props.meshType == 'PROP':
             column.prop(props, 'propSubtype')
             column.prop(props, 'propFilename')
 
