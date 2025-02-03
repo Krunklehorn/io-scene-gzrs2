@@ -14,33 +14,19 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 # Latest Update
 
-[***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.6.1***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.6)
+[***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.7***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.7)
 
-* NEW: Object types! .rs and .elu import overhaul!
-  * Artist friendly UI panels, no more string tags!
-  * Empties, meshes, lights, cameras and more!
-  * Content imported from previous versions will NOT be compatible, sorry!
-  * Look for more 'Realspace' panels to see what controls are available!
-* NEW: Light overhaul
-  * Removed 'tweaks' and simplified
-  * Dynamic lights hidden from render by default
-  * New translation layer retains Realspace values in preparation for .rs export
-  * Added UI controls for lightmap mix, mod4 fix and light recalculation
-  * Phased out light drivers in favor of a UI panel for light translation, fog and other global settings
-* NEW: Automatic material ID handling!
-  * IDs and sub-IDs are now abstracted behind 'Priority', all of which you can safely ignore
-  * Material type, base/sub distinctions are now implied by things like slot order and parent-child relationships
-  * Don't panic if warnings appear in the material panel, just follow their instructions
-  * Many, many checks are in place to help guide you and you can always message Krunk#6051 for support
-* NEW: Better texture path controls, no more labeling image texture nodes!
-* NEW: flag.xml and smoke.xml support
-* Exposed shader emission and renamed 'Power' to 'Exponent'
-* Converted occlusion planes to image dummies
-* Fixed data directory processing for Linux paths
-* Fixed lightmap uvs for atlased lightmaps (Citadel)
-* Fixed .elu power values
-* Phased out lightmap export atlasing, better to just increase texture resolution
-* Phased out isEffects and UV layer 3
+* NEW: .rs export, yes, that's full map export!
+  * Currently in beta, works fine for small, boxy test maps
+  * Check the GitHub page for requirements and known issues
+* NEW: World lightmap selector and "Prepare for Bake" operator
+  * Sets the active image texture node of all world materials
+  * Sets the active UV channel of all world meshes
+  * Disables the lightmap mix
+  * Marks the selected image as a fake user
+* Fixed .rs import 'Bake' mode
+* .col import now reads both solid and hull collision geometry
+* .col import can now read cut planes for debugging
 * Other minor fixes
 
 
@@ -60,6 +46,37 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 
 # Current Export Features
+
+## Map Export (.rs) (Beta!)
+
+* Writes .rs, .bsp, .col, .lm and .xml data all at once
+* Exports empties, meshes, lights and cameras
+* Requires at least one world mesh
+* Requires at least one collision mesh or a world mesh marked with '+Collision'
+* Ignores anything not marked by the type system...
+  * Empty: Spawn, Flare, Sound, Smoke, Item, Occlusion
+  * Mesh: World, Collision, Navigation
+  * Light: Static, Dynamic
+  * Camera: Wait, Track
+
+<!-- -->
+
+### Untested Features
+* Spawn empties for quest mobs
+* Occlusion planes
+* Smoke empties
+* Camera empties
+* Flag props
+
+<!-- -->
+
+### Known Issues
+* NO LEAK DETECTION: You must ensure collision meshes are completely sealed!
+  * Geometry should have no holes and appear red from the outside when viewed through the 'Face Orientation' overlay
+* NO AUTOMATIC PROPS: Prop (.elu) file names are written to .rs.xml under 'OBJECTLIST' however, the props themselves must be exported manually using a selection filter
+* RE-EXPORT IS UNTESTED: Don't expect it to work without some effort
+* WTF IT'S SO SLOW: Tree generation doesn't work well with dense, thin or curved geometry; don't stick a 300k polygon toothpick in an open room
+  * Future updates will address this with features like "Cordon" areas, "Detail" meshes and "Partition" planes
 
 ## Model Export (.elu)
 
