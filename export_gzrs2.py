@@ -71,6 +71,8 @@ def exportRS2(self, context):
 
     # TODO: Verify blitzkrieg data
 
+    # TODO: Detail meshes, how easy is this? Can we just restrict them from choosePlane()?
+
     # Gather data into lists
     blSpawnSoloObjs     = []
     blSpawnTeamObjs     = []

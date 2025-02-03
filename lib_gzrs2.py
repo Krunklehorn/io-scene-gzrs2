@@ -2923,14 +2923,16 @@ def calcLightRender(blLightObj, context):
     return hide
 
 def compareColors(color1, color2):
-    return vec3IsClose(color1, color2, RS_COLOR_THRESHOLD)
+    return all((math.isclose(color1[0],                 color2[0],                  abs_tol = RS_COLOR_THRESHOLD),
+                math.isclose(color1[1],                 color2[1],                  abs_tol = RS_COLOR_THRESHOLD),
+                math.isclose(color1[2],                 color2[2],                  abs_tol = RS_COLOR_THRESHOLD)))
 
 def compareLights(light1, light2):
-    return all((math.isclose(light1.color[0],            light2.color[0],            abs_tol = RS_COLOR_THRESHOLD),
-                math.isclose(light1.color[1],            light2.color[1],            abs_tol = RS_COLOR_THRESHOLD),
-                math.isclose(light1.color[2],            light2.color[2],            abs_tol = RS_COLOR_THRESHOLD),
-                math.isclose(light1.energy,              light2.energy,              abs_tol = RS_LIGHT_THRESHOLD),
-                math.isclose(light1.shadow_soft_size,    light2.shadow_soft_size,    abs_tol = RS_LIGHT_THRESHOLD)))
+    return all((math.isclose(light1.color[0],           light2.color[0],            abs_tol = RS_COLOR_THRESHOLD),
+                math.isclose(light1.color[1],           light2.color[1],            abs_tol = RS_COLOR_THRESHOLD),
+                math.isclose(light1.color[2],           light2.color[2],            abs_tol = RS_COLOR_THRESHOLD),
+                math.isclose(light1.energy,             light2.energy,              abs_tol = RS_LIGHT_THRESHOLD),
+                math.isclose(light1.shadow_soft_size,   light2.shadow_soft_size,    abs_tol = RS_LIGHT_THRESHOLD)))
 
 def groupLights(lights):
     groups = []
