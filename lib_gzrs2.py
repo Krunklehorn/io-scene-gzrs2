@@ -1,4 +1,4 @@
-import bpy, os, math, ctypes, shutil
+import bpy, os, math, random, ctypes, shutil
 
 from ctypes import *
 
@@ -2125,7 +2125,9 @@ def choosePlane(polygons, *, checkCounts = False, getter = lambda x: x):
 
     return chosenPlane
 
-def createOctreeNode(octPolygons, bbmin, bbmax, depthLimit, *, depth = 0):
+def createOctreeNode(octPolygons, bbmin, bbmax, depthLimit, windowManager, *, depth = 0):
+    windowManager.progress_update(depth)
+
     if depth < depthLimit and len(octPolygons) > TREE_MAX_NODE_POLYGON_COUNT:
         # if depth < len(partitionPlanes): # TODO: New empty type for "Partition" planes
         if False:
@@ -2146,22 +2148,24 @@ def createOctreeNode(octPolygons, bbmin, bbmax, depthLimit, *, depth = 0):
         posbbmin, posbbmax = calcPolygonBounds(posOctPolygons)
         negbbmin, negbbmax = calcPolygonBounds(negOctPolygons)
 
-        if len(posOctPolygons) > 0: positive = createOctreeNode(posOctPolygons, posbbmin, posbbmax, depthLimit, depth = depth + 1)
-        if len(negOctPolygons) > 0: negative = createOctreeNode(negOctPolygons, negbbmin, negbbmax, depthLimit, depth = depth + 1)
+        if len(posOctPolygons) > 0: positive = createOctreeNode(posOctPolygons, posbbmin, posbbmax, depthLimit, windowManager, depth = depth + 1)
+        if len(negOctPolygons) > 0: negative = createOctreeNode(negOctPolygons, negbbmin, negbbmax, depthLimit, windowManager, depth = depth + 1)
 
         return Rs2TreeNodeExport(bbmin, bbmax, plane, positive, negative, ())
 
     return Rs2TreeNodeExport(bbmin, bbmax, Vector((0, 0, 0, 0)), None, None, octPolygons)
 
-def createBsptreeNode(bspPolygons, bbmin, bbmax, *, depth = 0):
+def createBsptreeNode(bspPolygons, bbmin, bbmax, windowManager, *, depth = 0):
+    windowManager.progress_update(random.randint(0, 1))
+
     if (plane := choosePlane(bspPolygons, checkCounts = True, getter = lambda x: x.pos)) is not None:
         posBspPolygons, negBspPolygons = partitionPolygons(bspPolygons, plane, getter = lambda x: x.pos)
 
         posbbmin, posbbmax = calcPolygonBounds(posBspPolygons)
         negbbmin, negbbmax = calcPolygonBounds(negBspPolygons)
 
-        if len(posBspPolygons) > 0: positive = createBsptreeNode(posBspPolygons, posbbmin, posbbmax, depth = depth + 1)
-        if len(negBspPolygons) > 0: negative = createBsptreeNode(negBspPolygons, negbbmin, negbbmax, depth = depth + 1)
+        if len(posBspPolygons) > 0: positive = createBsptreeNode(posBspPolygons, posbbmin, posbbmax, windowManager, depth = depth + 1)
+        if len(negBspPolygons) > 0: negative = createBsptreeNode(negBspPolygons, negbbmin, negbbmax, windowManager, depth = depth + 1)
 
         return Rs2TreeNodeExport(bbmin, bbmax, plane, positive, negative, ())
 
@@ -2296,7 +2300,9 @@ def getPartitionPolygon(plane, boundsPolygons):
 
     return True, Col1BoundaryPolygon(vertexCount, posVertices, -up.copy()), Col1BoundaryPolygon(vertexCount, negVertices, up.copy()), outputPolygons
 
-def createColtreeNode(colPolygons, boundsPolygons, *, depth = 0):
+def createColtreeNode(colPolygons, boundsPolygons, windowManager, *, depth = 0):
+    windowManager.progress_update(random.randint(0, 1))
+
     colPolygonCount = len(colPolygons)
     boundsPolygonCount = len(boundsPolygons)
 
@@ -2419,9 +2425,9 @@ def createColtreeNode(colPolygons, boundsPolygons, *, depth = 0):
         negBoundsPolygons = tuple(negBoundsPolygons)
 
         # print("\t" * depth, "Positive:", len(posColPolygons), len(posBoundsPolygons))
-        positive = createColtreeNode(posColPolygons, posBoundsPolygons, depth = depth + 1)
+        positive = createColtreeNode(posColPolygons, posBoundsPolygons, windowManager, depth = depth + 1)
         # print("\t" * depth, "Negative:", len(negColPolygons), len(negBoundsPolygons))
-        negative = createColtreeNode(negColPolygons, negBoundsPolygons, depth = depth + 1)
+        negative = createColtreeNode(negColPolygons, negBoundsPolygons, windowManager, depth = depth + 1)
 
         # print("\t" * depth, "Export fork:", bool(positive), bool(negative))
         return Col1TreeNode(plane, False, positive, negative, ())

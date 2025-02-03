@@ -51,6 +51,8 @@ def exportRS2(self, context):
     splitname = basename.split(os.extsep)
     filename = splitname[0]
 
+    windowManager = context.window_manager
+
     objects = getFilteredObjects(context, state)
 
     # TODO: New material tags
@@ -98,7 +100,11 @@ def exportRS2(self, context):
     foundValid = False
     invalidCount = 0
 
-    for object in objects:
+    windowManager.progress_begin(0, len(objects))
+
+    for o, object in enumerate(objects):
+        windowManager.progress_update(o)
+
         if object is None:
             continue
 
@@ -317,8 +323,11 @@ def exportRS2(self, context):
     rsSoundCount = len(blSoundObjs)
 
     rsMatTexpaths = []
-
     reorientCamera = Matrix.Rotation(math.radians(-90.0), 4, 'X')
+
+    windowManager.progress_end()
+    windowManager.progress_begin(0, rsMatCount + rsLightCount + rsPropCount + rsDummyCount + rsOccCount + rsSoundCount)
+    progress = 0
 
     # Write .rs.xml
     rsxmlpath = f"{ rspath }{ os.extsep }xml"
@@ -333,6 +342,8 @@ def exportRS2(self, context):
             file.write("\t<MATERIALLIST>\n")
 
         for m, blWorldMat in enumerate(blWorldMats):
+            progress += 1
+            windowManager.progress_update(progress)
 
             props = blWorldMat.gzrs2
             exportName = blWorldMat.name
@@ -387,6 +398,9 @@ def exportRS2(self, context):
         if rsLightCount > 0:    file.write("\t<LIGHTLIST>\n")
 
         for blLightObj in blLightObjs:
+            progress += 1
+            windowManager.progress_update(progress)
+
             loc = blLightObj.matrix_world.to_translation()
 
             blLight = blLightObj.data
@@ -420,6 +434,9 @@ def exportRS2(self, context):
         if rsPropCount > 0:     file.write("\t<OBJECTLIST>\n")
 
         for blPropObj in blPropObjs:
+            progress += 1
+            windowManager.progress_update(progress)
+
             propFilename = blPropObj.data.gzrs2.propFilename
             propFilename = propFilename.replace(os.extsep + 'elu', '')
 
@@ -434,6 +451,9 @@ def exportRS2(self, context):
         sm = 1
 
         for blDummyObj in blDummyObjs:
+            progress += 1
+            windowManager.progress_update(progress)
+
             objType = blDummyObj.type
 
             if objType == 'EMPTY':
@@ -502,8 +522,10 @@ def exportRS2(self, context):
         oc = 1
 
         for blOccObj in blOccObjs:
-            occName = blOccObj.name
+            progress += 1
+            windowManager.progress_update(progress)
 
+            occName = blOccObj.name
             worldMatrix = blOccObj.matrix_world.copy()
 
             # Reorientation is baked into the vertices
@@ -548,10 +570,12 @@ def exportRS2(self, context):
         identityQuat = Quaternion()
 
         for blSoundObj in blSoundObjs:
+            progress += 1
+            windowManager.progress_update(progress)
+
             props = blSoundObj.gzrs2
 
             soundFileName = props.soundFileName
-
             soundSpace = props.soundSpace
             soundShape = props.soundShape
             typecode = ('a' if soundSpace == '2D' else 'b') + ('0' if soundShape == 'AABB' else '1')
@@ -599,7 +623,7 @@ def exportRS2(self, context):
 
     # Write spawn.xml
     itemSoloCount = len(blItemSoloObjs)
-    itemTeamCount = len(blItemSoloObjs)
+    itemTeamCount = len(blItemTeamObjs)
 
     if itemSoloCount > 0 or itemTeamCount > 0:
         spawnxmlpath = os.path.join(directory, "spawn.xml")
@@ -705,7 +729,12 @@ def exportRS2(self, context):
     worldPolygons = []
     o = 0
 
-    for blWorldObj in blWorldObjs:
+    windowManager.progress_end()
+    windowManager.progress_begin(0, len(blWorldObjs))
+
+    for w, blWorldObj in enumerate(blWorldObjs):
+        windowManager.progress_update(w)
+
         blMesh = blWorldObj.data
         uvLayer1 = getOrNone(blMesh.uv_layers, 0)
         uvLayer2 = getOrNone(blMesh.uv_layers, 1)
@@ -745,7 +774,12 @@ def exportRS2(self, context):
     rsConvexPolygons = []
     rsCVertexCount = 0
 
-    for polygon in worldPolygons:
+    windowManager.progress_end()
+    windowManager.progress_begin(0, len(worldPolygons))
+
+    for p, polygon in enumerate(worldPolygons):
+        windowManager.progress_update(w)
+
         normal = polygon.normal.normalized()
         plane = normal.to_4d()
         plane.w = -normal.dot(polygon.positions[0])
@@ -762,7 +796,12 @@ def exportRS2(self, context):
     # Generate Rs octree nodes
     rsOctreePolygons = []
 
+    windowManager.progress_end()
+    windowManager.progress_begin(0, len(worldPolygons))
+
     for convexID, polygon in enumerate(worldPolygons):
+        windowManager.progress_update(convexID)
+
         vertexCount = polygon.vertexCount
         vertices = []
 
@@ -777,7 +816,11 @@ def exportRS2(self, context):
 
     rsOctreePolygons = tuple(rsOctreePolygons)
 
-    rsOctreeRoot = createOctreeNode(rsOctreePolygons, worldBBMin, worldBBMax, calcDepthLimit(worldBBMin, worldBBMax))
+    depthLimit = calcDepthLimit(worldBBMin, worldBBMax)
+
+    windowManager.progress_end()
+    windowManager.progress_begin(0, depthLimit)
+    rsOctreeRoot = createOctreeNode(rsOctreePolygons, worldBBMin, worldBBMax, depthLimit, windowManager)
 
     rsONodeCount        = getTreeNodeCount(rsOctreeRoot)
     rsOPolygonCount     = getTreePolygonCount(rsOctreeRoot)
@@ -799,7 +842,12 @@ def exportRS2(self, context):
     # Generate Bsp nodes
     rsBsptreePolygons = []
 
+    windowManager.progress_end()
+    windowManager.progress_begin(0, len(worldPolygons))
+
     for convexID, polygon in enumerate(worldPolygons):
+        windowManager.progress_update(convexID)
+
         vertexCount = polygon.vertexCount
         vertices = []
 
@@ -815,7 +863,9 @@ def exportRS2(self, context):
 
     rsBsptreePolygons = tuple(rsBsptreePolygons)
 
-    rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, worldBBMin, worldBBMax)
+    windowManager.progress_end()
+    windowManager.progress_begin(0, 1)
+    rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, worldBBMin, worldBBMax, windowManager)
 
     rsBNodeCount        = getTreeNodeCount(rsBsptreeRoot)
     rsBPolygonCount     = getTreePolygonCount(rsBsptreeRoot)
@@ -957,7 +1007,12 @@ def exportRS2(self, context):
     coltreePolygons = []
     o = 0
 
-    for blColObj in blColObjs:
+    windowManager.progress_end()
+    windowManager.progress_begin(0, len(blColObjs))
+
+    for c, blColObj in enumerate(blColObjs):
+        windowManager.progress_update(c)
+
         blMesh = blColObj.data
 
         worldMatrix = blColObj.matrix_world
@@ -977,7 +1032,9 @@ def exportRS2(self, context):
     colBBMin, colBBMax = calcCoordinateBounds(coltreeVertices)
     coltreeBoundsQuads = tuple(createBoundsQuad(colBBMin, colBBMax, s) for s in range(6))
 
-    col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads)
+    windowManager.progress_end()
+    windowManager.progress_begin(0, 1)
+    col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads, windowManager)
 
     colNodeCount        = getTreeNodeCount(col1Root)
     colTriangleCount    = getTreeTriangleCount(col1Root)
@@ -1114,5 +1171,7 @@ def exportRS2(self, context):
 
     # Dump Images
     dumpImageData(imageDatas, imageSizes, imageCount, directory, filename, state)
+
+    windowManager.progress_end()
 
     return { 'FINISHED' }
