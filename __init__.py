@@ -2258,7 +2258,7 @@ class GZRS2_PT_Realspace_World(Panel):
 
         if lightmapImage is not None:
             imageWidth, imageHeight = lightmapImage.size
-            mipCount = math.log2(imageWidth)
+            mipCount = math.log2(imageWidth) if imageWidth != 0 else None
 
             if imageWidth == 0 or imageWidth != imageHeight or not mipCount.is_integer():
                 row = column.row()
