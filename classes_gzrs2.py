@@ -459,6 +459,7 @@ class RsWorldPolygon:
     matID:              int = 0
     drawFlags:          int = 0
     area:               float = 0.0
+    detail:             bool = False
 
 @dataclass
 class Rs2TreePolygonExport:

@@ -152,7 +152,7 @@ def exportRS2(self, context):
                 elif    meshType == 'COLLISION':    blColObjs.append(object)
                 elif    meshType == 'NAVIGATION':   blNavObjs.append(object)
 
-                if meshType == 'WORLD' and props.plusCollision:
+                if meshType == 'WORLD' and props.worldCollision:
                     blColObjs.append(object)
             elif objType == 'LIGHT':
                 props = object.data.gzrs2
@@ -738,6 +738,8 @@ def exportRS2(self, context):
         windowManager.progress_update(w)
 
         blMesh = blWorldObj.data
+        props = blMesh.gzrs2
+
         uvLayer1 = getOrNone(blMesh.uv_layers, 0)
         uvLayer2 = getOrNone(blMesh.uv_layers, 1)
 
@@ -762,8 +764,9 @@ def exportRS2(self, context):
             matID       = blWorldMats.index(matSlots[polygon.material_index].material)  if hasMatIDs            else -1
             drawFlags   = 0 # TODO
             area        = polygon.area
+            detail      = props.worldDetail
 
-            worldPolygons.append(RsWorldPolygon(normal, len(positions), positions, normals, uv1s, uv2s, matID, drawFlags, area))
+            worldPolygons.append(RsWorldPolygon(normal, len(positions), positions, normals, uv1s, uv2s, matID, drawFlags, area, detail))
 
         o += len(blMesh.vertices)
 
@@ -814,7 +817,7 @@ def exportRS2(self, context):
             uv2 = polygon.uv2s[i].copy()
 
             vertices.append(Rs2TreeVertex(pos, nor, uv1, uv2))
-        rsOctreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, False))
+        rsOctreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, polygon.detail))
 
     rsOctreePolygons = tuple(rsOctreePolygons)
 
@@ -861,7 +864,7 @@ def exportRS2(self, context):
 
             vertices.append(Rs2TreeVertex(pos, nor, uv1, uv2))
 
-        rsBsptreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, False))
+        rsBsptreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, polygon.detail))
 
     rsBsptreePolygons = tuple(rsBsptreePolygons)
 

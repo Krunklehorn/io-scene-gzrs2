@@ -2724,8 +2724,13 @@ class GZRS2MeshProperties(PropertyGroup):
         update = onUpdate
     )
 
-    plusCollision: BoolProperty(
-        name = '+Collision',
+    worldCollision: BoolProperty(
+        name = 'Collision',
+        default = False
+    )
+
+    worldDetail: BoolProperty(
+        name = 'Detail',
         default = False
     )
 
@@ -2835,7 +2840,8 @@ class GZRS2_PT_Realspace_Mesh(Panel):
         column = layout.column()
 
         if props.meshType == 'WORLD':
-            column.prop(props, 'plusCollision')
+            column.prop(props, 'worldCollision')
+            column.prop(props, 'worldDetail')
         elif props.meshType == 'PROP':
             column.prop(props, 'propSubtype')
             column.prop(props, 'propFilename')
