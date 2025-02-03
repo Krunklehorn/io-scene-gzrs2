@@ -428,6 +428,8 @@ class GZRS2_OT_Prepare_Bake(Operator):
             if node.type == 'MIX_RGB' and node.label.lower() == 'lightmap':
                 node.inputs[0].default_value = 0.0
 
+        worldProps.lightmapImage.use_fake_user = True
+
         return { 'FINISHED' }
 
 class GZRS2Preferences(AddonPreferences):
