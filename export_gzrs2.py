@@ -2,33 +2,9 @@
 # Most of the code is based on logic found in...
 #
 ### GunZ 1
-# - RTypes.h
-# - RToken.h
-# - RealSpace2.h/.cpp
 # - RBspObject.h/.cpp
-# - RMaterialList.h/.cpp
-# - RMesh_Load.cpp
-# - RMeshUtil.h
-# - MZFile.cpp
-# - R_Mtrl.cpp
-# - EluLoader.h/cpp
 # - LightmapGenerator.h/.cpp
-# - MCPlug2_Mesh.cpp
 # - RBspExporter.cpp
-#
-### GunZ 2
-# - RVersions.h
-# - RTypes.h
-# - RD3DVertexUtil.h
-# - RStaticMeshResource.h
-# - RStaticMeshResourceFileLoadImpl.cpp
-# - MTypes.h
-# - MVector3.h
-# - MSVector.h
-# - RMesh.cpp
-# - RMeshNodeData.h
-# - RMeshNodeLoadImpl.h/.cpp
-# - RSkeleton.h/.cpp
 #
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
@@ -64,27 +40,10 @@ def exportRS2(self, context):
         print("=======================================================================")
         print()
 
-        # TODO: Switches
-
-        state.logRsHeaders          = self.logRsHeaders # TODO
-        state.logRsTrees            = self.logRsTrees # TODO
-        state.logRsPolygons         = self.logRsPolygons # TODO
-        state.logRsVerts            = self.logRsVerts # TODO
-        state.logBspHeaders         = self.logBspHeaders # TODO
-        state.logBspPolygons        = self.logBspPolygons # TODO
-        state.logBspVerts           = self.logBspVerts # TODO
-        state.logColHeaders         = self.logColHeaders # TODO
-        state.logColNodes           = self.logColNodes # TODO
-        state.logColTris            = self.logColTris # TODO
-        state.logNavHeaders         = self.logNavHeaders # TODO
-        state.logNavData            = self.logNavData # TODO
-        state.logLmHeaders          = self.logLmHeaders # TODO
-        state.logLmImages           = self.logLmImages # TODO
-        state.logEluHeaders         = self.logEluHeaders # TODO
-        state.logEluMats            = self.logEluMats # TODO
-        state.logEluMeshNodes       = self.logEluMeshNodes # TODO
-        state.logVerboseIndices     = self.logVerboseIndices    and self.logEluMeshNodes # TODO
-        state.logVerboseWeights     = self.logVerboseWeights    and self.logEluMeshNodes # TODO
+        state.logRs     = self.logRs
+        state.logBsp    = self.logBsp
+        state.logCol    = self.logCol
+        state.logLm     = self.logLm
 
     rspath = self.filepath
     directory = os.path.dirname(rspath)
@@ -897,17 +856,33 @@ def exportRS2(self, context):
             writeDirection(file, polygon.normal, True)
 
     # Write Rs
-    if state.logRsHeaders or state.logRsTrees or state.logRsPolygons or state.logRsVerts:
-        print("===================  Write Rs   ===================")
-        print()
-
     id = RS2_ID
     version = RS2_VERSION
 
-    if state.logRsHeaders:
+    if state.logRs:
+        print("===================  Write Rs   ===================")
+        print()
         print(f"Path:               { rspath }")
         print(f"ID:                 { hex(id) }")
         print(f"Version:            { hex(version) }")
+        print()
+        print(f"Material Count:     { rsMatCount }")
+        print()
+        print("Convex:")
+        print(f"Polygon Count:      { rsCPolygonCount }")
+        print(f"Vertex Count:       { rsCVertexCount }")
+        print()
+        print("Bsptree:")
+        print(f"Node Count:         { rsBNodeCount }")
+        print(f"Polygon Count:      { rsBPolygonCount }")
+        print(f"Vertex Count:       { rsBVertexCount }")
+        print(f"Index Count:        { rsBIndexCount }")
+        print()
+        print("Octree:")
+        print(f"Node Count:         { rsONodeCount }")
+        print(f"Polygon Count:      { rsOPolygonCount }")
+        print(f"Vertex Count:       { rsOVertexCount }")
+        print(f"Index Count:        { rsOIndexCount }")
         print()
 
     createBackupFile(rspath)
@@ -947,19 +922,21 @@ def exportRS2(self, context):
         writeTreeNode(rsOctreeRoot)
 
     # Write Bsp
-    if state.logBspHeaders or state.logBspPolygons or state.logBspVerts:
-        print("===================  Write Bsp  ===================")
-        print()
-
+    bsppath = f"{ rspath }{ os.extsep }bsp"
     id = BSP_ID
     version = BSP_VERSION
 
-    bsppath = f"{ rspath }{ os.extsep }bsp"
-
-    if state.logBspHeaders:
+    if state.logBsp:
+        print("===================  Write Bsp  ===================")
+        print()
         print(f"Path:               { bsppath }")
         print(f"ID:                 { hex(id) }")
         print(f"Version:            { hex(version) }")
+        print()
+        print(f"Node Count:         { bspNodeCount }")
+        print(f"Polygon Count:      { bspPolygonCount }")
+        print(f"Vertex Count:       { bspVertexCount }")
+        print(f"Index Count:        { bspIndexCount }")
         print()
 
     createBackupFile(bsppath)
@@ -1006,19 +983,19 @@ def exportRS2(self, context):
     colTriangleCount    = getTreeTriangleCount(col1Root)
 
     # Write Col
-    if state.logColHeaders or state.logColNodes or state.logColTris:
-        print("===================  Write Col  ===================")
-        print()
-
+    colpath = f"{ rspath }{ os.extsep }col"
     id = COL1_ID
     version = COL1_VERSION
 
-    colpath = f"{ rspath }{ os.extsep }col"
-
-    if state.logColHeaders:
+    if state.logCol:
+        print("===================  Write Col  ===================")
+        print()
         print(f"Path:               { colpath }")
         print(f"ID:                 { hex(id) }")
         print(f"Version:            { hex(version) }")
+        print()
+        print(f"Node Count:         { colNodeCount }")
+        print(f"Triangle Count:     { colTriangleCount }")
         print()
 
     createBackupFile(colpath)
@@ -1086,21 +1063,19 @@ def exportRS2(self, context):
     lightmapUVsFloats.release()
 
     # Write LM
-    if state.logLmHeaders or state.logLmImages:
-        print("===================  Write Lm   ===================")
-        print()
-
+    lmpath = f"{ rspath }{ os.extsep }lm"
     id = LM_ID
     version = LM_VERSION_EXT if state.lmVersion4 else LM_VERSION
     lmCPolygonCount = rsCPolygonCount # CONVEX polygon count!
     lmONodeCount = rsONodeCount # OCTREE node count!
 
-    lmpath = f"{ rspath }{ os.extsep }lm"
-
-    if state.logLmHeaders:
+    if state.logLm:
+        print("===================  Write Lm   ===================")
+        print()
         print(f"Path:               { lmpath }")
         print(f"ID:                 { hex(id) }")
         print(f"Version:            { hex(version) }")
+        print()
         print(f"Image Count:        { imageCount }")
         print()
 
@@ -1112,7 +1087,7 @@ def exportRS2(self, context):
 
         writeUInt(file, lmCPolygonCount)
         writeUInt(file, lmONodeCount)
-        writeUInt(file, len(imageDatas))
+        writeUInt(file, imageCount)
 
         for i in range(imageCount):
             imageData = imageDatas[i]

@@ -431,20 +431,10 @@ class GZRS2ExportState:
     lmVersion4:             bool = False
     mod4Fix:                bool = False
 
-    logRsHeaders:           bool = False
-    logRsTrees:             bool = False
-    logRsPolygons:          bool = False
-    logRsVerts:             bool = False
-    logBspHeaders:          bool = False
-    logBspPolygons:         bool = False
-    logBspVerts:            bool = False
-    logColHeaders:          bool = False
-    logColNodes:            bool = False
-    logColTris:             bool = False
-    logVerboseIndices:      bool = False
-    logVerboseWeights:      bool = False
-    logLmHeaders:           bool = False
-    logLmImages:            bool = False
+    logRs:                  bool = False
+    logBsp:                 bool = False
+    logCol:                 bool = False
+    logLm:                  bool = False
 
     treeDepthLimit:         int = 0
 

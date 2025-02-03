@@ -159,6 +159,7 @@ def exportLm(self, context):
             print(f"Path:               { lmpath }")
             print(f"ID:                 { hex(id) }")
             print(f"Version:            { hex(version) }")
+            print()
             print(f"Image Count:        { imageCount }")
             print()
 

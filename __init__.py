@@ -1799,118 +1799,28 @@ class ExportGZRS2(Operator, ExportHelper):
         default = True
     )
 
-    logRsHeaders: BoolProperty(
-        name = 'RS Headers',
-        description = "Log RS header data",
+    logRs: BoolProperty(
+        name = 'Rs',
+        description = "Log Rs data",
         default = True
     )
 
-    logRsTrees: BoolProperty(
-        name = 'RS Trees',
-        description = "Log RS tree data",
+    logBsp: BoolProperty(
+        name = 'Bsp',
+        description = "Log Bsp data",
         default = True
     )
 
-    logRsPolygons: BoolProperty(
-        name = 'RS Polygons',
-        description = "Log RS polygon data",
-        default = False
-    )
-
-    logRsVerts: BoolProperty(
-        name = 'RS Vertices',
-        description = "Log RS vertex data",
-        default = False
-    )
-
-    logBspHeaders: BoolProperty(
-        name = 'BSP Headers',
-        description = "Log BSP header data",
+    logCol: BoolProperty(
+        name = 'Col',
+        description = "Log Col data",
         default = True
     )
 
-    logBspPolygons: BoolProperty(
-        name = 'BSP Polygons',
-        description = "Log BSP polygon data",
-        default = False
-    )
-
-    logBspVerts: BoolProperty(
-        name = 'BSP Vertices',
-        description = "Log BSP vertex data",
-        default = False
-    )
-
-    logColHeaders: BoolProperty(
-        name = 'Col Headers',
-        description = "Log Col header data",
+    logLm: BoolProperty(
+        name = 'Lm',
+        description = "Log Lm data",
         default = True
-    )
-
-    logColNodes: BoolProperty(
-        name = 'Col Nodes',
-        description = "Log Col node data",
-        default = False
-    )
-
-    logColTris: BoolProperty(
-        name = 'Col Triangles',
-        description = "Log Col triangle data",
-        default = False
-    )
-
-    logNavHeaders: BoolProperty(
-        name = 'Nav Headers',
-        description = "Log Nav header data",
-        default = True
-    )
-
-    logNavData: BoolProperty(
-        name = 'Nav Data',
-        description = "Log Nav data",
-        default = True
-    )
-
-    logLmHeaders: BoolProperty(
-        name = 'Lm Headers',
-        description = "Log Lm header data",
-        default = True
-    )
-
-    logLmImages: BoolProperty(
-        name = 'Lm Images',
-        description = "Log Lm image data",
-        default = False
-    )
-
-    logEluHeaders: BoolProperty(
-        name = 'Elu Headers',
-        description = "Log ELU header data",
-        default = True
-    )
-
-    logEluMats: BoolProperty(
-        name = 'Elu Materials',
-        description = "Log ELU material data",
-        default = True
-    )
-
-    logEluMeshNodes: BoolProperty(
-        name = 'Elu Mesh Nodes',
-        description = "Log ELU mesh node data",
-        default = True
-    )
-
-    logVerboseIndices: BoolProperty(
-        name = 'Verbose Indices',
-        description = "Log ELU indices verbosely",
-        default = False
-    )
-
-    logVerboseWeights: BoolProperty(
-        name = 'Verbose Weights',
-        description = "Log ELU weights verbosely",
-        default = False
     )
 
     @classmethod
@@ -1958,16 +1868,12 @@ class GZRS2_PT_Export_Lightmap(Panel):
     def poll(cls, context):
         return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
 
-    # def draw_header(self, context):
-        # self.layout.prop(context.space_data.active_operator, 'panelLightmap', text = "")
-
     def draw(self, context):
         layout = self.layout
         operator = context.space_data.active_operator
 
         layout.use_property_split = True
         layout.use_property_decorate = False
-        # layout.enabled = operator.panelLightmap
 
         layout.prop(operator, 'lmVersion4')
 
@@ -1996,28 +1902,10 @@ class GZRS2_PT_Export_Logging(Panel):
         layout.use_property_decorate = False
         layout.enabled = operator.panelLogging
 
-        layout.prop(operator, "logRsHeaders")
-        layout.prop(operator, "logRsTrees")
-        layout.prop(operator, "logRsPolygons")
-        layout.prop(operator, "logRsVerts")
-        layout.prop(operator, "logBspHeaders")
-        layout.prop(operator, "logBspPolygons")
-        layout.prop(operator, "logBspVerts")
-        layout.prop(operator, "logColHeaders")
-        layout.prop(operator, "logColNodes")
-        layout.prop(operator, "logColTris")
-        layout.prop(operator, "logNavHeaders")
-        layout.prop(operator, "logNavData")
-        layout.prop(operator, "logLmHeaders")
-        layout.prop(operator, "logLmImages")
-        layout.prop(operator, "logEluHeaders")
-        layout.prop(operator, "logEluMats")
-        layout.prop(operator, "logEluMeshNodes")
-
-        column = layout.column()
-        column.prop(operator, 'logVerboseIndices')
-        column.prop(operator, 'logVerboseWeights')
-        column.enabled = operator.logEluMeshNodes
+        layout.prop(operator, "logRs")
+        layout.prop(operator, "logBsp")
+        layout.prop(operator, "logCol")
+        layout.prop(operator, "logLm")
 
 class ExportRSNAV(Operator, ExportHelper):
     bl_idname = 'export_scene.rsnav'
