@@ -870,8 +870,30 @@ def importRS2(self, context):
 
         if state.doOcclusion:
             reorientOcclusion = Matrix.Rotation(math.radians(90.0), 4, 'X')
+            skippedOccs = []
 
             for o, occlusion in enumerate(state.xmlOccs):
+                name = occlusion['name']
+                nameLower = name.lower()
+
+                if all(('wall_' not in nameLower,
+                        'partition_' not in nameLower,
+                        'plane_' not in nameLower)):
+                    skippedOccs.append(o)
+                    continue
+
+                nameSplits = nameLower.split('_')
+
+                if len(nameSplits) == 0:
+                    skippedOccs.append(o)
+                    continue
+
+                nameSuffix = nameSplits[-1]
+
+                if not nameSuffix.isdigit():
+                    skippedOccs.append(o)
+                    continue
+
                 occName = f"{ state.filename }_Occlusion{ o }"
 
                 # We assume the occlusion points are cyclical, not z-form
@@ -926,16 +948,25 @@ def importRS2(self, context):
                 blOccObj.empty_image_side = 'FRONT'
                 blOccObj.use_empty_image_alpha = True
                 blOccObj.color[3] = 0.5
-                # TODO: 'wall_' vs 'wall_partition_'?
                 # TODO: Custom image or sprite gizmo?
                 # TODO: Duplicate the empty panel to appear for image data as well
 
                 props = blOccObj.gzrs2
                 props.dummyType = 'OCCLUSION'
+                props.occPriority = int(nameSuffix)
+                props.occBsp = False
+                props.occOct = 'partition_' in nameLower
+                props.occProp = 'wall_' in nameLower
+
+                if props.occOct:
+                    blOccObj.rotation_euler = eulerSnapped(blOccObj.rotation_euler)
 
                 state.blOccObjs.append(blOccObj)
 
                 rootExtras.objects.link(blOccObj)
+
+            if len(skippedOccs) > 0:
+                self.report({ 'WARNING' }, f"GZRS2: Skipped occlusion planes with incorrect formatting: { skippedOccs }")
 
         if state.doBounds:
             def createBBoxEmpty(name, bbmin, bbmax, blBBoxObjs, rootBounds):

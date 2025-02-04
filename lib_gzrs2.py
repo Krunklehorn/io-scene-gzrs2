@@ -45,6 +45,15 @@ def ensureWorld(context):
 
     return world
 
+def eulerSnapped(angles):
+    angles = angles.copy()
+
+    angles.x = round(angles.x / PI_OVER_2) * PI_OVER_2
+    angles.y = round(angles.y / PI_OVER_2) * PI_OVER_2
+    angles.z = round(angles.z / PI_OVER_2) * PI_OVER_2
+
+    return angles
+
 def vecArrayMinMax(vectors, size):
     minLen2 = float('inf')
     maxLen2 = float('-inf')
@@ -2125,14 +2134,17 @@ def choosePlane(polygons, *, checkCounts = False, getter = lambda x: x):
 
     return chosenPlane
 
-def createOctreeNode(octPolygons, bbmin, bbmax, depthLimit, windowManager, *, depth = 0):
+def createOctreeNode(octPolygons, octPlanes, bbmin, bbmax, depthLimit, windowManager, *, depth = 0):
     windowManager.progress_update(depth)
 
     if depth < depthLimit and len(octPolygons) > TREE_MAX_NODE_POLYGON_COUNT:
-        # if depth < len(partitionPlanes): # TODO: New empty type for "Partition" planes
-        if False:
-            plane = partitionPlanes[depth]
-        else:
+        plane = None
+
+        if depth < len(octPlanes):
+            plane = octPlanes[depth]
+            octPlanes[depth] = None
+
+        if plane is None:
             span = bbmax - bbmin
             center = (bbmax + bbmin) / 2
             axis = (0 if span.x > span.z else 2) if span.x > span.y else (1 if span.y > span.z else 2)
@@ -2148,24 +2160,32 @@ def createOctreeNode(octPolygons, bbmin, bbmax, depthLimit, windowManager, *, de
         posbbmin, posbbmax = calcPolygonBounds(posOctPolygons)
         negbbmin, negbbmax = calcPolygonBounds(negOctPolygons)
 
-        if len(posOctPolygons) > 0: positive = createOctreeNode(posOctPolygons, posbbmin, posbbmax, depthLimit, windowManager, depth = depth + 1)
-        if len(negOctPolygons) > 0: negative = createOctreeNode(negOctPolygons, negbbmin, negbbmax, depthLimit, windowManager, depth = depth + 1)
+        if len(posOctPolygons) > 0: positive = createOctreeNode(posOctPolygons, octPlanes, posbbmin, posbbmax, depthLimit, windowManager, depth = depth + 1)
+        if len(negOctPolygons) > 0: negative = createOctreeNode(negOctPolygons, octPlanes, negbbmin, negbbmax, depthLimit, windowManager, depth = depth + 1)
 
         return Rs2TreeNodeExport(bbmin, bbmax, plane, positive, negative, ())
 
     return Rs2TreeNodeExport(bbmin, bbmax, Vector((0, 0, 0, 0)), None, None, octPolygons)
 
-def createBsptreeNode(bspPolygons, bbmin, bbmax, windowManager, *, depth = 0):
+def createBsptreeNode(bspPolygons, bspPlanes, bbmin, bbmax, windowManager, *, depth = 0):
     windowManager.progress_update(random.randint(0, 1))
+    plane = None
 
-    if (plane := choosePlane(bspPolygons, checkCounts = True, getter = lambda x: x.pos)) is not None:
+    if depth < len(bspPlanes):
+        plane = bspPlanes[depth]
+        bspPlanes[depth] = None
+
+    if plane is None:
+        plane = choosePlane(bspPolygons, checkCounts = True, getter = lambda x: x.pos)
+
+    if plane is not None:
         posBspPolygons, negBspPolygons = partitionPolygons(bspPolygons, plane, getter = lambda x: x.pos)
 
         posbbmin, posbbmax = calcPolygonBounds(posBspPolygons)
         negbbmin, negbbmax = calcPolygonBounds(negBspPolygons)
 
-        if len(posBspPolygons) > 0: positive = createBsptreeNode(posBspPolygons, posbbmin, posbbmax, windowManager, depth = depth + 1)
-        if len(negBspPolygons) > 0: negative = createBsptreeNode(negBspPolygons, negbbmin, negbbmax, windowManager, depth = depth + 1)
+        if len(posBspPolygons) > 0: positive = createBsptreeNode(posBspPolygons, bspPlanes, posbbmin, posbbmax, windowManager, depth = depth + 1)
+        if len(negBspPolygons) > 0: negative = createBsptreeNode(negBspPolygons, bspPlanes, negbbmin, negbbmax, windowManager, depth = depth + 1)
 
         return Rs2TreeNodeExport(bbmin, bbmax, plane, positive, negative, ())
 

@@ -67,11 +67,7 @@ def exportRS2(self, context):
     #   water_: it's wet
     #   sea_:   it's wet
 
-    # TODO: New empty type for "Partition" planes, cuts an octree at a specified depth without incrementing the counter
-
     # TODO: Verify blitzkrieg data
-
-    # TODO: Detail meshes, how easy is this? Can we just restrict them from choosePlane()?
 
     # Gather data into lists
     blSpawnSoloObjs     = []
@@ -219,10 +215,18 @@ def exportRS2(self, context):
             x.name
         )
 
+    def sortOcclusion(x):
+        return (
+            x.gzrs2.occBsp,
+            x.gzrs2.occOct,
+            x.gzrs2.occPriority,
+            x.name
+        )
+
     def sortCamera(x):
         return (
-            CAMERA_TYPE_TAGS.index(x.data.gzrs2.gzrs2.cameraType),
-            x.data.gzrs2.gzrs2.cameraIndex,
+            CAMERA_TYPE_TAGS.index(x.data.gzrs2.cameraType),
+            x.data.gzrs2.cameraIndex,
             x.name
         )
 
@@ -244,7 +248,7 @@ def exportRS2(self, context):
     blItemSoloObjs      = tuple(sorted(blItemSoloObjs,      key = sortItem))
     blItemTeamObjs      = tuple(sorted(blItemTeamObjs,      key = sortItem))
 
-    blOccObjs           = tuple(sorted(blOccObjs,           key = sortByName))
+    blOccObjs           = tuple(sorted(blOccObjs,           key = sortOcclusion))
 
     blCameraObjs        = tuple(sorted(blCameraObjs,        key = lambda x: sortCamera))
     blCameraWaitObjs    = tuple(sorted(blCameraWaitObjs,    key = lambda x: (x.data.gzrs2.cameraIndex,  x.name)))
@@ -521,13 +525,29 @@ def exportRS2(self, context):
         if rsOccCount > 0:
             file.write("\t<OCCLUSIONLIST>\n")
 
+        bspPlanes   = []
+        octPlanes   = []
         oc = 1
+
+        for blOccObj in blOccObjs:
+            if blOccObj.gzrs2.occOct:
+                blOccObj.rotation_euler = eulerSnapped(blOccObj.rotation_euler)
+
+        context.view_layer.update()
 
         for blOccObj in blOccObjs:
             progress += 1
             windowManager.progress_update(progress)
 
-            occName = blOccObj.name
+            props = blOccObj.gzrs2
+            occPrefix = ''
+
+            if props.occOct:    occPrefix = 'partition_' + occPrefix
+            if props.occProp:   occPrefix = 'wall_' + occPrefix
+
+            if occPrefix == '':
+                occPrefix = 'plane_'
+
             worldMatrix = blOccObj.matrix_world.copy()
 
             # Reorientation is baked into the vertices
@@ -541,8 +561,14 @@ def exportRS2(self, context):
             v3 = worldMatrix @ v3
             v4 = worldMatrix @ v4
 
-            # TODO: 'wall_' vs 'wall_partition_'?
-            file.write(f"\t\t<OCCLUSION name=\"wall_{ str(oc).zfill(2) }\">\n")
+            normal = worldMatrix.to_quaternion() @ Vector((0, 0, 1))
+            plane = normal.to_4d()
+            plane.w = -normal.dot(worldMatrix.translation)
+
+            if props.occBsp:    bspPlanes.append(plane)
+            if props.occOct:    octPlanes.append(plane)
+
+            file.write(f"\t\t<OCCLUSION name=\"{ occPrefix }{ str(oc).zfill(2) }\">\n")
             file.write("\t\t\t<POSITION>{:f} {:f} {:f}</POSITION>\n".format(*tokenizeVec3(v1, 'POSITION', state.convertUnits, True)))
             file.write("\t\t\t<POSITION>{:f} {:f} {:f}</POSITION>\n".format(*tokenizeVec3(v2, 'POSITION', state.convertUnits, True)))
             file.write("\t\t\t<POSITION>{:f} {:f} {:f}</POSITION>\n".format(*tokenizeVec3(v3, 'POSITION', state.convertUnits, True)))
@@ -825,7 +851,7 @@ def exportRS2(self, context):
 
     windowManager.progress_end()
     windowManager.progress_begin(0, depthLimit)
-    rsOctreeRoot = createOctreeNode(rsOctreePolygons, worldBBMin, worldBBMax, depthLimit, windowManager)
+    rsOctreeRoot = createOctreeNode(rsOctreePolygons, octPlanes, worldBBMin, worldBBMax, depthLimit, windowManager)
 
     rsONodeCount        = getTreeNodeCount(rsOctreeRoot)
     rsOPolygonCount     = getTreePolygonCount(rsOctreeRoot)
@@ -870,7 +896,7 @@ def exportRS2(self, context):
 
     windowManager.progress_end()
     windowManager.progress_begin(0, 1)
-    rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, worldBBMin, worldBBMax, windowManager)
+    rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, bspPlanes, worldBBMin, worldBBMax, windowManager)
 
     rsBNodeCount        = getTreeNodeCount(rsBsptreeRoot)
     rsBPolygonCount     = getTreePolygonCount(rsBsptreeRoot)

@@ -1,4 +1,4 @@
-import os
+import os, math
 
 from mathutils import Vector, Matrix
 
@@ -2315,6 +2315,10 @@ class GZRS2ObjectProperties(PropertyGroup):
         if 'smokeSize'          not in self: self['smokeSize']          = 40.0
         if 'smokeLife'          not in self: self['smokeLife']          = 1.0
         if 'smokeToggleMinTime' not in self: self['smokeToggleMinTime'] = 2.0
+        if 'occPriority'        not in self: self['occPriority']        = 1
+        if 'occBsp'             not in self: self['occBsp']             = False
+        if 'occOct'             not in self: self['occOct']             = False
+        if 'occProp'            not in self: self['occProp']            = False
 
     def onUpdate(self, context):
         blObj = self.id_data
@@ -2344,13 +2348,14 @@ class GZRS2ObjectProperties(PropertyGroup):
                 blObj.scale = (1, 1, 1)
                 blObj.empty_display_size = int(blObj.empty_display_size * 100) / 100
         elif dummyType == 'OCCLUSION':
-            # TODO: 'wall_' vs 'wall_partition_'?
-            # TODO: Custom image or sprite gizmo?
-            # TODO: Duplicate the empty panel to appear for image data as well
-            blObj.empty_display_type = 'IMAGE'
+            if props.occOct:
+                blObj.rotation_euler = eulerSnapped(blObj.rotation_euler)
+
             blObj.empty_image_side = 'FRONT'
             blObj.use_empty_image_alpha = True
             blObj.color[3] = 0.5
+            # TODO: Custom image or sprite gizmo?
+            # TODO: Duplicate the empty panel to appear for image data as well
 
     dummyTypeEnumItems = (
         ('NONE',        'None',         "Not a Realspace object. Will not be exported"),
@@ -2392,6 +2397,10 @@ class GZRS2ObjectProperties(PropertyGroup):
     def onGetSmokeSize(self):           self.ensureAll(); return self['smokeSize']
     def onGetSmokeLife(self):           self.ensureAll(); return self['smokeLife']
     def onGetSmokeToggleMinTime(self):  self.ensureAll(); return self['smokeToggleMinTime']
+    def onGetOccPriority(self):         self.ensureAll(); return self['occPriority']
+    def onGetOccBsp(self):              self.ensureAll(); return self['occBsp']
+    def onGetOccOct(self):              self.ensureAll(); return self['occOct']
+    def onGetOccProp(self):             self.ensureAll(); return self['occProp']
 
     def onSetDummyType(self, value):            self.ensureAll(); self['dummyType']             = enumIndexToTag(value, self.dummyTypeEnumItems)
     def onSetSpawnType(self, value):            self.ensureAll(); self['spawnType']             = enumIndexToTag(value, self.spawnTypeEnumItems)
@@ -2413,6 +2422,10 @@ class GZRS2ObjectProperties(PropertyGroup):
     def onSetSmokeSize(self, value):            self.ensureAll(); self['smokeSize']             = value
     def onSetSmokeLife(self, value):            self.ensureAll(); self['smokeLife']             = value
     def onSetSmokeToggleMinTime(self, value):   self.ensureAll(); self['smokeToggleMinTime']    = value
+    def onSetOccPriority(self, value):          self.ensureAll(); self['occPriority']           = value
+    def onSetOccBsp(self, value):               self.ensureAll(); self['occBsp']                = value
+    def onSetOccOct(self, value):               self.ensureAll(); self['occOct']                = value
+    def onSetOccProp(self, value):              self.ensureAll(); self['occProp']               = value
 
     dummyType: EnumProperty(
         name = 'Type',
@@ -2625,6 +2638,43 @@ class GZRS2ObjectProperties(PropertyGroup):
         set = onSetSmokeToggleMinTime
     )
 
+    occPriority: IntProperty(
+        name = 'Priority',
+        default = 1,
+        min = 1,
+        max = 999,
+        soft_min = 1,
+        soft_max = 999,
+        subtype = 'UNSIGNED',
+        update = onUpdate,
+        get = onGetOccPriority,
+        set = onSetOccPriority
+    )
+
+    occBsp: BoolProperty(
+        name = 'Bsptree',
+        default = True,
+        update = onUpdate,
+        get = onGetOccBsp,
+        set = onSetOccBsp
+    )
+
+    occOct: BoolProperty(
+        name = 'Octree',
+        default = False,
+        update = onUpdate,
+        get = onGetOccOct,
+        set = onSetOccOct
+    )
+
+    occProp: BoolProperty(
+        name = 'Props',
+        default = False,
+        update = onUpdate,
+        get = onGetOccProp,
+        set = onSetOccProp
+    )
+
     attachmentFilename: StringProperty(
         name = 'Filename',
         default = '',
@@ -2694,7 +2744,12 @@ class GZRS2_PT_Realspace_Object(Panel):
             if props.smokeType == 'SS' or props.smokeType == 'TS':
                 column.prop(props, 'smokeToggleMinTime')
         elif props.dummyType == 'OCCLUSION':
-            column.label(text = "Tip: Keep size at 1m, use scale instead.")
+            column.prop(props, 'occPriority')
+            column.prop(props, 'occBsp')
+            column.prop(props, 'occOct')
+            column.prop(props, 'occProp')
+            if props.occProp:
+                column.label(text = "Tip: Keep size at 1m, use scale instead.")
         elif props.dummyType == 'ATTACHMENT':
             column.prop(props, 'attachmentFilename')
 

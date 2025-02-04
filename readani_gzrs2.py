@@ -16,7 +16,7 @@
 
 import math, io
 
-from mathutils import Vector, Quaternion, Matrix
+from mathutils import Vector, Matrix, Quaternion
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *

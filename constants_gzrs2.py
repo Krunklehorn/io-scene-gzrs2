@@ -1,4 +1,6 @@
-import os, re
+import os, math, re
+
+PI_OVER_2                       = math.pi / 2
 
 TEX_UPWARD_SEARCH_LIMIT =       4
 RES_UPWARD_SEARCH_LIMIT =       5
