@@ -113,7 +113,7 @@ Instead of managing two versions of our map, one visual and one physical, we can
 5. Give the new mesh a new material with a different color. Keep it's type as "World" but disable "Collision".
 4. Export and test.
 
-*Pro Tip: Re-import the resulting .col file and look at the mesh labeled "_Solid". See how it cuts off beyond the fake ceiling? All that space up there can be filled with whatever you want now. The same can apply to windows, walkways and other openings, so make something cool! If you remove the geometry you can surround the map with a giant sky prop. This is the basic technique used by MAIET in all outdoor maps.*
+*Pro Tip: Re-import the resulting .col file and look at the mesh labeled "_Solid". See how it cuts off beyond the fake ceiling? All that space up there can be filled with whatever you want now. The same can be done for windows, walkways and other openings. If you remove the external geometry but keep the opening sealed by collision, you can surround the map with a giant sky prop. This is the basic technique used by MAIET in all outdoor maps.*
 
 ### Configuring Entities
 
