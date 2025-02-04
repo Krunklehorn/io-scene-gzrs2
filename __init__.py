@@ -2311,7 +2311,7 @@ class GZRS2ObjectProperties(PropertyGroup):
         if 'spawnEnemyType'     not in self: self['spawnEnemyType']     = 'MELEE'
         if 'spawnBlitzType'     not in self: self['spawnBlitzType']     = 'BARRICADE'
         if 'soundFileName'      not in self: self['soundFileName']      = ''
-        if 'soundSpace'         not in self: self['soundSpace']         = '2D'
+        if 'soundSpace'         not in self: self['soundSpace']         = '3D'
         if 'soundShape'         not in self: self['soundShape']         = 'AABB'
         if 'itemGameID'         not in self: self['itemGameID']         = 'SOLO'
         if 'itemType'           not in self: self['itemType']           = 'HP'
