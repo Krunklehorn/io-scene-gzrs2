@@ -300,15 +300,9 @@ def exportRS2(self, context):
     if checkPropsParentForks(blPropObjsAll, self):      return { 'CANCELLED' }
     if checkPropsParentChains(blPropObjsAll, self):     return { 'CANCELLED' }
 
-    blWorldMats     = set(getOrNone(blWorldObj.material_slots, 0)   for blWorldObj  in blWorldObjs)
-    blPropMats      = set(getOrNone(blPropObj.material_slots, 0)    for blPropObj   in blPropObjsAll)
-
-    blWorldMats     = set(blWorldMat.material       for blWorldMat  in blWorldMats)
-    blPropMats      = set(blPropMat.material        for blPropMat   in blPropMats)
-    blPropMats      |= set(blPropMat.gzrs2.parent   for blPropMat   in blPropMats)
-
-    blWorldMats     -= { None }
-    blPropMats      -= { None }
+    blWorldMats     = set(matSlot.material for blWorldObj   in blWorldObjs      for matSlot in blWorldObj.material_slots)
+    blPropMats      = set(matSlot.material for blPropObj    in blPropObjsAll    for matSlot in blPropObj.material_slots)
+    blPropMats      |= set(blPropMat.gzrs2.parent for blPropMat in blPropMats) - { None }
 
     for blWorldMat in blWorldMats:
         if blWorldMat in blPropMats:
