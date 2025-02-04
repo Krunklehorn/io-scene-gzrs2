@@ -28,6 +28,7 @@ def exportRS2(self, context):
     state.filterMode        = self.filterMode
     state.includeChildren   = self.includeChildren and self.filterMode == 'SELECTED'
 
+    state.purgeUnused       = self.purgeUnused
     state.lmVersion4        = self.lmVersion4
     state.mod4Fix           = self.mod4Fix and not self.lmVersion4
 
@@ -50,6 +51,23 @@ def exportRS2(self, context):
     basename = bpy.path.basename(rspath)
     splitname = basename.split(os.extsep)
     filename = splitname[0]
+
+    rsxmlpath = f"{ rspath }{ os.extsep }xml"
+    spawnxmlpath = os.path.join(directory, "spawn.xml")
+    flagxmlpath = os.path.join(directory, "flag.xml")
+    smokexmlpath = os.path.join(directory, "smoke.xml")
+    bsppath = f"{ rspath }{ os.extsep }bsp"
+    colpath = f"{ rspath }{ os.extsep }col"
+    lmpath = f"{ rspath }{ os.extsep }lm"
+
+    createBackupFile(rspath,        purgeUnused = state.purgeUnused)
+    createBackupFile(rsxmlpath,     purgeUnused = state.purgeUnused)
+    createBackupFile(spawnxmlpath,  purgeUnused = state.purgeUnused)
+    createBackupFile(flagxmlpath,   purgeUnused = state.purgeUnused)
+    createBackupFile(smokexmlpath,  purgeUnused = state.purgeUnused)
+    createBackupFile(bsppath,       purgeUnused = state.purgeUnused)
+    createBackupFile(colpath,       purgeUnused = state.purgeUnused)
+    createBackupFile(lmpath,        purgeUnused = state.purgeUnused)
 
     windowManager = context.window_manager
 
@@ -330,10 +348,6 @@ def exportRS2(self, context):
     progress = 0
 
     # Write .rs.xml
-    rsxmlpath = f"{ rspath }{ os.extsep }xml"
-
-    createBackupFile(rsxmlpath)
-
     with open(rsxmlpath, 'w') as file:
         file.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
         file.write("<XML>\n")
@@ -648,10 +662,6 @@ def exportRS2(self, context):
     itemTeamCount = len(blItemTeamObjs)
 
     if itemSoloCount > 0 or itemTeamCount > 0:
-        spawnxmlpath = os.path.join(directory, "spawn.xml")
-
-        createBackupFile(spawnxmlpath)
-
         with open(spawnxmlpath, 'w') as file:
             file.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
             file.write("<XML>\n")
@@ -686,10 +696,6 @@ def exportRS2(self, context):
 
     # Write flag.xml
     if len(blPropFlagObjs) > 0:
-        flagxmlpath = os.path.join(directory, "flag.xml")
-
-        createBackupFile(flagxmlpath)
-
         with open(flagxmlpath, 'w') as file:
             file.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
             file.write("<XML>\n")
@@ -716,10 +722,6 @@ def exportRS2(self, context):
 
     # Write smoke.xml
     if len(blSmokeObjs) > 0:
-        smokexmlpath = os.path.join(directory, "smoke.xml")
-
-        createBackupFile(smokexmlpath)
-
         with open(smokexmlpath, 'w') as file:
             file.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
             file.write("<XML>\n")
@@ -964,8 +966,6 @@ def exportRS2(self, context):
         print(f"Depth:              { rsOTreeDepth }")
         print()
 
-    createBackupFile(rspath)
-
     with open(rspath, 'wb') as file:
         writeUInt(file, id)
         writeUInt(file, version)
@@ -1001,7 +1001,6 @@ def exportRS2(self, context):
         writeTreeNode(rsOctreeRoot)
 
     # Write Bsp
-    bsppath = f"{ rspath }{ os.extsep }bsp"
     id = BSP_ID
     version = BSP_VERSION
 
@@ -1017,8 +1016,6 @@ def exportRS2(self, context):
         print(f"Vertex Count:       { bspVertexCount }")
         print(f"Index Count:        { bspIndexCount }")
         print()
-
-    createBackupFile(bsppath)
 
     with open(bsppath, 'wb') as file:
         writeUInt(file, id)
@@ -1070,7 +1067,6 @@ def exportRS2(self, context):
     colTreeDepth        = getTreeDepth(col1Root)
 
     # Write Col
-    colpath = f"{ rspath }{ os.extsep }col"
     id = COL1_ID
     version = COL1_VERSION
 
@@ -1085,8 +1081,6 @@ def exportRS2(self, context):
         print(f"Triangle Count:     { colTriangleCount }")
         print(f"Depth:              { colTreeDepth }")
         print()
-
-    createBackupFile(colpath)
 
     with open(colpath, 'wb') as file:
         writeUInt(file, id)
@@ -1157,7 +1151,6 @@ def exportRS2(self, context):
     lightmapUVsFloats.release()
 
     # Write LM
-    lmpath = f"{ rspath }{ os.extsep }lm"
     id = LM_ID
     version = LM_VERSION_EXT if state.lmVersion4 else LM_VERSION
     lmCPolygonCount = rsCPolygonCount # CONVEX polygon count!
@@ -1172,8 +1165,6 @@ def exportRS2(self, context):
         print()
         print(f"Image Count:        { imageCount }")
         print()
-
-    createBackupFile(lmpath)
 
     with open(lmpath, 'wb') as file:
         writeUInt(file, id)

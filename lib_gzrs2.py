@@ -1647,19 +1647,22 @@ def processEluHeirarchy(self, state):
         if not found:
             self.report({ 'WARNING' }, f"GZRS2: Parent not found for .elu child mesh: { child.meshName }, { child.parentName }")
 
-def createBackupFile(path):
+def createBackupFile(path, *, purgeUnused = False):
     if not os.path.isfile(path):
         return
 
     directory = os.path.dirname(path)
     splitname = bpy.path.basename(path).split(os.extsep)
     filename = splitname[0]
-    extension = '.' + splitname[1]
+    extension = os.extsep + splitname[1]
 
     if len(splitname) > 2:
-        extension += '.' + splitname[2]
+        extension += os.extsep + splitname[2]
 
     shutil.copy2(path, os.path.join(directory, filename + "_backup") + extension)
+
+    if purgeUnused:
+        os.remove(path)
 
 # TODO: This pattern is ugly, wrap and generalize with a function call
 # TODO: Try the walrus operator for succinct error handling

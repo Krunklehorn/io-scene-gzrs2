@@ -1790,6 +1790,12 @@ class ExportGZRS2(Operator, ExportHelper):
         default = True
     )
 
+    purgeUnused: BoolProperty(
+        name = 'Purge Unused',
+        description = "Always checks for files to backup. Ensures map data a previous export does not conflict with the current one",
+        default = True
+    )
+
     lmVersion4: BoolProperty(
         name = 'Version 4',
         description = "Fixes bit depth issues and makes use of DXT1 compression, not compatible with vanilla GunZ",
@@ -1860,6 +1866,8 @@ class GZRS2_PT_Export_Main(Panel):
         column = layout.column()
         column.prop(operator, 'includeChildren')
         column.enabled = operator.filterMode == 'SELECTED'
+
+        layout.prop(operator, 'purgeUnused')
 
 class GZRS2_PT_Export_Lightmap(Panel):
     bl_space_type = 'FILE_BROWSER'
