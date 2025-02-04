@@ -53,32 +53,199 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 * Exports empties, meshes, lights and cameras
 * Requires at least one world mesh
 * Requires at least one collision mesh or a world mesh marked with '+Collision'
+  * Collision geometry should form a closed surface with no overlaps or holes
+  * Collision geometry should should appear red when viewed from out of bounds through the 'Face Orientation' overlay
 * Ignores anything not marked by the type system...
   * Empty: Spawn, Flare, Sound, Smoke, Item, Occlusion
   * Mesh: World, Collision, Navigation
   * Light: Static, Dynamic
   * Camera: Wait, Track
 
-<!-- -->
+### Tips & Tricks
+
+* Collision generation doesn't work well with dense, thin or curved geometry; don't stick a 300k polygon toothpick in an open room
+  * Marking a world mesh as "Detail" prevents it from cutting nearby geometry during bsptree and octree generation, this should be used for telephone poles, statues, flags etc.
+  * "Detail" does not affect collision tree generation, you must manually create separate, low-poly collision meshes for complex objects
+  * Empties marked as "Occlusion" planes can be used to specify bsptree and octree cuts manually, similar to Radiant/Hammer "Hint" brushes, for advanced users
 
 ### Untested Features
+
 * Spawn empties for quest mobs
-* Occlusion planes
+* Occlusion planes for props
 * Smoke empties
 * Camera empties
 * Flag props
 
-<!-- -->
-
 ### Known Issues
-* NO LEAK DETECTION: You must ensure collision meshes are completely sealed!
-  * All collision geometry should form manifold, closed surfaces with no overlaps or holes
-  * External collision geometry should appear red when viewed from out-of-bounds through the 'Face Orientation' overlay
-  * Internal collision geometry should appear blue when viewed through the 'Face Orientation' overlay
-* NO AUTOMATIC PROPS: Prop (.elu) file names are written to .rs.xml under 'OBJECTLIST' however, the props themselves must be exported manually using a selection filter
-* RE-EXPORT IS UNTESTED: Don't expect it to work without some effort
-* WTF IT'S SO SLOW: Tree generation doesn't work well with dense, thin or curved geometry; don't stick a 300k polygon toothpick in an open room
-  * Future updates will address this with features like "Cordon" areas, "Detail" meshes and "Partition" planes
+
+* FALLING THROUGH FLOOR: You must ensure collision meshes are completely sealed!
+  * Collision geometry should form a closed surface with no overlaps or holes
+  * Collision geometry should should appear red when viewed from out of bounds through the 'Face Orientation' overlay
+  * Future updates *may* address this with leak detection, orientation checks and/or CSG union pre-processing
+* PROPS WON'T SHOW UP: Prop (.elu) file names are written to .rs.xml under 'OBJECTLIST' however, the props themselves must be exported manually using a selection filter
+* RE-EXPORT IS UNTESTED: Don't expect it to work without some effort, most vanilla maps require touch ups
+
+## Your First Map
+
+### Thinking Inside The Box
+
+The plugin adds a custom type system for managing Realspace2 data. Look for the panel labeled "Realspace" in the World, Object, Object Properties and Material tabs to configure these properties.
+
+The following instructions assume a basic knowledge of Blender.
+
+1. Add a cube to the scene, scale it up a bit, then flip it (Alt + N) inside out.
+2. Set the mesh type to "World" and enable "Collision".
+3. Add a material then choose "Change Preset" and select "Colored"
+    * If your geometry appears black, navigate to the world tab and run "Toggle Lightmap Mix" or try re-applying the preset.
+4. Export and test.
+
+### Thinking Outside The Box
+
+Realspace's collision system requires a closed surface with no overlaps or holes.
+
+World geometry can contribute to the collision pass, but for outdoor scenes or any map with a window, we usually have an open landscape that is largely inaccessible to the player. Calculating collision for all of that stuff would be wasteful.
+
+Instead of managing two versions of our map, one visual and one physical, we can separate what pieces are exposed to the outside and turn them into collision geometry.
+
+1. Select the ceiling and separate it (P) to it's own mesh.
+2. Set this new mesh's type to "Collision" and delete all it's materials.
+3. Back in the original mesh, select the edges of the opening and extrude them (E) higher, then seal (F) them, and separate (P) them to a new mesh.
+5. Give the new mesh a new material with a different color. Keep it's type as "World" but disable "Collision".
+4. Export and test.
+
+*Pro Tip: Re-import the resulting .col file and look at the mesh labeled "_Solid". See how it cuts off beyond the fake ceiling? All that space up there can be filled with whatever you want now. The same can apply to windows, walkways and other openings, so make something cool! If you remove the geometry you can surround the map with a giant sky prop. This is the basic technique used by MAIET in all outdoor maps.*
+
+### Configuring Entities
+
+What most game engines refer to as 'entities', Realspace internally refers to as 'dummies'. In Blender, we represent them using 'empties' and will refer to them as such.
+
+Things like spawn points, powerups and ambient sounds are configured using empties.
+
+1. Add three empties to the scene.
+2. Mark one as type "Spawn", one as "Item" and one as "Sound".
+3. For the sound entity, change the "Filename" field to something like amb_shore_2d or amb_fireplace. Don't include any file extension.
+4. For testing purposes, change the timer on the item entity to something low.
+5. Move the entities wherever you please. The spawn entity's local y-axis points in the direction the player will face, while the sound entity may need it's size or shape adjusted.
+6. Export and test.
+
+*Gotcha: Powerups never spawn if your test client creates a fake match with no gametype.*
+
+*Coming soon: A full description of all entity types. In the meantime, feel free to play around with their settings.*
+
+### Configuring Materials
+
+Each world mesh can only have one material. You must separate (P) and join (Ctrl + J) geometry to swap it's material.
+
+During development it may be convenient to join all meshes into one. This is fine, just make sure they're separated by material before exporting.
+
+1. Add a second, smaller box to the scene.
+2. Assign a new material and change it's preset to "Textured".
+3. Open the shader node editor and find the image texture node connected to the 'A' socket of the "Lightmap Mix" group.
+4. Open your image to this node and take note of it's name and path.
+    * If your geometry appears black, navigate to the world tab and run "Toggle Lightmap Mix" or try re-applying the preset.
+5. Unwrap your geometry as you please. The first channel is for textures.
+6. Copy your images to the output directory of your map.
+    * Use the override controls in the Material->Realspace panel to specify a sub-directory if desired.
+7. Export and test.
+
+### Configuring Lights
+
+Realspace uses the nearest dynamic light source to light player models at runtime. Realspace's light system is empirical, while Blender's is physically based.
+
+To get around this, the plugin has a translation layer for approximating light data and keeping the result synchronized between both engines.
+
+1. Add a light to the scene and set it's type to "Dynamic". Only point lights are supported at runtime.
+2. Switch your viewport shading mode to "Display Render Preview".
+    * If your geometry appears black, navigate to the world tab and run "Toggle Lightmap Mix" or try re-applying your presets.
+3. Use the fly controls (Shift + ~) to move the view inside your map's boundary.
+4. Set the light's color as you please.
+5. Instead of modifying the light's power directly, use the "Recalculate Lights & Fog" button after tweaking the Realspace panel settings.
+    * The values listed under "Render" are global. They affect all lights in the scene.
+6. Keep the light's "Intensity" field at 1 and configure the "Attenuation End" field (measured in meters) until the light is bright enough.
+7. Export and test. Notice that the world itself has no shading, only the player character is lit.
+
+### Lightmap Baking: Preparation
+
+Lights in Realspace don't affect world geometry. We have to bake a lightmap to give depth to the world.
+
+1. Add a second UV channel to all your world meshes and unwrap them as you please.
+    * Blender's default "Lightmap Pack" works fine but it disconnects all faces and is very wasteful.
+    * Manually adding seams, unwrapping and packing a lightmap is guaranteed to add hair to your chest. This is an artform, treat it like one.
+    * Beware 3rd party lightmap plugins that fuck with the shader node configuration.
+2. Organize your project data into collections: one for meshes, one for empties, one for lights and one more labeled "Bake".
+3. Duplicate ALL of your meshes, join them (Ctrl + J) into one and put the result in your "Bake" collection.
+4. Toggle the "Disable In Renders" switch OFF on your source mesh collection.
+5. Navigate to the Output->Output panel and set the following fields...
+    * File Format: PNG
+    * Color: RGB
+    * Color Depth: 16
+    * Color Management->Follow Scene
+6. Navigate to the Render->Sampling->Render panel and set the following fields...
+    * Noise Threshold: Disabled
+    * Render Samples: 16
+7. Navigate to the Render->Color Management panel and set the "View Transform" field to "Standard".
+8. Navigate to the Render->Bake panel and set the following fields...
+    * Bake Type: Diffuse
+    * Direct: Enabled
+    * Indirect: Enabled
+    * Color: Disabled
+    * Selected to Active: Disabled
+    * Target: Image Textures
+    * Clear Image: Enabled
+    * Margin Type: Adjacent Faces
+    * Margin Size: 128 or higher
+
+### Lightmap Baking: Diffuse
+
+1. Create a new image with no alpha channel. Give it square, power-of-two dimensions. 1024x1024 is fine.
+2. Navigate to World->Realspace and assign the new image to the "Lightmap" field.
+3. Navigate to the world tab. Run both "Recalculate Lights & Fog" and "Prepare for Bake".
+    * If you make changes to the scene, always come back to recalculate and prepare before you start baking again.
+4. Navigate to Render->Bake and make sure your bake mesh is selected. Hit that Bake button and wait.
+    * On a good GPU, a 1024x1024 bake at 16 samples should finish within a few seconds.
+    * If this simple bake is super slow, search the internet about enabling "GPU Compute" to verify your graphics card is being utilized.
+5. Wait until the bake is finished, then navigate to the world tab and toggle "Lightmap Mix" to check the result.
+    * If everything looks super bright, first try toggling "Lightmap Mod4" before tweaking any lights.
+    * Keep sample count low for now, we denoise manually and you can always rebake later.
+    * For a final bake, anything above 1024 samples is probably overkill.
+6. Save your image to the same directory as your .blend project. This is NOT your lightmap yet, it's only the image data.
+
+### Lightmap Baking: Denoise and Export
+
+Blender's denoiser currently only applies to the 'Combined' pass, which includes the surface color.
+
+Since we only want surface lighting, we have to denoise manually.
+
+1. Open the compositor, enable "Use Nodes" and delete all the nodes inside.
+2. Add a "Viewer" node and disable alpha.
+3. Add an "Image" node and select your lightmap image.
+4. Add a "Denoise" node and disable HDR.
+5. Plug the image sockets between the nodes in this order: Image->Denoise->Viewer
+6. Open the image editor and switch to the "Viewer" image.
+7. Toggle the viewer node's alpha switch on and off to force it to update. (Oh, Blender)
+8. Save the image and overwrite the lightmap you previously saved to disk.
+    * Make sure it's a PNG set to RGB at 16 bits! Blender likes to switch back to 8 all the time it's fucking annoying.
+9. Switch the image editor to your original, noisy lightmap and select "Image->Reload". Presto!
+10. Delete your bake mesh or set it's type to "None".
+11. Export and test.
+
+### Bonus: Ambient Occlusion
+
+The "Ambient Occlusion" bake type gives quick, decent results and doesn't require fiddling with lights.
+
+Although unrealistic, it's always a nice touch. Advanced users should consider baking it using the "Emit" pass for extra control.
+
+1. Create two new images, same settings as your diffuse lightmap. One for AO and another for mixing.
+2. Link the AO lightmap in the world tab.
+3. When baking, set the bake type to "Ambient Occlusion" and crank up the samples to 1024. AO is fast so we go nuts.
+4. When compositing, add the AO to it's own image node and combine them with a "Mix" node set to "Soft Light".
+5. Plug the diffuse lightmap into the top mix socket and the AO lightmap into the bottom one, then plug the mix output into the denoiser.
+6. Save, overwrite and reload the viewer image into your mixing lightmap.
+7. Link the mixing lightmap in the world tab.
+8. Export and test.
+
+*Pro Tip: Lightmap color is multiplicative, but lightmaps can do more than just shading. Try breaking up repetitious surfaces by adding dirt, rust, puddles or even graffiti. Mappers are encouraged to try their best and make GunZ beautiful. Who knows, maybe the community will host a contest sometime.*
+
 
 ## Model Export (.elu)
 
