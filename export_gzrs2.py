@@ -322,6 +322,10 @@ def exportRS2(self, context):
     blPropMats      = set(matSlot.material for blPropObj    in blPropObjsAll    for matSlot in blPropObj.material_slots)
     blPropMats      |= set(blPropMat.gzrs2.parent for blPropMat in blPropMats) - { None }
 
+    if len(blWorldMats) == 0:
+        self.report({ 'ERROR' }, f"GZRS2: RS export requires at least one world material!")
+        return { 'CANCELLED' }
+
     for blWorldMat in blWorldMats:
         if blWorldMat in blPropMats:
             self.report({ 'ERROR' }, f"GZRS2: RS export requires all materials be linked to mesh objects of type 'World' or 'Prop', but not both: { blWorldMat.name }")
