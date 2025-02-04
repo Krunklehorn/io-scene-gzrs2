@@ -2957,7 +2957,7 @@ class GZRS2LightProperties(PropertyGroup):
 
     intensity: FloatProperty(
         name = 'Intensity',
-        default = 0.0,
+        default = 1.0,
         min = 0.0,
         max = 3.402823e+38,
         soft_min = 0.0,
