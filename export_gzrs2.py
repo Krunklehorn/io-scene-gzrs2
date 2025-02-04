@@ -67,8 +67,6 @@ def exportRS2(self, context):
     #   water_: it's wet
     #   sea_:   it's wet
 
-    # TODO: Test if detail mesh causes leaks
-
     # TODO: Verify blitzkrieg data
 
     # Gather data into lists
@@ -859,6 +857,7 @@ def exportRS2(self, context):
     rsOPolygonCount     = getTreePolygonCount(rsOctreeRoot)
     rsOVertexCount      = getTreeVertexCount(rsOctreeRoot)
     rsOIndexCount       = getTreeIndicesCount(rsOctreeRoot)
+    rsOTreeDepth        = getTreeDepth(rsOctreeRoot)
 
     def getOctreeLmUVs(node, *, data = []):
         if node.positive: getOctreeLmUVs(node.positive, data = data)
@@ -904,6 +903,7 @@ def exportRS2(self, context):
     rsBPolygonCount     = getTreePolygonCount(rsBsptreeRoot)
     rsBVertexCount      = getTreeVertexCount(rsBsptreeRoot)
     rsBIndexCount       = getTreeIndicesCount(rsBsptreeRoot)
+    rsBTreeDepth        = getTreeDepth(rsBsptreeRoot)
 
     bspNodeCount        = rsBNodeCount
     bspPolygonCount     = rsBPolygonCount
@@ -960,12 +960,14 @@ def exportRS2(self, context):
         print(f"Polygon Count:      { rsBPolygonCount }")
         print(f"Vertex Count:       { rsBVertexCount }")
         print(f"Index Count:        { rsBIndexCount }")
+        print(f"Depth:              { rsBTreeDepth }")
         print()
         print("Octree:")
         print(f"Node Count:         { rsONodeCount }")
         print(f"Polygon Count:      { rsOPolygonCount }")
         print(f"Vertex Count:       { rsOVertexCount }")
         print(f"Index Count:        { rsOIndexCount }")
+        print(f"Depth:              { rsOTreeDepth }")
         print()
 
     createBackupFile(rspath)
@@ -1071,6 +1073,7 @@ def exportRS2(self, context):
 
     colNodeCount        = getTreeNodeCount(col1Root)
     colTriangleCount    = getTreeTriangleCount(col1Root)
+    colTreeDepth        = getTreeDepth(col1Root)
 
     # Write Col
     colpath = f"{ rspath }{ os.extsep }col"
@@ -1086,6 +1089,7 @@ def exportRS2(self, context):
         print()
         print(f"Node Count:         { colNodeCount }")
         print(f"Triangle Count:     { colTriangleCount }")
+        print(f"Depth:              { colTreeDepth }")
         print()
 
     createBackupFile(colpath)

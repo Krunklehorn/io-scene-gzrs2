@@ -2495,6 +2495,14 @@ def getTreeIndicesCount(tree):
 
     return count
 
+def getTreeDepth(tree, *, depth = 0):
+    if tree.negative: depth = max(depth, getTreeDepth(tree.negative))
+    if tree.positive: depth = max(depth, getTreeDepth(tree.positive))
+
+    depth = depth + 1
+
+    return depth
+
 def unpackLmImages(context, state):
     numCells = len(state.lmImages)
 
