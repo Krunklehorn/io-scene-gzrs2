@@ -72,7 +72,9 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 ### Known Issues
 * NO LEAK DETECTION: You must ensure collision meshes are completely sealed!
-  * Geometry should have no holes and appear red from the outside when viewed through the 'Face Orientation' overlay
+  * All collision geometry should form manifold, closed surfaces with no overlaps or holes
+  * External collision geometry should appear red when viewed from out-of-bounds through the 'Face Orientation' overlay
+  * Internal collision geometry should appear blue when viewed through the 'Face Orientation' overlay
 * NO AUTOMATIC PROPS: Prop (.elu) file names are written to .rs.xml under 'OBJECTLIST' however, the props themselves must be exported manually using a selection filter
 * RE-EXPORT IS UNTESTED: Don't expect it to work without some effort
 * WTF IT'S SO SLOW: Tree generation doesn't work well with dense, thin or curved geometry; don't stick a 300k polygon toothpick in an open room
