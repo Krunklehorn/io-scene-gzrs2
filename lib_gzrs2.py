@@ -2837,8 +2837,8 @@ def ensureLmMixGroup():
         groupMod4x.blend_type = 'MULTIPLY'
         groupMix.blend_type = 'MULTIPLY'
 
-        groupMod4x.inputs[0].default_value = 1.0
-        groupMix.inputs[0].default_value = 1.0
+        groupMod4x.inputs[0].default_value = 0.0
+        groupMix.inputs[0].default_value = 0.0
 
         groupToLinear.inputs[1].default_value = 1 / 2.2
         groupMod4x.inputs[1].default_value = (1.0, 1.0, 1.0, 1.0)

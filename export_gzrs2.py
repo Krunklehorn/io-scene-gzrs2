@@ -67,6 +67,8 @@ def exportRS2(self, context):
     #   water_: it's wet
     #   sea_:   it's wet
 
+    # TODO: Test if detail mesh causes leaks
+
     # TODO: Verify blitzkrieg data
 
     # Gather data into lists
