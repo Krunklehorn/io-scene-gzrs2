@@ -370,8 +370,8 @@ class GZRS2_OT_Prepare_Bake(Operator):
         return context.active_object is None or context.active_object.mode == 'OBJECT'
 
     def execute(self, context):
-        world = ensureWorld(context)
-        worldProps = world.gzrs2
+        worldProps = ensureWorld(context).gzrs2
+        lightmapImage = worldProps.lightmapImage
 
         blWorldObjs = tuple(blObj for blObj in context.scene.objects if blObj.type == 'MESH' and blObj.data.gzrs2.meshType == 'WORLD')
 
@@ -418,7 +418,7 @@ class GZRS2_OT_Prepare_Bake(Operator):
 
             if lightmap is not None:
                 tree.nodes.active = lightmap
-                lightmap.image = worldProps.lightmapImage
+                lightmap.image = lightmapImage
                 lightmap.select = True
 
         group = ensureLmMixGroup()
@@ -428,7 +428,8 @@ class GZRS2_OT_Prepare_Bake(Operator):
             if node.type == 'MIX_RGB' and node.label.lower() == 'lightmap':
                 node.inputs[0].default_value = 0.0
 
-        worldProps.lightmapImage.use_fake_user = True
+        if lightmapImage is not None:
+            lightmapImage.use_fake_user = True
 
         return { 'FINISHED' }
 

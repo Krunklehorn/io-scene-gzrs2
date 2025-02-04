@@ -38,6 +38,13 @@ def exportLm(self, context):
     splitname = basename.split(os.extsep)
     filename = splitname[0]
 
+    worldProps = ensureWorld(context).gzrs2
+    lightmapImage = worldProps.lightmapImage
+
+    if not lightmapImage:
+        self.report({ 'ERROR' }, "GZRS2: No lightmap assigned! Check the World tab!")
+        return { 'CANCELLED' }
+
     if state.doUVs:
         blMeshObj = context.active_object if context.active_object in getSelectedObjects(context) else None
 
@@ -102,8 +109,6 @@ def exportLm(self, context):
                 return { 'CANCELLED' }
 
     # Gather lightmap data
-    worldProps = ensureWorld(context).gzrs2
-    lightmapImage = worldProps.lightmapImage
     # Never atlas, we increase the lightmap resolution instead
     # numCells = worldProps.lightmapNumCells
     numCells = 1

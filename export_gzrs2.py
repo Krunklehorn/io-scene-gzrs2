@@ -1119,6 +1119,12 @@ def exportRS2(self, context):
 
     # Gather lightmap data
     lightmapImage = worldProps.lightmapImage
+
+    if not lightmapImage:
+        windowManager.progress_end()
+
+        return { 'FINISHED' }
+
     # Never atlas, we increase the lightmap resolution instead
     # numCells = worldProps.lightmapNumCells
     numCells = 1
