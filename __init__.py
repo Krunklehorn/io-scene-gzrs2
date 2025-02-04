@@ -2978,7 +2978,7 @@ class GZRS2LightProperties(PropertyGroup):
     attEnd: FloatProperty(
         name = 'Attenuation End',
         default = 0.0,
-        min = 0.0,
+        min = 10.0,
         max = 3.402823e+38,
         soft_min = 0.0,
         soft_max = 3.402823e+38,
