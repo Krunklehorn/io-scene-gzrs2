@@ -171,7 +171,7 @@ Lights in Realspace don't affect world geometry. We have to bake a lightmap to g
 1. Add a second UV channel to all your world meshes and unwrap them as you please.
     * Blender's default "Lightmap Pack" works fine but it disconnects all faces and is very wasteful.
     * Manually adding seams, unwrapping and packing a lightmap is guaranteed to add hair to your chest. This is an artform, treat it like one.
-    * Beware 3rd party lightmap plugins that fuck with the shader node configuration.
+    * Beware 3rd party lightmap plugins that mess with the shader node configuration.
 2. Organize your project data into collections: one for meshes, one for empties, one for lights and one more labeled "Bake".
 3. Duplicate ALL of your meshes, join them (Ctrl + J) into one and put the result in your "Bake" collection.
 4. Toggle the "Disable In Renders" switch OFF on your source mesh collection.
@@ -199,7 +199,7 @@ Lights in Realspace don't affect world geometry. We have to bake a lightmap to g
 
 1. Create a new image with no alpha channel. Give it square, power-of-two dimensions. 1024x1024 is fine.
 2. Navigate to World->Realspace and assign the new image to the "Lightmap" field.
-3. Navigate to the world tab. Run both "Recalculate Lights & Fog" and "Prepare for Bake".
+3. Navigate to the world tab then run both "Recalculate Lights & Fog" and "Prepare for Bake".
     * If you make changes to the scene, always come back to recalculate and prepare before you start baking again.
 4. Navigate to Render->Bake and make sure your bake mesh is selected. Hit that Bake button and wait.
     * On a good GPU, a 1024x1024 bake at 16 samples should finish within a few seconds.
@@ -224,7 +224,7 @@ Since we only want surface lighting, we have to denoise manually.
 6. Open the image editor and switch to the "Viewer" image.
 7. Toggle the viewer node's alpha switch on and off to force it to update. (Oh, Blender)
 8. Save the image and overwrite the lightmap you previously saved to disk.
-    * Make sure it's a PNG set to RGB at 16 bits! Blender likes to switch back to 8 all the time it's fucking annoying.
+    * Make sure it's a PNG set to RGB at 16 bits! Blender likes to switch back to 8 all the time. It's annoying.
 9. Switch the image editor to your original, noisy lightmap and select "Image->Reload". Presto!
 10. Delete your bake mesh or set it's type to "None".
 11. Export and test.
@@ -233,18 +233,18 @@ Since we only want surface lighting, we have to denoise manually.
 
 The "Ambient Occlusion" bake type gives quick, decent results and doesn't require fiddling with lights.
 
-Although unrealistic, it's always a nice touch. Advanced users should consider baking it using the "Emit" pass for extra control.
+Although unrealistic, it's always a nice touch. Advanced users should consider baking it using the "Emit" type for extra control.
 
 1. Create two new images, same settings as your diffuse lightmap. One for AO and another for mixing.
 2. Link the AO lightmap in the world tab.
-3. When baking, set the bake type to "Ambient Occlusion" and crank up the samples to 1024. AO is fast so we go nuts.
+3. When baking, set the bake type to "Ambient Occlusion" and crank up the samples to 1024. AO bakes are fast.
 4. When compositing, add the AO to it's own image node and combine them with a "Mix" node set to "Soft Light".
 5. Plug the diffuse lightmap into the top mix socket and the AO lightmap into the bottom one, then plug the mix output into the denoiser.
 6. Save, overwrite and reload the viewer image into your mixing lightmap.
 7. Link the mixing lightmap in the world tab.
 8. Export and test.
 
-*Pro Tip: Lightmap color is multiplicative, but lightmaps can do more than just shading. Try breaking up repetitious surfaces by adding dirt, rust, puddles or even graffiti. Mappers are encouraged to try their best and make GunZ beautiful. Who knows, maybe the community will host a contest sometime.*
+*Pro Tip: Lightmap color is multiplicative, but lightmaps can do more than just shading. Try breaking up repetitious surfaces by adding dirt, rust, puddles or even graffiti. Mappers are encouraged to try their best and make GunZ look beautiful. Who knows, maybe the community will host a contest sometime.*
 
 
 ## Model Export (.elu)
