@@ -7,7 +7,7 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import os, io
+import bpy, os, io
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
@@ -34,7 +34,7 @@ def exportNav(self, context):
     navpath = self.filepath
     directory = os.path.dirname(navpath)
     basename = bpy.path.basename(navpath)
-    splitname = basename.split(os.extsep)
+    splitname = os.path.splitext(basename)
     filename = splitname[0]
 
     id = NAV_ID

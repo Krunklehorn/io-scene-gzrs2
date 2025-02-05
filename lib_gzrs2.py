@@ -178,9 +178,7 @@ def ensureRS3DataDict(self, state):
 
     for dirpath, _, filenames in os.walk(state.rs3DataDir):
         for filename in filenames:
-            splitname = filename.split(os.extsep)
-
-            if splitname[-1].lower() in RS3_DATA_DICT_EXTENSIONS:
+            if os.path.splitext(filename)[-1].lower() in RS3_DATA_DICT_EXTENSIONS:
                 resourcepath = pathExists(os.path.join(dirpath, filename))
 
                 if not resourcepath:
@@ -326,7 +324,7 @@ def resourceSearch(self, resourcename, state):
     result = state.rs3DataDict.get(resourcename.lower())
     if result: return result
 
-    splitname = resourcename.split(os.extsep)
+    splitname = os.path.splitext(resourcename)
 
     if splitname[-1].lower() == 'xml' and splitname[-2].lower() in ('scene', 'prop'):
         eluname = f"{ splitname[0] }{ os.extsep }elu"
@@ -1652,7 +1650,7 @@ def createBackupFile(path, *, purgeUnused = False):
         return
 
     directory = os.path.dirname(path)
-    splitname = bpy.path.basename(path).split(os.extsep)
+    splitname = os.path.splitext(bpy.path.basename(path))
     filename = splitname[0]
     extension = os.extsep + splitname[1]
 

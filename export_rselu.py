@@ -32,7 +32,7 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
-import os, io
+import bpy, os, io
 
 from mathutils import Vector, Matrix
 
@@ -67,7 +67,7 @@ def exportElu(self, context):
     elupath = self.filepath
     directory = os.path.dirname(elupath)
     basename = bpy.path.basename(elupath)
-    splitname = basename.split(os.extsep)
+    splitname = os.path.splitext(basename)
     filename = splitname[0]
 
     id = ELU_ID

@@ -8,6 +8,8 @@
 # Please report maps and models with unsupported features to me on Discord: Krunk#6051
 #####
 
+import bpy, os
+
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
 from .readlm_gzrs2 import *
@@ -30,7 +32,7 @@ def importLm(self, context):
 
     lmpath = self.filepath
     state.directory = os.path.dirname(lmpath)
-    state.filename = bpy.path.basename(lmpath).split(os.extsep)[0]
+    state.filename = os.path.splitext(bpy.path.basename(lmpath))[0]
 
     with open(lmpath, 'rb') as file:
         if readLm(self, file, lmpath, state):

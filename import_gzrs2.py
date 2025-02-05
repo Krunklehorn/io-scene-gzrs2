@@ -117,7 +117,7 @@ def importRS2(self, context):
 
     rspath = self.filepath
     state.directory = os.path.dirname(rspath)
-    state.filename = bpy.path.basename(rspath).split(os.extsep)[0]
+    state.filename = os.path.splitext(bpy.path.basename(rspath))[0]
 
     xmlRs = False
     for ext in XML_EXTENSIONS:
@@ -847,7 +847,7 @@ def importRS2(self, context):
     if doExtras:
         if state.doCollision:
             colName = f"{ state.filename }_Collision"
-            colExt = bpy.path.basename(colpath).split(os.extsep)[-1].lower()
+            colExt = os.path.splitext(bpy.path.basename(colpath))[-1].lower()
             blColObjHull, blColObjSolid = setupColMesh(colName, rootExtras, context, colExt, state)
 
             blColObjHull.hide_render = True

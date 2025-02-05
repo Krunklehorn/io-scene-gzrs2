@@ -64,7 +64,7 @@ def importCol(self, context):
 
     colpath = self.filepath
     state.directory = os.path.dirname(colpath)
-    splitname = bpy.path.basename(colpath).split(os.extsep)
+    splitname = os.path.splitext(bpy.path.basename(colpath))
     state.filename = splitname[0]
     extension = splitname[-1].lower()
 

@@ -33,7 +33,7 @@ def importNav(self, context):
 
     navpath = self.filepath
     state.directory = os.path.dirname(navpath)
-    splitname = bpy.path.basename(navpath).split(os.extsep)
+    splitname = os.path.splitext(bpy.path.basename(navpath))
     state.filename = splitname[0]
     extension = splitname[-1].lower()
 

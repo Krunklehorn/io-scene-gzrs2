@@ -35,7 +35,7 @@ def exportLm(self, context):
     lmpath = self.filepath
     directory = os.path.dirname(lmpath)
     basename = bpy.path.basename(lmpath)
-    splitname = basename.split(os.extsep)
+    splitname = os.path.splitext(basename)
     filename = splitname[0]
 
     worldProps = ensureWorld(context).gzrs2

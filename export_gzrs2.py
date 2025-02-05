@@ -49,7 +49,7 @@ def exportRS2(self, context):
     rspath = self.filepath
     directory = os.path.dirname(rspath)
     basename = bpy.path.basename(rspath)
-    splitname = basename.split(os.extsep)
+    splitname = os.path.splitext(basename)
     filename = splitname[0]
 
     rsxmlpath = f"{ rspath }{ os.extsep }xml"
