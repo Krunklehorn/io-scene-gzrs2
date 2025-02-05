@@ -995,6 +995,8 @@ def importRS2(self, context):
                 self.report({ 'WARNING' }, f"GZRS2: Multiple sets of FOG tags were read! Only the first will be considered!")
 
             fog = state.xmlFogs[0]
+            fogMin = fog['min'] * 0.01
+            fogMax = fog['max'] * 0.01
             fogR = fog.get('R', 255) / 255
             fogG = fog.get('G', 255) / 255
             fogB = fog.get('B', 255) / 255
@@ -1002,8 +1004,8 @@ def importRS2(self, context):
             world = ensureWorld(context)
             worldProps = world.gzrs2
             worldProps.fogColor = (fogR, fogG, fogB)
-            worldProps.fogMin = fog['min']
-            worldProps.fogMax = fog['max']
+            worldProps.fogMin = fogMin
+            worldProps.fogMax = fogMax
 
             state.blFogShader = shader
 

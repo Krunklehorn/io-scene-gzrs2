@@ -593,12 +593,14 @@ def exportRS2(self, context):
             file.write("\t</OCCLUSIONLIST>\n")
 
         fogColor = worldProps.fogColor
+        fogMin = tokenizeDistance(worldProps.fogMin, state.convertUnits)
+        fogMax = tokenizeDistance(worldProps.fogMax, state.convertUnits)
         fogR = int(fogColor.r * 255)
         fogG = int(fogColor.g * 255)
         fogB = int(fogColor.b * 255)
 
         if worldProps.fogEnable:
-            file.write(f"\t<FOG min=\"{ worldProps.fogMin }\" max=\"{ worldProps.fogMax }\">\n")
+            file.write(f"\t<FOG min=\"{ fogMin }\" max=\"{ fogMax }\">\n")
             file.write(f"\t<R>{ fogR }</R>\n")
             file.write(f"\t<G>{ fogG }</G>\n")
             file.write(f"\t<B>{ fogB }</B>\n")
@@ -652,10 +654,10 @@ def exportRS2(self, context):
         file.write("\t<GLOBAL>\n")
         if worldProps.fogEnable:
             file.write(f"\t\t<fog_enable>{ str(worldProps.fogEnable).upper() }</fog_enable>\n")
-            file.write(f"\t\t<fog_min>{ worldProps.fogMin }</fog_min>\n")
-            file.write(f"\t\t<fog_max>{ worldProps.fogMax }</fog_max>\n")
+            file.write(f"\t\t<fog_min>{ fogMin }</fog_min>\n")
+            file.write(f"\t\t<fog_max>{ fogMax }</fog_max>\n")
             file.write(f"\t\t<fog_color>{ fogR },{ fogG },{ fogB }</fog_color>\n")
-        file.write(f"\t\t<far_z>{ worldProps.farClip }</far_z>\n")
+        file.write(f"\t\t<far_z>{ tokenizeDistance(worldProps.farClip, state.convertUnits) }</far_z>\n")
         file.write("\t</GLOBAL>\n")
         file.write("</XML>\n")
 
@@ -678,7 +680,7 @@ def exportRS2(self, context):
                     props = blItemSoloObj.gzrs2
                     itemIDString = str(props.itemID).zfill(2)
 
-                    file.write(f"\t\t<SPAWN item=\"{ props.itemType.lower() }{ itemIDString }\" timesec=\"{ props.itemTimer }\">\n")
+                    file.write(f"\t\t<SPAWN item=\"{ props.itemType.lower() }{ itemIDString }\" timesec=\"{ int(props.itemTimer * 1000) }\">\n")
                     file.write("\t\t\t<POSITION>{:f} {:f} {:f}</POSITION>\n".format(*tokenizeVec3(loc, 'POSITION', state.convertUnits, True)))
                     file.write(f"\t\t</SPAWN>\n")
                 file.write("\t</GAMETYPE>\n")
@@ -691,7 +693,7 @@ def exportRS2(self, context):
                     props = blItemTeamObj.gzrs2
                     itemIDString = str(props.itemID).zfill(2)
 
-                    file.write(f"\t\t<SPAWN item=\"{ props.itemType.lower() }{ itemIDString }\" timesec=\"{ props.itemTimer }\">\n")
+                    file.write(f"\t\t<SPAWN item=\"{ props.itemType.lower() }{ itemIDString }\" timesec=\"{ int(props.itemTimer * 1000) }\">\n")
                     file.write("\t\t\t<POSITION>{:f} {:f} {:f}</POSITION>\n".format(*tokenizeVec3(loc, 'POSITION', state.convertUnits, True)))
                     file.write(f"\t\t</SPAWN>\n")
                 file.write("\t</GAMETYPE>\n")

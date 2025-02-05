@@ -2186,34 +2186,37 @@ class GZRS2WorldProperties(PropertyGroup):
         subtype = 'UNSIGNED'
     )
 
-    fogMin: IntProperty(
+    fogMin: FloatProperty(
         name = 'Start',
-        default = 1000,
-        min = 0,
-        max = 2**31 - 1,
-        soft_min = 0,
-        soft_max = 2**31 - 1,
-        subtype = 'UNSIGNED'
+        default = 10.0,
+        min = 0.0,
+        max = 3.402823e+38,
+        soft_min = 0.0,
+        soft_max = 3.402823e+38,
+        subtype = 'UNSIGNED',
+        unit = 'LENGTH'
     )
 
-    fogMax: IntProperty(
+    fogMax: FloatProperty(
         name = 'End',
-        default = 10000,
-        min = 0,
-        max = 2**31 - 1,
-        soft_min = 0,
-        soft_max = 2**31 - 1,
-        subtype = 'UNSIGNED'
+        default = 100.0,
+        min = 0.0,
+        max = 3.402823e+38,
+        soft_min = 0.0,
+        soft_max = 3.402823e+38,
+        subtype = 'UNSIGNED',
+        unit = 'LENGTH'
     )
 
-    farClip: IntProperty(
+    farClip: FloatProperty(
         name = 'Far Clip',
-        default = 10000,
-        min = 0,
-        max = 2**31 - 1,
-        soft_min = 0,
-        soft_max = 2**31 - 1,
-        subtype = 'UNSIGNED'
+        default = 100.0,
+        min = 0.0,
+        max = 3.402823e+38,
+        soft_min = 0.0,
+        soft_max = 3.402823e+38,
+        subtype = 'UNSIGNED',
+        unit = 'LENGTH'
     )
 
     @classmethod
@@ -2316,7 +2319,7 @@ class GZRS2ObjectProperties(PropertyGroup):
         if 'itemGameID'         not in self: self['itemGameID']         = 'SOLO'
         if 'itemType'           not in self: self['itemType']           = 'HP'
         if 'itemID'             not in self: self['itemID']             = 1
-        if 'itemTimer'          not in self: self['itemTimer']          = 30000
+        if 'itemTimer'          not in self: self['itemTimer']          = 30.0
         if 'smokeType'          not in self: self['smokeType']          = 'SS'
         if 'smokeDirection'     not in self: self['smokeDirection']     = 0
         if 'smokePower'         not in self: self['smokePower']         = 0.0
@@ -2548,14 +2551,15 @@ class GZRS2ObjectProperties(PropertyGroup):
         set = onSetItemID
     )
 
-    itemTimer: IntProperty(
+    itemTimer: FloatProperty(
         name = 'Timer',
-        default = 30000,
-        min = 0,
-        max = 2**31 - 1,
-        soft_min = 0,
-        soft_max = 2**31 - 1,
+        default = 30.0,
+        min = 0.0,
+        max = 3.402823e+38,
+        soft_min = 0.0,
+        soft_max = 3.402823e+38,
         subtype = 'UNSIGNED',
+        unit = 'TIME_ABSOLUTE',
         update = onUpdate,
         get = onGetItemTimer,
         set = onSetItemTimer
@@ -2972,7 +2976,8 @@ class GZRS2LightProperties(PropertyGroup):
         max = 3.402823e+38,
         soft_min = 0.0,
         soft_max = 3.402823e+38,
-        subtype = 'UNSIGNED'
+        subtype = 'UNSIGNED',
+        unit = 'LENGTH'
     )
 
     attEnd: FloatProperty(
@@ -2982,7 +2987,8 @@ class GZRS2LightProperties(PropertyGroup):
         max = 3.402823e+38,
         soft_min = 0.0,
         soft_max = 3.402823e+38,
-        subtype = 'UNSIGNED'
+        subtype = 'UNSIGNED',
+        unit = 'LENGTH'
     )
 
     @classmethod

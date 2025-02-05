@@ -86,11 +86,11 @@ def parseRsXML(self, xmlRs, tagName, state):
                 nodeEntry[nodeName] = data
             elif nodeName == 'fog_enable':
                 nodeEntry[nodeName] = data.strip().lower() == 'true'
-            elif nodeName in ('R', 'G', 'B', 'fog_min', 'fog_max', 'far_z'):
+            elif nodeName in ('R', 'G', 'B'):
                 nodeEntry[nodeName] = int(data)
             elif nodeName == 'INTENSITY':
                 nodeEntry[nodeName] = float(data)
-            elif nodeName in ('ATTENUATIONSTART', 'ATTENUATIONEND', 'RADIUS'):
+            elif nodeName in ('ATTENUATIONSTART', 'ATTENUATIONEND', 'RADIUS', 'fog_min', 'fog_max', 'far_z'):
                 nodeEntry[nodeName] = parseDistance(data, state.convertUnits)
             elif nodeName in ('DIFFUSE', 'AMBIENT', 'SPECULAR', 'COLOR'):
                 try:                nodeEntry[nodeName] = tuple(float(s) for s in data.split(' '))
@@ -127,7 +127,7 @@ def parseSpawnXML(self, xmlSpawn, state):
         for spawn in spawns:
             spawnEntry = {}
             spawnEntry['item'] = spawn.getAttribute('item')
-            spawnEntry['timesec'] = int(spawn.getAttribute('timesec'))
+            spawnEntry['timesec'] = int(spawn.getAttribute('timesec')) / 1000
 
             for node, nodeName, data in filterNodes(spawn.childNodes):
                 if nodeName == 'POSITION':
