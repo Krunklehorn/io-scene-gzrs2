@@ -171,15 +171,15 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         blObj = context.active_object
 
         if blObj is None or blObj.type != 'MESH':
-            return
+            return False
 
         if blObj.mode != 'OBJECT':
-            return
+            return False
 
         blMesh = blObj.data
 
         if blMesh is None or blMesh.gzrs2.meshType not in ('WORLD', 'PROP'):
-            return
+            return False
 
         return blObj.active_material is not None
 
@@ -367,46 +367,49 @@ class GZRS2_OT_Prepare_Bake(Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object is None or context.active_object.mode == 'OBJECT'
+        blObj = context.active_object
+
+        if blObj is None or blObj.type != 'MESH':
+            return False
+
+        if blObj.mode != 'OBJECT':
+            return False
+
+        blMesh = blObj.data
+
+        if blMesh is None:
+            return False
+
+        return True
 
     def execute(self, context):
         worldProps = ensureWorld(context).gzrs2
         lightmapImage = worldProps.lightmapImage
 
-        blWorldObjs = tuple(blObj for blObj in context.scene.objects if blObj.type == 'MESH' and blObj.data.gzrs2.meshType == 'WORLD')
+        blBakeObj = context.active_object
+        blBakeMesh = blBakeObj.data
 
-        if len(blWorldObjs) == 0:
-            self.report({ 'ERROR' }, f"GZRS2: Bake requires at least one world mesh! Set mesh types in the Object Data tab!")
+        if len(blBakeMesh.uv_layers) < 2:
+            self.report({ 'ERROR' }, f"GZRS2: Bake prep requires a second UV channel!")
             return { 'CANCELLED' }
 
-        for blWorldObj in blWorldObjs:
-            if len(blWorldObj.data.uv_layers) < 2:
-                self.report({ 'ERROR' }, f"GZRS2: Bake requires a second UV channel in all world meshes! { blWorldObj.name }")
-                return { 'CANCELLED' }
+        blBakeMesh.uv_layers.active_index = 1
 
-            blWorldObj.data.uv_layers.active_index = 1
+        blBakeMats = set(matSlot.material for matSlot in blBakeObj.material_slots)
 
-        if checkMeshesEmptySlots(blWorldObjs, self):
+        if len(blBakeMats) == 0:
+            self.report({ 'ERROR' }, f"GZRS2: Bake prep requires at least one material!")
             return { 'CANCELLED' }
 
-        blWorldMats = set(matSlot.material for blWorldObj in blWorldObjs for matSlot in blWorldObj.material_slots)
-
-        if len(blWorldMats) == 0:
-            self.report({ 'ERROR' }, f"GZRS2: Bake requires at least one world material!")
-            return { 'CANCELLED' }
-
-        for blWorldMat in blWorldMats:
-            tree, links, nodes = getMatTreeLinksNodes(blWorldMat)
+        for blBakeMat in blBakeMats:
+            tree, links, nodes = getMatTreeLinksNodes(blBakeMat)
 
             shader, output, info, transparent, mix, clip, add, lightmix = getRelevantShaderNodes(nodes)
             shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
 
             if any((not shaderValid,        not infoValid,
-                    not transparentValid,   not mixValid,
-                    clipValid       == False,
-                    addValid        == False,
-                    lightmixValid   == False)):
-                self.report({ 'ERROR' }, f"GZRS2: Bake requires all world materials conform to a preset! { blWorldMat.name }")
+                    not transparentValid,   not mixValid)):
+                self.report({ 'ERROR' }, f"GZRS2: Bake prep requires all bake materials conform to a preset! { blBakeMat.name }")
                 return { 'CANCELLED' }
 
             nodes.active = None
@@ -3288,12 +3291,12 @@ class GZRS2_PT_Realspace_Material(Panel):
         blObj = context.active_object
 
         if blObj is None or blObj.type != 'MESH':
-            return
+            return False
 
         blMesh = blObj.data
 
         if blMesh is None:
-            return
+            return False
 
         return blObj.active_material is not None
 

@@ -378,9 +378,7 @@ def exportRS2(self, context):
             shaderValid, infoValid, transparentValid, mixValid, clipValid, addValid, lightmixValid = checkShaderNodeValidity(shader, output, info, transparent, mix, clip, add, lightmix, links)
 
             if any((shaderValid         == False,   infoValid   == False,
-                    transparentValid    == False,   mixValid    == False,
-                    clipValid           == False,   addValid    == False,
-                    lightmixValid       == False)):
+                    transparentValid    == False,   mixValid    == False)):
                 self.report({ 'ERROR' }, f"GZRS2: RS export requires all materials conform to a preset! { exportName }")
                 return { 'CANCELLED' }
 

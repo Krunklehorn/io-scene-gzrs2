@@ -173,7 +173,7 @@ Lights in Realspace don't affect world geometry. We have to bake a lightmap to g
     * Manually adding seams, unwrapping and packing a lightmap is guaranteed to add hair to your chest. This is an artform, treat it like one.
     * Beware 3rd party lightmap plugins that mess with the shader node configuration.
 2. Organize your project data into collections: one for meshes, one for empties, one for lights and one more labeled "Bake".
-3. Duplicate ALL of your meshes, join them (Ctrl + J) into one and put the result in your "Bake" collection.
+3. Duplicate ALL of your meshes, join them (Ctrl + J) into one, put the result in your "Bake" collection and set it's type to "None".
 4. Toggle the "Disable In Renders" switch OFF on your source mesh collection.
 5. Navigate to the Output->Output panel and set the following fields...
     * File Format: PNG
@@ -226,7 +226,7 @@ Since we only want surface lighting, we have to denoise manually.
 8. Save the image and overwrite the lightmap you previously saved to disk.
     * Make sure it's a PNG set to RGB at 16 bits! Blender likes to switch back to 8 all the time. It's annoying.
 9. Switch the image editor to your original, noisy lightmap and select "Image->Reload". Presto!
-10. Delete your bake mesh or set it's type to "None".
+10. Double check that your bake mesh's type is set to "None".
 11. Export and test.
 
 ### Bonus: Ambient Occlusion
