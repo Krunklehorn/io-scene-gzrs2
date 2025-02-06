@@ -67,7 +67,7 @@ def exportElu(self, context):
     elupath = self.filepath
     directory = os.path.dirname(elupath)
     basename = bpy.path.basename(elupath)
-    splitname = os.path.splitext(basename)
+    splitname = basename.split(os.extsep)
     filename = splitname[0]
 
     id = ELU_ID

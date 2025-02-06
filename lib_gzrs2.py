@@ -324,7 +324,7 @@ def resourceSearch(self, resourcename, state):
     result = state.rs3DataDict.get(resourcename.lower())
     if result: return result
 
-    splitname = os.path.splitext(resourcename)
+    splitname = resourcename.split(os.extsep)
 
     if splitname[-1].lower() == 'xml' and splitname[-2].lower() in ('scene', 'prop'):
         eluname = f"{ splitname[0] }{ os.extsep }elu"

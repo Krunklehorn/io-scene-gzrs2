@@ -83,7 +83,9 @@ def importElu(self, context):
 
     elupath = self.filepath
     state.directory = os.path.dirname(elupath)
-    state.filename = os.path.splitext(bpy.path.basename(elupath))[0]
+    basename = bpy.path.basename(elupath)
+    splitname = basename.split(os.extsep)
+    state.filename = splitname[0]
 
     for ext in XML_EXTENSIONS:
         eluxmlpath = pathExists(f"{ elupath }{ os.extsep }{ ext }")

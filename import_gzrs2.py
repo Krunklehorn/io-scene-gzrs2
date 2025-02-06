@@ -117,7 +117,9 @@ def importRS2(self, context):
 
     rspath = self.filepath
     state.directory = os.path.dirname(rspath)
-    state.filename = os.path.splitext(bpy.path.basename(rspath))[0]
+    basename = bpy.path.basename(rspath)
+    splitname = basename.split(os.extsep)
+    state.filename = splitname[0]
 
     xmlRs = False
     for ext in XML_EXTENSIONS:

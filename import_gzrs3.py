@@ -87,7 +87,8 @@ def importRS3(self, context):
 
     xmlpath = self.filepath
     state.directory = os.path.dirname(xmlpath)
-    splitname = os.path.splitext(bpy.path.basename(xmlpath))
+    basename = bpy.path.basename(xmlpath)
+    splitname = basename.split(os.extsep)
     state.filename = splitname[0]
     xmltype = splitname[-2].lower()
 
@@ -135,7 +136,7 @@ def importRS3(self, context):
 
                     childnode = {
                         'type': 'ACTOR',
-                        'name': os.path.splitext(resourcebase)[0],
+                        'name': resourcebase.split(os.extsep)[0],
                         'resourcename': resourcebase,
                         'parent': node
                     }

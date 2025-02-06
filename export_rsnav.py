@@ -34,7 +34,7 @@ def exportNav(self, context):
     navpath = self.filepath
     directory = os.path.dirname(navpath)
     basename = bpy.path.basename(navpath)
-    splitname = os.path.splitext(basename)
+    splitname = basename.split(os.extsep)
     filename = splitname[0]
 
     id = NAV_ID

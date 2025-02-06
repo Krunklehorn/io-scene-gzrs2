@@ -32,7 +32,9 @@ def importLm(self, context):
 
     lmpath = self.filepath
     state.directory = os.path.dirname(lmpath)
-    state.filename = os.path.splitext(bpy.path.basename(lmpath))[0]
+    basename = bpy.path.basename(lmpath)
+    splitname = basename.split(os.extsep)
+    state.filename = splitname[0]
 
     with open(lmpath, 'rb') as file:
         if readLm(self, file, lmpath, state):
