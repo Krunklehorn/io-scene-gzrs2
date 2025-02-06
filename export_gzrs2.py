@@ -49,7 +49,7 @@ def exportRS2(self, context):
     rspath = self.filepath
     directory = os.path.dirname(rspath)
     basename = bpy.path.basename(rspath)
-    splitname = os.path.splitext(basename)
+    splitname = basename.split(os.extsep)
     filename = splitname[0]
 
     rsxmlpath = f"{ rspath }{ os.extsep }xml"
@@ -60,14 +60,10 @@ def exportRS2(self, context):
     colpath = f"{ rspath }{ os.extsep }col"
     lmpath = f"{ rspath }{ os.extsep }lm"
 
-    createBackupFile(rspath,        purgeUnused = state.purgeUnused)
-    createBackupFile(rsxmlpath,     purgeUnused = state.purgeUnused)
-    createBackupFile(spawnxmlpath,  purgeUnused = state.purgeUnused)
-    createBackupFile(flagxmlpath,   purgeUnused = state.purgeUnused)
-    createBackupFile(smokexmlpath,  purgeUnused = state.purgeUnused)
-    createBackupFile(bsppath,       purgeUnused = state.purgeUnused)
-    createBackupFile(colpath,       purgeUnused = state.purgeUnused)
-    createBackupFile(lmpath,        purgeUnused = state.purgeUnused)
+    exportPaths = (rspath, rsxmlpath, spawnxmlpath, flagxmlpath, smokexmlpath, bsppath, colpath, lmpath)
+
+    for exportPath in exportPaths:
+        createBackupFile(exportPath, purgeUnused = state.purgeUnused)
 
     windowManager = context.window_manager
 
@@ -851,7 +847,12 @@ def exportRS2(self, context):
 
     windowManager.progress_end()
     windowManager.progress_begin(0, depthLimit)
-    rsOctreeRoot = createOctreeNode(rsOctreePolygons, octPlanes, worldBBMin, worldBBMax, depthLimit, windowManager)
+
+    try:
+        rsOctreeRoot = createOctreeNode(rsOctreePolygons, octPlanes, worldBBMin, worldBBMax, depthLimit, windowManager)
+    except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
+        self.report({ 'ERROR' }, error.message)
+        return { 'CANCELLED' }
 
     rsONodeCount        = getTreeNodeCount(rsOctreeRoot)
     rsOPolygonCount     = getTreePolygonCount(rsOctreeRoot)
@@ -897,7 +898,12 @@ def exportRS2(self, context):
 
     windowManager.progress_end()
     windowManager.progress_begin(0, 1)
-    rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, bspPlanes, worldBBMin, worldBBMax, windowManager)
+
+    try:
+        rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, bspPlanes, worldBBMin, worldBBMax, windowManager)
+    except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
+        self.report({ 'ERROR' }, error.message)
+        return { 'CANCELLED' }
 
     rsBNodeCount        = getTreeNodeCount(rsBsptreeRoot)
     rsBPolygonCount     = getTreePolygonCount(rsBsptreeRoot)
@@ -1064,7 +1070,12 @@ def exportRS2(self, context):
 
     windowManager.progress_end()
     windowManager.progress_begin(0, 1)
-    col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads, windowManager)
+
+    try:
+        col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads, windowManager)
+    except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
+        self.report({ 'ERROR' }, error.message)
+        return { 'CANCELLED' }
 
     colNodeCount        = getTreeNodeCount(col1Root)
     colTriangleCount    = getTreeTriangleCount(col1Root)

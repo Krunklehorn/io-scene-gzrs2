@@ -53,7 +53,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 * Exports empties, meshes, lights and cameras
 * Requires at least one world mesh
 * Requires at least one collision mesh or a world mesh marked with '+Collision'
-  * Collision geometry should form a closed surface with no overlaps or holes
+  * Collision geometry should form a closed surface with no overlaps, holes or concave polygons
   * Collision geometry should should appear red when viewed from out of bounds through the 'Face Orientation' overlay
 * Ignores anything not marked by the type system...
   * Empty: Spawn, Flare, Sound, Smoke, Item, Occlusion
@@ -79,11 +79,13 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 ### Known Issues
 
 * FALLING THROUGH FLOOR: You must ensure collision meshes are completely sealed!
-  * Collision geometry should form a closed surface with no overlaps or holes
-  * Collision geometry should should appear red when viewed from out of bounds through the 'Face Orientation' overlay
-  * Future updates *may* address this with leak detection, orientation checks and/or CSG union pre-processing
-* PROPS WON'T SHOW UP: Prop (.elu) file names are written to .rs.xml under 'OBJECTLIST' however, the props themselves must be exported manually using a selection filter
-* RE-EXPORT IS UNTESTED: Don't expect it to work without some effort, most vanilla maps require touch ups
+  * Collision geometry should form a closed surface with no overlaps, holes or concave polygons.
+  * Collision geometry should should appear red when viewed from out of bounds through the 'Face Orientation' overlay.
+  * Future updates *may* address this with leak detection, orientation checks and/or CSG union pre-processing.
+* PROPS WON'T SHOW UP: Props (.elu) have a "Filename" property which the exporter writes to .rs.xml under 'OBJECTLIST'.
+  * The props themselves must be exported through the .elu exporter by setting the filter mode to "Selected".
+* RE-EXPORT IS UNTESTED: Don't expect it to work without some effort, most vanilla maps require touch ups.
+* CRITICAL ERROR: You probably have a concave polygon somewhere. Try running Cleanup->Split Concave Faces or turn on the Mesh Analyzer and set it to "Degenerate".
 
 ## Your First Map
 
@@ -101,7 +103,7 @@ The following instructions assume a basic knowledge of Blender.
 
 ### Thinking Outside The Box
 
-Realspace's collision system requires a closed surface with no overlaps or holes.
+Realspace's collision system requires a closed surface with no overlaps, holes or concave polygons
 
 World geometry can contribute to the collision pass, but for outdoor scenes or any map with a window, we usually have an open landscape that is largely inaccessible to the player. Calculating collision for all of that stuff would be wasteful.
 

@@ -422,6 +422,16 @@ class Col1TreeNode:
 ####    RS EXPORT    ####
 #########################
 
+class GZRS2EdgePlaneIntersectionError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
+class GZRS2DegeneratePolygonError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
 @dataclass
 class GZRS2ExportState:
     convertUnits:           bool = False

@@ -1650,12 +1650,13 @@ def createBackupFile(path, *, purgeUnused = False):
         return
 
     directory = os.path.dirname(path)
-    splitname = os.path.splitext(bpy.path.basename(path))
+    basename = bpy.path.basename(path)
+    splitname = basename.split(os.extsep)
     filename = splitname[0]
-    extension = os.extsep + splitname[1]
+    extension = ''
 
-    if len(splitname) > 2:
-        extension += os.extsep + splitname[2]
+    for token in splitname[1:]:
+        extension += os.extsep + token
 
     shutil.copy2(path, os.path.join(directory, filename + "_backup") + extension)
 
@@ -1969,7 +1970,8 @@ def calcPlaneEdgeIntersection(plane, p1, p2):
     delta = p2 - p1
     t = -calcPlanePointDistance(plane, p1) / delta.dot(plane)
 
-    assert t >= 0 and t <= 1, f"calcPlaneEdgeIntersection() created a t value outside the 0-1 range: { t }"
+    if t < 0 or t > 1:
+        raise GZRS2EdgePlaneIntersectionError(f"GZRS2: calcPlaneEdgeIntersection() created a t value outside the 0-1 range: { t }!")
 
     return p1 + delta * t, t
 
@@ -2235,7 +2237,7 @@ def createColTriangles(polygons):
 
         for v1, v2, vertex1, vertex2 in vertexPairs:
             if vec3IsClose(vertex1, vertex2, RS_COORD_THRESHOLD):
-                assert False, "createColTriangles() found a degenerate polygon!"
+                raise GZRS2DegeneratePolygonError("GZRS2: createColTriangles() found a degenerate polygon! Try running Cleanup->Split Concave Faces or turn on the Mesh Analyzer and set it to \"Degenerate\"!")
 
     for polygon in polygons:
         for v in range(polygon.vertexCount - 2):
