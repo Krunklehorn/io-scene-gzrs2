@@ -343,6 +343,9 @@ def exportRS2(self, context):
     rsMatTexpaths = []
     reorientCamera = Matrix.Rotation(math.radians(-90.0), 4, 'X')
 
+    propFilenames = { blPropObj.data.gzrs2.propFilename for blPropObj in blPropObjs }
+    propFilenames = { propFilename.replace(os.extsep + 'elu', '') for propFilename in propFilenames }
+
     windowManager.progress_end()
     windowManager.progress_begin(0, rsMatCount + rsLightCount + rsPropCount + rsDummyCount + rsOccCount + rsSoundCount)
     progress = 0
@@ -449,12 +452,9 @@ def exportRS2(self, context):
         if rsLightCount > 0:    file.write("\t</LIGHTLIST>\n")
         if rsPropCount > 0:     file.write("\t<OBJECTLIST>\n")
 
-        for blPropObj in blPropObjs:
+        for propFilename in propFilenames:
             progress += 1
             windowManager.progress_update(progress)
-
-            propFilename = blPropObj.data.gzrs2.propFilename
-            propFilename = propFilename.replace(os.extsep + 'elu', '')
 
             file.write(f"\t\t<OBJECT name=\"{ propFilename }{ os.extsep }elu\"/>\n")
 
