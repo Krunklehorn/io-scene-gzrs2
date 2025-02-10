@@ -422,16 +422,20 @@ def exportRS2(self, context):
             lightSubtype = props.lightSubtype
             intensity = props.intensity
 
-            lightName = blLightObj.name
-            lightNameLower = lightName.lower()
+            if lightSubtype == 'SUN':
+                lightName = 'sun_omni'
+            else:
+                lightName = blLightObj.name
 
-            lightName = lightName.replace('obj_', '')
-            lightName = lightName.replace('_obj', '')
-            lightName = lightName.replace('sun_', '')
-            lightName = lightName.replace('_sun', '')
+                lightName = lightName.replace('obj_', '')
+                lightName = lightName.replace('_obj', '')
+                lightName = lightName.replace('sun_', '')
+                lightName = lightName.replace('_sun', '')
+                lightName = lightName.replace('sun_omni_', '')
+                lightName = lightName.replace('_sun_omni', '')
 
-            if lightSubtype == 'SUN':   lightName = 'sun_' + lightName # Ruin & Lost Shrine
-            if lightType == 'DYNAMIC':  lightName = 'obj_' + lightName
+                if lightType == 'DYNAMIC':
+                    lightName = 'obj_' + lightName
 
             file.write(f"\t\t<LIGHT name=\"{ lightName.lower() }\">\n")
             file.write("\t\t\t<POSITION>{:f} {:f} {:f}</POSITION>\n".format(*tokenizeVec3(loc, 'POSITION', state.convertUnits, True)))
