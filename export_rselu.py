@@ -180,7 +180,7 @@ def exportElu(self, context):
 
         for exportFilename in exportFilenames:
             if exportFilename != filename:
-                self.report({ 'ERROR' }, "GZRS2: Export for map props requires Prop and Attachment filenames match the .elu export filename! This ensures synchronicity with the .rs.xml <OBJECT> tags during .rs export!")
+                self.report({ 'ERROR' }, "GZRS2: Prop and Attachment filenames must match the .elu export filename! This ensures synchronicity with the .rs.xml <OBJECT> tags during .rs export!")
                 return { 'CANCELLED' }
 
     eluObjByName = {}

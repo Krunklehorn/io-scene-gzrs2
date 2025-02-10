@@ -438,8 +438,8 @@ class GZRS2ExportState:
     convertUnits:           bool = False
     filterMode:             str = 'ALL'
     includeChildren:        bool = False
-    purgeUnused:            bool = False
 
+    purgeUnused:            bool = False
     lmVersion4:             bool = False
     mod4Fix:                bool = False
 

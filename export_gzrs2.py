@@ -71,8 +71,8 @@ def exportRS2(self, context):
 
     # TODO: New material tags
     #   at_:    adds <ALPHATEST/>?
-    #   hide_:  not rendered at runtime
-    #   pass_:  rendered but ignored by collision
+    #   hide_:  not rendered at runtime, useless?
+    #   pass_:  rendered but ignored by collision, useless?
     #   passb_: bullets pass through
     #   passr_: bullets, rockets and grenades pass through
 
@@ -82,6 +82,8 @@ def exportRS2(self, context):
     #   sea_:   it's wet
 
     # TODO: Verify blitzkrieg data
+    # TODO: Verify flag data
+    # TODO: Verify smoke data
 
     # Gather data into lists
     blSpawnSoloObjs     = []
@@ -295,11 +297,10 @@ def exportRS2(self, context):
     for blSmokeObj          in blSmokeObjs:         blDummyObjs.append(blSmokeObj)
     for blItemSoloObj       in blItemSoloObjs:      blDummyObjs.append(blItemSoloObj)
     for blItemTeamObj       in blItemTeamObjs:      blDummyObjs.append(blItemTeamObj)
-    for blPropObj           in blPropObjs:          blDummyObjs.append(blPropObj)
+    for blPropObj           in blPropObjsAll:       blDummyObjs.append(blPropObj)
     for blCameraWaitObj     in blCameraWaitObjs:    blDummyObjs.append(blCameraWaitObj)
     for blCameraTrackObj    in blCameraTrackObjs:   blDummyObjs.append(blCameraTrackObj)
 
-    blPropObjs      = tuple(blPropObjs)
     blPropObjsAll   = tuple(blPropObjsAll)
     blLightObjs     = tuple(blLightObjs)
     blDummyObjs     = tuple(blDummyObjs)
@@ -335,7 +336,7 @@ def exportRS2(self, context):
 
     rsMatCount = len(blWorldMats)
     rsLightCount = len(blLightObjs)
-    rsPropCount = len(blPropObjs)
+    rsPropCount = len(blPropObjsAll)
     rsDummyCount = len(blDummyObjs)
     rsOccCount = len(blOccObjs)
     rsSoundCount = len(blSoundObjs)
@@ -343,8 +344,17 @@ def exportRS2(self, context):
     rsMatTexpaths = []
     reorientCamera = Matrix.Rotation(math.radians(-90.0), 4, 'X')
 
-    propFilenames = { blPropObj.data.gzrs2.propFilename for blPropObj in blPropObjs }
-    propFilenames = { propFilename.replace(os.extsep + 'elu', '') for propFilename in propFilenames }
+    propFilenames = set()
+
+    for blPropObj in blPropObjsAll:
+        propFilename = blPropObj.data.gzrs2.propFilename
+        propFilename = propFilename.replace(os.extsep + 'elu', '')
+
+        if propFilename == '':
+            self.report({ 'ERROR' }, f"GZRS2: Prop with empty filename: { blPropObj.name }")
+            return { 'CANCELLED' }
+
+        propFilenames.append(propFilename)
 
     windowManager.progress_end()
     windowManager.progress_begin(0, rsMatCount + rsLightCount + rsPropCount + rsDummyCount + rsOccCount + rsSoundCount)
