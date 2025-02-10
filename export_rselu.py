@@ -572,12 +572,16 @@ def exportElu(self, context):
 
                     for vgroupInfo in vgroupInfos:
                         boneName = vertexGroups[vgroupInfo.group].name
+                        weight = vgroupInfo.weight
 
                         if boneName not in blValidBones:
                             skippedBoneNames.add(boneName)
                             continue
 
-                        pairs.append((vgroupInfo.weight, boneName))
+                        if weight < ELU_WEIGHT_THRESHOLD:
+                            continue
+
+                        pairs.append((weight, boneName))
 
                     degree = len(pairs)
                     for _ in range(ELU_PHYS_KEYS - degree): pairs.append((0.0, ''))

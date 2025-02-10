@@ -137,6 +137,7 @@ ELU_PATH_LENGTH =               256
 ELU_PHYS_KEYS =                 4
 
 ELU_MAX_TRIS =                  int(1024 * 100 / 3)
+ELU_WEIGHT_THRESHOLD =          0.001
 
 ANI_ID =                        ELU_ID
 
