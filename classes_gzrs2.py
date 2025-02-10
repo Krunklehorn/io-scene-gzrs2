@@ -13,6 +13,7 @@ class GZRS2State:
     convertUnits:       bool = False
     meshMode:           str = ""
     texSearchMode:      str = ""
+    isMapProp:          bool = False
     overwriteAction:    bool = False
     doCollision:        bool = False
     doNavigation:       bool = False
@@ -514,6 +515,7 @@ class RSELUExportState:
     uncapLimits:            bool = False
     filterMode:             str = 'ALL'
     includeChildren:        bool = False
+    isMapProp:              bool = False
 
     logEluHeaders:          bool = False
     logEluMats:             bool = False

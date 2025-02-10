@@ -1078,6 +1078,12 @@ class ImportRSELU(Operator, ImportHelper):
                  ('SKIP',       'Skip',         "Don't search for or load any textures (fastest)"))
     )
 
+    isMapProp: BoolProperty(
+        name = 'Map Prop',
+        description = "Reorients the prop to face forward",
+        default = False
+    )
+
     doBoneRolls: BoolProperty(
         name = 'Bone Rolls',
         description = "Re-calculate all bone rolls to the positive world z-axis. Required for twist bone constraints to work properly",
@@ -1162,6 +1168,7 @@ class RSELU_PT_Import_Main(Panel):
 
         layout.prop(operator, 'convertUnits')
         layout.prop(operator, 'texSearchMode')
+        layout.prop(operator, 'isMapProp')
 
         layout.prop(operator, 'doBoneRolls')
 
@@ -1654,6 +1661,12 @@ class ExportRSELU(Operator, ExportHelper):
         default = True
     )
 
+    isMapProp: BoolProperty(
+        name = 'Map Prop',
+        description = "Reorients the prop to face forward and verifies the user is exporting it with the correct filename",
+        default = False
+    )
+
     logEluHeaders: BoolProperty(
         name = 'Elu Headers',
         description = "Log ELU header data",
@@ -1719,6 +1732,8 @@ class RSELU_PT_Export_Main(Panel):
         column = layout.column()
         column.prop(operator, 'includeChildren')
         column.enabled = operator.filterMode == 'SELECTED'
+
+        layout.prop(operator, 'isMapProp')
 
 class RSELU_PT_Export_Logging(Panel):
     bl_space_type = 'FILE_BROWSER'

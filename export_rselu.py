@@ -48,6 +48,7 @@ def exportElu(self, context):
     state.uncapLimits       = self.uncapLimits
     state.filterMode        = self.filterMode
     state.includeChildren   = self.includeChildren and self.filterMode == 'SELECTED'
+    state.isMapProp         = self.isMapProp
 
     if self.panelLogging:
         print()
@@ -171,6 +172,17 @@ def exportElu(self, context):
 
     blObjs = blEmptyObjs + blMeshObjsAll
 
+    # Verify filenames
+    if state.isMapProp:
+        exportFilenames = set(blEmptyObj.data.gzrs2.attachmentFilename for blEmptyObj in blEmptyObjs)
+        exportFilenames |= set(blMeshObj.data.gzrs2.propFilename for blMeshObj in blMeshObjsAll)
+        exportFilenames = set(exportFilename.replace(os.extsep + 'elu', '') for exportFilename in exportFilenames)
+
+        for exportFilename in exportFilenames:
+            if exportFilename != filename:
+                self.report({ 'ERROR' }, "GZRS2: Export for map props requires Prop and Attachment filenames match the .elu export filename! This ensures synchronicity with the .rs.xml <OBJECT> tags during .rs export!")
+                return { 'CANCELLED' }
+
     eluObjByName = {}
 
     eluMeshObjs = []
@@ -180,6 +192,9 @@ def exportElu(self, context):
     worldInvMatrices = []
 
     eluBoneIDs = {}
+
+    reorientWorld = Matrix.Rotation(math.radians(180.0), 4, 'Z')
+    reorientBone = Matrix.Rotation(math.radians(90.0), 4, 'Y') @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
 
     meshCount = 0
 
@@ -195,6 +210,10 @@ def exportElu(self, context):
         eluMeshObjs.append(blObj)
 
         worldMatrix = blObj.matrix_world
+
+        if state.isMapProp:
+            worldMatrix = reorientWorld @ worldMatrix
+
         worldMatrixByName[objName] = worldMatrix
         worldInvMatrices.append(worldMatrix.inverted())
 
@@ -212,14 +231,16 @@ def exportElu(self, context):
         eluMeshObjs.append(blObj)
 
         worldMatrix = blObj.matrix_world
+
+        if state.isMapProp:
+            worldMatrix = reorientWorld @ worldMatrix
+
         worldMatrixByName[objName] = worldMatrix
         worldInvMatrices.append(worldMatrix.inverted())
 
         eluBoneIDs[objName] = meshCount
 
         meshCount += 1
-
-    reorientBone = Matrix.Rotation(math.radians(90.0), 4, 'Y') @ Matrix.Rotation(math.radians(90.0), 4, 'Z')
 
     # Remaining bones last
     for blArmatureObj in blArmatureObjs:
@@ -237,6 +258,10 @@ def exportElu(self, context):
             eluEmptyBones.append(blBone)
 
             worldMatrix = blArmatureObj.matrix_world @ blBone.matrix_local @ reorientBone
+
+            if state.isMapProp:
+                worldMatrix = reorientWorld @ worldMatrix
+
             worldMatrixByName[boneName] = worldMatrix
             worldInvMatrices.append(worldMatrix.inverted())
 

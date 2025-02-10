@@ -59,11 +59,12 @@ def importElu(self, context):
             self.report({ 'ERROR' }, f"GZRS2: Search path must point to a folder containing a valid data subdirectory! Verify your path in the plugin's preferences!")
             return { 'CANCELLED' }
 
-    state.convertUnits = self.convertUnits
-    state.texSearchMode = self.texSearchMode
-    state.doBoneRolls = self.doBoneRolls
-    state.doTwistConstraints = self.doTwistConstraints
-    state.doCleanup = self.doCleanup
+    state.convertUnits          = self.convertUnits
+    state.texSearchMode         = self.texSearchMode
+    state.isMapProp             = self.isMapProp
+    state.doBoneRolls           = self.doBoneRolls
+    state.doTwistConstraints    = self.doTwistConstraints
+    state.doCleanup             = self.doCleanup
 
     if self.panelLogging:
         print()
@@ -74,12 +75,12 @@ def importElu(self, context):
         print("=======================================================================")
         print()
 
-        state.logEluHeaders = self.logEluHeaders
-        state.logEluMats = self.logEluMats
-        state.logEluMeshNodes = self.logEluMeshNodes
-        state.logVerboseIndices = self.logVerboseIndices and self.logEluMeshNodes
-        state.logVerboseWeights = self.logVerboseWeights and self.logEluMeshNodes
-        state.logCleanup = self.logCleanup
+        state.logEluHeaders         = self.logEluHeaders
+        state.logEluMats            = self.logEluMats
+        state.logEluMeshNodes       = self.logEluMeshNodes
+        state.logVerboseIndices     = self.logVerboseIndices and self.logEluMeshNodes
+        state.logVerboseWeights     = self.logVerboseWeights and self.logEluMeshNodes
+        state.logCleanup            = self.logCleanup
 
     elupath = self.filepath
     state.directory = os.path.dirname(elupath)
@@ -144,7 +145,7 @@ def importElu(self, context):
             state.blDummyObjs.append(blDummyObj)
             state.blObjPairs.append((eluMesh, blDummyObj))
         else:
-            setupElu(self, eluMesh, False, rootMesh, context, state)
+            setupElu(self, eluMesh, state.isMapProp, rootMesh, context, state)
 
     processEluHeirarchy(self, state)
 
