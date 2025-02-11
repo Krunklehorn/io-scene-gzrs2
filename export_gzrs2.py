@@ -1141,20 +1141,23 @@ def exportRS2(self, context):
     # Gather lightmap data
     lightmapImage = worldProps.lightmapImage
 
-    if not lightmapImage:
-        windowManager.progress_end()
-
-        return { 'FINISHED' }
-
     # Never atlas, we increase the lightmap resolution instead
     # numCells = worldProps.lightmapNumCells
     numCells = 1
 
-    imageDatas, imageSizes = generateLightmapData(self, lightmapImage, numCells, state)
-    imageCount = len(imageDatas)
+    if lightmapImage:
+        imageDatas, imageSizes = generateLightmapData(self, lightmapImage, numCells, state)
 
-    if not imageDatas or not imageSizes:
-        return { 'CANCELLED' }
+        if not imageDatas or not imageSizes:
+            return { 'CANCELLED' }
+    else:
+        pixelCount = LM_MIN_SIZE ** 2
+        floats = tuple(1.0 for _ in range(pixelCount * 4))
+        imageData = packLmImageData(self, LM_MIN_SIZE, floats, state)
+
+        imageDatas, imageSizes = (imageData,), (LM_MIN_SIZE,)
+
+    imageCount = len(imageDatas)
 
     polygonOrder = bytearray(rsOPolygonCount * 4)
     lightmapIDs = bytearray(rsOPolygonCount * 4)

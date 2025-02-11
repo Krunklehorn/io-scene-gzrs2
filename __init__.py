@@ -2292,10 +2292,16 @@ class GZRS2_PT_Realspace_World(Panel):
             imageWidth, imageHeight = lightmapImage.size
             mipCount = math.log2(imageWidth) if imageWidth != 0 else None
 
-            if imageWidth == 0 or imageWidth != imageHeight or not mipCount.is_integer():
-                row = column.row()
-                row.alert = True
-                row.label(text = "Image must be a square, power of two texture!")
+            if imageWidth < LM_MIN_SIZE or imageHeight < LM_MIN_SIZE or imageWidth != imageHeight or not mipCount.is_integer():
+                if imageWidth < LM_MIN_SIZE or imageHeight < LM_MIN_SIZE:
+                    row = column.row()
+                    row.alert = True
+                    row.label(text = f"Image side length must be greater than { LM_MIN_SIZE }!")
+
+                if imageWidth != imageHeight or not mipCount.is_integer():
+                    row = column.row()
+                    row.alert = True
+                    row.label(text = f"Image must be a square, power of two texture!")
             else:
                 row = column.row()
                 row.label(text = "Size:")

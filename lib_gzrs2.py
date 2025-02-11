@@ -2566,7 +2566,7 @@ def packLmImageData(self, imageSize, floats, state, *, fromAtlas = False, atlasS
         try:
             return clib.packLmImageData(imageSize, floats, state.lmVersion4, state.mod4Fix, fromAtlas, atlasSize, cx, cy)
         except (ValueError, ctypes.ArgumentError) as ex:
-            print(f"GZRS2: Failed to call C function, defaulting to pure Python: { ex }")
+            print(f"GZRS2: Failed to call C function, defaulting to pure Python: { ex }, { sopath }")
 
     pixelCount = imageSize ** 2
 
@@ -2763,10 +2763,10 @@ def generateLightmapData(self, image, numCells, state):
         return False, False
 
     imageWidth, imageHeight = image.size
-    mipCount = math.log2(imageWidth)
+    mipCount = math.log2(imageWidth) if imageWidth != 0 else None
 
-    if imageWidth == 0 or imageWidth != imageHeight or not mipCount.is_integer():
-        self.report({ 'ERROR' }, f"GZRS2: Lightmap is not valid! Image must be a square, power of two texture! { image.name }")
+    if imageWidth < LM_MIN_SIZE or imageHeight < LM_MIN_SIZE or imageWidth != imageHeight or not mipCount.is_integer():
+        self.report({ 'ERROR' }, f"GZRS2: Lightmap is not valid! Image must be a square, power of two texture with a side length greater than { LM_MIN_SIZE }! { image.name }")
         return False, False
 
     mipCount = int(mipCount)

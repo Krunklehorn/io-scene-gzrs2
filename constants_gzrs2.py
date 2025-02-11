@@ -56,6 +56,7 @@ PAT_VERSION =                   0
 LM_ID =                         0x30671804
 LM_VERSION =                    3
 LM_VERSION_EXT =                4
+LM_MIN_SIZE =                   4 * 16 * 4 # BLOCK_LENGTH * MAX_THREADS * 4
 
 COL1_ID =                       0x05050178f
 COL1_VERSION =                  0

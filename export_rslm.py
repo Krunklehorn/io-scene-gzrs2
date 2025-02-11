@@ -113,11 +113,12 @@ def exportLm(self, context):
     # numCells = worldProps.lightmapNumCells
     numCells = 1
 
-    imageDatas, imageSizes = generateLightmapData(self, lightmapImage, numCells, state)
-    imageCount = len(imageDatas)
+    success, imageDatas, imageSizes = generateLightmapData(self, lightmapImage, numCells, state)
 
     if not imageDatas or not imageSizes:
         return { 'CANCELLED' }
+
+    imageCount = len(imageDatas)
 
     # Read LM
     createBackupFile(lmpath)
