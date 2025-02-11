@@ -261,11 +261,12 @@ def importAni(self, context):
 
         blPoseBones = blArmatureObj.pose.bones
 
-        for blPoseBone in blPoseBones:
-            if blPoseBone.parent is not None:
-                break
-        else:
-            self.report({ 'WARNING' }, f"GZRS2: ANI import of type { aniTypePretty } performed on an armature with no parent-child hierarchy!")
+        if len(state.aniNodes) > 1:
+            for blPoseBone in blPoseBones:
+                if blPoseBone.parent is not None:
+                    break
+            else:
+                self.report({ 'WARNING' }, f"GZRS2: ANI import of type { aniTypePretty } performed on an armature with no parent-child hierarchy!")
 
         for blPoseBone in blPoseBones:
             blPoseBone.matrix_basis.identity()
