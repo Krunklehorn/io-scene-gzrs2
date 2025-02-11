@@ -354,7 +354,7 @@ def exportRS2(self, context):
             self.report({ 'ERROR' }, f"GZRS2: Prop with empty filename: { blPropObj.name }")
             return { 'CANCELLED' }
 
-        propFilenames.append(propFilename)
+        propFilenames.add(propFilename)
 
     windowManager.progress_end()
     windowManager.progress_begin(0, rsMatCount + rsLightCount + rsPropCount + rsDummyCount + rsOccCount + rsSoundCount)
