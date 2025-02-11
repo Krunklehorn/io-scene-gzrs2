@@ -2467,7 +2467,7 @@ def getTreeNodeCount(tree):
     return count
 
 def getTreePolygonCount(tree):
-    count = sum(polygon.vertexCount for polygon in tree.polygons)
+    count = len(tree.polygons)
 
     if tree.negative: count += getTreePolygonCount(tree.negative)
     if tree.positive: count += getTreePolygonCount(tree.positive)
