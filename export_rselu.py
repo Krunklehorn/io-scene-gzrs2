@@ -529,6 +529,10 @@ def exportElu(self, context):
                 usesDummies = True
 
             if version >= ELU_5005 and hasColors:
+                if not state.uncapLimits and faceCount > ELU_MAX_CLOTH_TRIS:
+                    self.report({ 'ERROR' }, f"GZRS2: Cloth mesh with too many triangles, maximum is { ELU_MAX_CLOTH_TRIS }: { meshName }")
+                    return { 'CANCELLED' }
+
                 colorCount = vertexCount
                 colors = []
 
