@@ -18,6 +18,9 @@ def parseDistance(data, convertUnits):
 
     return value
 
+def parseDegrees(data):
+    return -(data + 180) % 360
+
 def parseVec3(data, nodeName, convertUnits, flipY):
     vec = Vector((float(s) for s in data.split(' ')))
     if nodeName in ('POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT') and convertUnits: vec *= 0.01
@@ -30,6 +33,9 @@ def tokenizeDistance(data, convertUnits):
     if convertUnits: data /= 0.01
 
     return data
+
+def tokenizeDegrees(data):
+    return -(data + 180) % 360
 
 def tokenizeVec3(data, nodeName, convertUnits, flipY):
     data = data.copy()
@@ -146,16 +152,12 @@ def parseFlagXML(self, xmlFlag):
     flagEntries = []
 
     for flag in flags:
-        name = flag.getAttribute('NAME')
-        direction = int(flag.getAttribute('DIRECTION'))
-        power = float(flag.getAttribute('POWER'))
-
         flagEntry = {
-            'NAME': name,
-            'DIRECTION': direction,
-            'POWER': power,
+            'NAME': flag.getAttribute('NAME'),
+            'DIRECTION': parseDegrees(int(flag.getAttribute('DIRECTION'))),
+            'POWER': float(flag.getAttribute('POWER')),
             'windtypes': [],
-            'limits': [] # ZClothEmblem.cpp
+            'limits': []
         }
 
         windtypes = flag.getElementsByTagName('WINDTYPE')
@@ -171,14 +173,14 @@ def parseFlagXML(self, xmlFlag):
         for limit in limits:
             limitEntry = {}
 
-            if limit.hasAttribute('POSITION'):
-                print(name)
-                print(limit.getAttribute('POSITION'))
-                print(float(limit.getAttribute('POSITION')))
-
             if limit.hasAttribute('AXIS'):      limitEntry['AXIS']      = int(limit.getAttribute('AXIS'))
-            if limit.hasAttribute('POSITION'):  limitEntry['POSITION']  = float(limit.getAttribute('POSITION'))
-            if limit.hasAttribute('COMPARE'):   limitEntry['COMPARE']   = int(limit.getAttribute('COMPARE'))
+            if limit.hasAttribute('POSITION'):  limitEntry['POSITION']  = parseDistance(float(limit.getAttribute('POSITION')), convertUnits)
+            if limit.hasAttribute('COMPARE'):   limitEntry['COMPARE']   = limit.getAttribute('COMPARE')
+
+            # Flip y-axis
+            if limitEntry['AXIS'] == 1:
+                limitEntry['POSITION'] = -limitEntry['POSITION']
+                limitEntry['COMPARE'] = int(not bool(limitEntry['COMPARE']))
 
             flagEntry['limits'].append(limitEntry)
 
@@ -193,7 +195,7 @@ def parseSmokeXML(xmlSmoke):
     for smoke in smokes:
         smokeEntry = {
             'NAME': smoke.getAttribute('NAME'),
-            'DIRECTION': int(smoke.getAttribute('DIRECTION')),
+            'DIRECTION': parseDegrees(int(smoke.getAttribute('DIRECTION'))),
             'POWER': float(smoke.getAttribute('POWER')),
             'DELAY': int(smoke.getAttribute('DELAY')),
             'SIZE': float(smoke.getAttribute('SIZE'))

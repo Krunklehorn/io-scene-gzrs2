@@ -794,8 +794,6 @@ def importRS2(self, context):
                 props = blFlagObj.data.gzrs2
                 props.propSubtype = 'FLAG'
 
-                # TODO: Reorient
-
                 if 'DIRECTION'      in flag:            props.flagDirection     = flag['DIRECTION']
                 if 'POWER'          in flag:            props.flagPower         = flag['POWER']
 
@@ -812,7 +810,7 @@ def importRS2(self, context):
                             'COMPARE' in limit)):       props.flagUseLimit      = True
                     if 'AXIS'       in limit:           props.flagLimitAxis     = dataOrFirst(FLAG_LIMIT_AXIS_DATA, limit['AXIS'], 0)
                     if 'POSITION'   in limit:           props.flagLimitOffset   = limit['POSITION']
-                    if 'COMPARE'    in limit:           props.flagLimitCompare  = dataOrFirst(FLAG_LIMIT_COMPARE_DATA, limit['AXIS'], 0)
+                    if 'COMPARE'    in limit:           props.flagLimitCompare  = dataOrFirst(FLAG_LIMIT_COMPARE_DATA, limit['COMPARE'], 0)
 
                     # TODO: Multiple limit data
                     continue

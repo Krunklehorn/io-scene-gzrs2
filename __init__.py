@@ -2598,7 +2598,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     smokeDirection: IntProperty(
-        name = 'Smoke Direction',
+        name = 'Accel. Direction',
         default = 0,
         min = 0,
         max = 359,
@@ -2611,12 +2611,12 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     smokePower: FloatProperty(
-        name = 'Smoke Power',
+        name = 'Accel. Power',
         default = 0.0,
         min = 0.0,
-        max = 100.0,
+        max = 1000.0,
         soft_min = 0.0,
-        soft_max = 100.0,
+        soft_max = 1000.0,
         subtype = 'UNSIGNED',
         update = onUpdate,
         get = onGetSmokePower,
@@ -2624,7 +2624,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     smokeDelay: IntProperty(
-        name = 'Smoke Delay',
+        name = 'Delay',
         default = 0,
         min = 0,
         max = 1000,
@@ -2637,7 +2637,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     smokeSize: FloatProperty(
-        name = 'Smoke Size',
+        name = 'Size',
         default = 40.0,
         min = 0.0,
         max = 500.0,
@@ -2650,12 +2650,12 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     smokeLife: FloatProperty(
-        name = 'Smoke Life',
+        name = 'Lifetime',
         default = 1.0,
         min = 0.0,
-        max = 10.0,
+        max = 100.0,
         soft_min = 0.0,
-        soft_max = 10.0,
+        soft_max = 100.0,
         subtype = 'UNSIGNED',
         update = onUpdate,
         get = onGetSmokeLife,
@@ -2663,7 +2663,7 @@ class GZRS2ObjectProperties(PropertyGroup):
     )
 
     smokeToggleMinTime: FloatProperty(
-        name = 'Toggle Minimum Time',
+        name = 'Min. Toggle Time',
         default = 2.0,
         min = 0.0,
         max = 10.0,
@@ -2778,8 +2778,11 @@ class GZRS2_PT_Realspace_Object(Panel):
             column.prop(props, 'smokeDelay')
             column.prop(props, 'smokeSize')
             column.prop(props, 'smokeLife')
-            if props.smokeType == 'SS' or props.smokeType == 'TS':
+            if props.smokeType == 'ST':
                 column.prop(props, 'smokeToggleMinTime')
+            else:
+                column.label(text = "Tip: Smoke and Train Smoke always point up.")
+            column.label(text = "Tip: Direction is an angle in world space.")
         elif props.dummyType == 'OCCLUSION':
             column.prop(props, 'occPriority')
             column.prop(props, 'occBsp')
@@ -2839,7 +2842,7 @@ class GZRS2MeshProperties(PropertyGroup):
     )
 
     flagDirection: IntProperty(
-        name = 'Flag Direction',
+        name = 'Wind Direction',
         default = 0,
         min = 0,
         max = 359,
@@ -2849,17 +2852,17 @@ class GZRS2MeshProperties(PropertyGroup):
     )
 
     flagPower: FloatProperty(
-        name = 'Flag Power',
+        name = 'Wind Power',
         default = 0.0,
         min = 0.0,
-        max = 10.0,
+        max = 1000.0,
         soft_min = 0.0,
-        soft_max = 10.0,
+        soft_max = 1000.0,
         subtype = 'UNSIGNED'
     )
 
     flagWindType: EnumProperty(
-        name = 'Type',
+        name = 'Wind Type',
         items = FLAG_WINDTYPE_DATA
     )
 
@@ -2886,10 +2889,11 @@ class GZRS2MeshProperties(PropertyGroup):
     flagLimitOffset: FloatProperty(
         name = 'Limit Offset',
         default = 0.0,
-        min = -10000.0,
-        max = 10000.0,
-        soft_min = -10000.0,
-        soft_max = 10000.0
+        min = -1000.0,
+        max = 1000.0,
+        soft_min = -1000.0,
+        soft_max = 1000.0,
+        unit = 'LENGTH'
     )
 
     flagLimitCompare: EnumProperty(

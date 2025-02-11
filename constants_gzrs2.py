@@ -247,8 +247,8 @@ FLAG_LIMIT_AXIS_DATA = (
 )
 
 FLAG_LIMIT_COMPARE_DATA = (
-    ('GREATER',     'Greater',  "Vertex position greater than the specified position along the specified axis"),
-    ('LESS',        'Less',     "Vertex position less than specified position along the specified axis")
+    ('LESS',        'Less',     "Vertex position less than the specified position along the specified axis"),
+    ('GREATER',     'Greater',  "Vertex position greater than the specified position along the specified axis")
 )
 
 MESH_TYPE_DATA = (

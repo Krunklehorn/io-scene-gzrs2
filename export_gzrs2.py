@@ -374,10 +374,9 @@ def exportRS2(self, context):
 
             props = blWorldMat.gzrs2
             exportName = blWorldMat.name
-            exportNameLower = exportName.lower()
 
             # TODO: Regex this instead, '_mt_AAA'
-            if props.sound != 'NONE' and '_mt_' not in exportNameLower:
+            if props.sound != 'NONE' and '_mt_' not in exportName.lower():
                 exportName += '_mt_'
                 exportName += props.sound.lower()
 
@@ -408,7 +407,7 @@ def exportRS2(self, context):
 
             rsMatTexpaths.append(texpath)
 
-            file.write(f"\t\t<MATERIAL name=\"{ exportName.lower() }\">\n")
+            file.write(f"\t\t<MATERIAL name=\"{ exportName }\">\n")
             file.write("\t\t\t<DIFFUSE>{:f} {:f} {:f}</DIFFUSE>\n".format(*props.diffuse[:3]))
             file.write("\t\t\t<AMBIENT>{:f} {:f} {:f}</AMBIENT>\n".format(*props.ambient[:3]))
             file.write("\t\t\t<SPECULAR>{:f} {:f} {:f}</SPECULAR>\n".format(*props.specular[:3]))
@@ -450,7 +449,7 @@ def exportRS2(self, context):
                 if lightType == 'DYNAMIC':
                     lightName = 'obj_' + lightName
 
-            file.write(f"\t\t<LIGHT name=\"{ lightName.lower() }\">\n")
+            file.write(f"\t\t<LIGHT name=\"{ lightName }\">\n")
             file.write("\t\t\t<POSITION>{:f} {:f} {:f}</POSITION>\n".format(*tokenizeVec3(loc, 'POSITION', state.convertUnits, True)))
             file.write("\t\t\t<COLOR>{:f} {:f} {:f}</COLOR>\n".format(*blLight.color))
             file.write("\t\t\t<INTENSITY>{:f}</INTENSITY>\n".format(intensity))
@@ -484,24 +483,23 @@ def exportRS2(self, context):
 
             if objType == 'EMPTY':
                 dummyName = blDummyObj.name
-                dummyNameLower = dummyName.lower()
 
                 props = blDummyObj.gzrs2
                 dummyType = props.dummyType
 
                 if dummyType == 'SPAWN':
                     spawnType = props.spawnType
-                    exportName = f"spawn_{ props.spawnType }"
+                    exportName = f"spawn_{ spawnType.lower() }"
 
                     if      spawnType == 'SOLO':    exportName += f"_{ props.spawnIndex + 100 }"
                     elif    spawnType == 'TEAM':    exportName += f"{ props.spawnTeamID }_{ props.spawnIndex + 100 }"
-                    elif    spawnType == 'NPC':     exportName += f"_{ props.spawnEnemyType }_{ str(props.spawnIndex).zfill(2) }"
+                    elif    spawnType == 'NPC':     exportName += f"_{ props.spawnEnemyType.lower() }_{ str(props.spawnIndex).zfill(2) }"
                     elif    spawnType == 'BLITZ':
                         spawnBlitzType = props.spawnBlitzType
                         # TODO: Support for custom teamIDs, wait, but blitz spawns use letters now? OH GOD
                         spawnTeamAlpha = 'r' if props.spawnTeamID == 1 else 'b'
 
-                        exportName = f"_{ props.spawnBlitzType }"
+                        exportName = f"_{ spawnBlitzType.lower() }"
 
                         if      spawnBlitzType == 'BARRICADE':  exportName += f"_{ spawnTeamAlpha }"
                         elif    spawnBlitzType == 'RADAR':      exportName += f"_{ spawnTeamAlpha }"
@@ -534,7 +532,7 @@ def exportRS2(self, context):
             loc = worldMatrix.to_translation()
             rot = worldMatrix.to_quaternion() @ Vector((0, 1, 0))
 
-            file.write(f"\t\t<DUMMY name=\"{ exportName.lower() }\">\n")
+            file.write(f"\t\t<DUMMY name=\"{ exportName }\">\n")
             file.write("\t\t\t<POSITION>{:f} {:f} {:f}</POSITION>\n".format(*tokenizeVec3(loc, 'POSITION', state.convertUnits, True)))
             file.write("\t\t\t<DIRECTION>{:f} {:f} {:f}</DIRECTION>\n".format(*tokenizeVec3(rot, 'DIRECTION', state.convertUnits, True)))
             file.write("\t\t</DUMMY>\n")
@@ -630,7 +628,7 @@ def exportRS2(self, context):
             soundShape = props.soundShape
             typecode = ('a' if soundSpace == '2D' else 'b') + ('0' if soundShape == 'AABB' else '1')
 
-            file.write(f"\t\t<AMBIENTSOUND ObjName=\"{ blSoundObj.name.lower() }\" type=\"{ typecode }\" filename=\"{ soundFileName }\">\n")
+            file.write(f"\t\t<AMBIENTSOUND ObjName=\"{ blSoundObj.name }\" type=\"{ typecode }\" filename=\"{ soundFileName }\">\n")
 
             worldMatrix = blSoundObj.matrix_world.copy()
             loc, rot, sca = worldMatrix.decompose()
@@ -716,19 +714,25 @@ def exportRS2(self, context):
 
             for blPropFlagObj in blPropFlagObjs:
                 props = blPropFlagObj.data.gzrs2
+                windDirection = tokenizeDegrees(props.flagDirection)
                 windType = FLAG_WINDTYPE_TAGS.index(props.flagWindType)
 
-                # TODO: Reorient
-
-                file.write(f"\t<FLAG NAME=\"{ blPropFlagObj.name.lower() }{ os.extsep }elu\" DIRECTION=\"{ props.flagDirection }\" POWER=\"{ props.flagPower }\">\n")
+                file.write(f"\t<FLAG NAME=\"{ blPropFlagObj.name }{ os.extsep }elu\" DIRECTION=\"{ windDirection }\" POWER=\"{ props.flagPower }\">\n")
                 # TODO: Multiple windtype data
                 file.write(f"\t\t<WINDTYPE TYPE=\"{ windType }\" DELAY=\"{ props.flagWindDelay }\"/>\n")
 
                 # TODO: Multiple limit data
                 if props.flagUseLimit:
-                    file.write(f"\t\t<RESTRICTION AXIS=\"{ limitAxis }\" POSITION=\"{ props.flagLimitOffset }\" COMPARE=\"{ limitCompare }\" />\n")
                     limitAxis = FLAG_LIMIT_AXIS_TAGS.index(props.flagLimitAxis)
+                    limitOffset = tokenizeDistance(props.flagLimitOffset, state.convertUnits)
                     limitCompare = FLAG_LIMIT_COMPARE_TAGS.index(props.flagLimitCompare)
+
+                    # Flip y-axis
+                    if limitAxis == 1:
+                        limitOffset = -limitOffset
+                        limitCompare = int(not bool(limitCompare))
+
+                    file.write(f"\t\t<RESTRICTION AXIS=\"{ limitAxis }\" POSITION=\"{ limitOffset }\" COMPARE=\"{ limitCompare }\" />\n")
 
                 file.write("\t</FLAG>\n")
 
@@ -744,16 +748,15 @@ def exportRS2(self, context):
 
             for blSmokeObj in blSmokeObjs:
                 props = blSmokeObj.gzrs2
+                smokeDirection = tokenizeDegrees(props.smokeDirection)
 
                 exportName = f"smk_{ props.smokeType.lower() }"
                 exportName += f"_{ str(sm).zfill(2) }"
                 sm += 1
 
-                # TODO: Reorient
-
                 file.write("\t<SMOKE ")
                 file.write(f"NAME=\"{           exportName                  }{ os.extsep }elu\" ")
-                file.write(f"DIRECTION=\"{      props.smokeDirection        }\" ")
+                file.write(f"DIRECTION=\"{      smokeDirection              }\" ")
                 file.write(f"POWER=\"{          props.smokePower            }\" ")
                 file.write(f"DELAY=\"{          props.smokeDelay            }\" ")
                 file.write(f"SIZE=\"{           props.smokeSize             }\" ")
