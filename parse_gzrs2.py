@@ -147,7 +147,7 @@ def parseSpawnXML(self, xmlSpawn, state):
 
     return gametypeEntries
 
-def parseFlagXML(self, xmlFlag):
+def parseFlagXML(self, xmlFlag, state):
     flags = xmlFlag.getElementsByTagName('FLAG')
     flagEntries = []
 
@@ -174,7 +174,7 @@ def parseFlagXML(self, xmlFlag):
             limitEntry = {}
 
             if limit.hasAttribute('AXIS'):      limitEntry['AXIS']      = int(limit.getAttribute('AXIS'))
-            if limit.hasAttribute('POSITION'):  limitEntry['POSITION']  = parseDistance(float(limit.getAttribute('POSITION')), convertUnits)
+            if limit.hasAttribute('POSITION'):  limitEntry['POSITION']  = parseDistance(float(limit.getAttribute('POSITION')), state.convertUnits)
             if limit.hasAttribute('COMPARE'):   limitEntry['COMPARE']   = limit.getAttribute('COMPARE')
 
             # Flip y-axis

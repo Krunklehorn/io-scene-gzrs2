@@ -189,7 +189,7 @@ def importRS2(self, context):
 
     if state.doMisc:
         if xmlSpawn:            state.xmlItms = parseSpawnXML(self, xmlSpawn, state)
-        if xmlFlag:             state.xmlFlgs = parseFlagXML(self, xmlFlag)
+        if xmlFlag:             state.xmlFlgs = parseFlagXML(self, xmlFlag, state)
         if xmlSmoke:            state.xmlSmks = parseSmokeXML(xmlSmoke)
 
     state.doLights =        state.doLights          and len(state.xmlLits) > 0
