@@ -61,20 +61,11 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
   * Light: Static, Dynamic
   * Camera: Wait, Track
 
-### Tips & Tricks
-
-* Collision generation doesn't work well with dense, thin or curved geometry; don't stick a 300k polygon toothpick in an open room
-  * Marking a world mesh as "Detail" prevents it from cutting nearby geometry during bsptree and octree generation, this should be used for telephone poles, statues, flags etc.
-  * "Detail" does not affect collision tree generation, you must manually create separate, low-poly collision meshes for complex objects
-  * Empties marked as "Occlusion" planes can be used to specify bsptree and octree cuts manually, similar to Radiant/Hammer "Hint" brushes, for advanced users
-
 ### Untested Features
 
 * Spawn empties for quest mobs
 * Occlusion planes for props
-* Smoke empties
 * Camera empties
-* Flag props
 
 ### Known Issues
 
@@ -84,6 +75,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
   * Future updates *may* address this with leak detection, orientation checks and/or CSG union pre-processing.
 * PROPS WON'T SHOW UP: Props (.elu) have a "Filename" property which the exporter writes to .rs.xml under 'OBJECTLIST'.
   * The props themselves must be exported through the .elu exporter by setting the filter mode to "Selected".
+  * Flag props have a strict naming convention, refer to the guide for details.
 * RE-EXPORT IS UNTESTED: Don't expect it to work without some effort, most vanilla maps require touch ups.
 * CRITICAL ERROR: You probably have a concave polygon somewhere. Try running Cleanup->Split Concave Faces or turn on the Mesh Analyzer and set it to "Degenerate".
 
@@ -99,7 +91,7 @@ The following instructions assume a basic knowledge of Blender.
 2. Set the mesh type to "World" and enable "Collision".
 3. Add a material then choose "Change Preset" and select "Colored"
     * If your geometry appears black, navigate to the world tab and run "Toggle Lightmap Mix" or try re-applying the preset.
-4. Export and test.
+4. Export your map (.rs) and load it in your test client.
 
 ### Thinking Outside The Box
 
@@ -117,6 +109,27 @@ Instead of managing two versions of our map, one visual and one physical, we can
 
 *Pro Tip: Re-import the resulting .col file and look at the mesh labeled "_Solid". See how it cuts off beyond the fake ceiling? All that space up there can be filled with whatever you want now. The same can be done for windows, walkways and other openings. If you remove the external geometry but keep the opening sealed by collision, you can surround the map with a giant sky prop. This is the basic technique used by MAIET in all outdoor maps.*
 
+### Paying Attention To Details
+
+Map generation doesn't work well with dense, thin or curved geometry. Don't stick a 300k polygon toothpick in a room full of exploding barrels.
+
+More generally, objects placed in a map for adornment or clutter should be marked as "Detail". This prevents them from cutting nearby geometry during bsptree generation and should should be used for telephone poles, statues, flower pots etc.
+
+Let's see the problem in action...
+
+1. Add a new icosphere mesh to the scene and set it's type to "World".
+2. Position it hovering somewhere in the middle of the room.
+3. Save the project and export the map.
+4. Create an empty project and import the map with the "Bsptree" and "Bounds" switches enabled.
+5. Show the "\<mapname\>_Bounds_Bsptree" collection and note how many bounding boxes are clustered around the sphere. This is bad.
+6. Take a look at the "\<mapname\>_Bsptree#" meshes and note any cuts in the walls surrounding the sphere. See how they jut out at odd angles? We can do better.
+7. Open the project again, select the sphere mesh and enable the "Detail" switch.
+8. Save, export, re-import and test again. Much cleaner.
+
+*Pro Tip: World meshes marked as both Collision and Detail still contribute to the collision pass. To avoid performance problems, always create separate, low-poly collision meshes for complex objects.*
+
+*Pro Tip: Empties marked as "Occlusion" planes can be used to specify bsptree and octree cuts manually, similar to Radiant/Hammer "Hint" brushes. Recommended for experienced mappers only.*
+
 ### Configuring Entities
 
 What most game engines refer to as 'entities', Realspace internally refers to as 'dummies'. In Blender, we represent them using 'empties' and will refer to them as such.
@@ -125,14 +138,14 @@ Things like spawn points, powerups and ambient sounds are configured using empti
 
 1. Add three empties to the scene.
 2. Mark one as type "Spawn", one as "Item" and one as "Sound".
-3. For the sound entity, change the "Filename" field to something like amb_shore_2d or amb_fireplace. Don't include any file extension.
-4. For testing purposes, change the timer on the item entity to something low.
-5. Move the entities wherever you please. The spawn entity's local y-axis points in the direction the player will face, while the sound entity may need it's size or shape adjusted.
+3. For the sound empty, change the "Filename" field to something like amb_shore_2d or amb_fireplace. Don't include any file extension.
+4. For testing purposes, change the timer on the item empty to something low.
+5. Move the entities wherever you please. The spawn empty's local y-axis points in the direction the player will face, while the sound empty may need it's size or shape adjusted.
 6. Export and test.
 
 *Gotcha: Powerups never spawn if your test client creates a fake match with no gametype.*
 
-*Coming soon: A full description of all entity types. In the meantime, feel free to play around with their settings.*
+*Coming soon: A full description of all empty types. In the meantime, feel free to play around with their settings.*
 
 ### Configuring Materials
 
@@ -235,7 +248,7 @@ Since we only want surface lighting, we have to denoise manually.
 
 The "Ambient Occlusion" bake type gives quick, decent results and doesn't require fiddling with lights.
 
-Although unrealistic, it's always a nice touch. Advanced users should consider baking it using the "Emit" type for extra control.
+Although unrealistic, it's always a nice touch. Advanced users should consider baking it using the "Emit" pass for extra control.
 
 1. Create two new images, same settings as your diffuse lightmap. One for AO and another for mixing.
 2. Link the AO lightmap in the world tab.
@@ -247,6 +260,40 @@ Although unrealistic, it's always a nice touch. Advanced users should consider b
 8. Export and test.
 
 *Pro Tip: Lightmap color is multiplicative, but lightmaps can do more than just shading. Try breaking up repetitious surfaces by adding dirt, rust, puddles or even graffiti. Mappers are encouraged to try their best and make GunZ look beautiful. Who knows, maybe the community will host a contest sometime.*
+
+### Bonus: Cloth Physics
+
+Realspace supports cloth physics on any prop with vertex colors, up to 165 triangles.
+
+Mappers can use this to create things like flags or curtains with extra controls to have them blow in the wind or lay flat across a surface.
+
+1. Add a new plane mesh to the scene and subdivide it 8 times. A 9x9 grid of quads is 162 triangles which is just below the limit.
+2. Change it's type to "Prop" and subtype to "Flag".
+3. In the "Filename" field, enter: \<name of your map\>_\<name of the object\>
+    * For example: TestMap_Test_Flag
+    * For flags, this naming convention is strict!
+4. Scale, rotate, position, unwrap and texture your flag as you please.
+5. Switch to Vertex Paint mode then open the color attribute selector and delete the default color attribute.
+6. Add a new color attribute with the following properties...
+    * Name: Color
+    * Domain: Vertex
+    * Data Type: Color
+    * Color: Black
+7. Color the top row of vertices red to pin them in place. Leave the rest black.
+    * If you can't see any vertex color, change the viewport shading mode to "Solid"
+8. Switch to Object mode and make sure your flag mesh is the only object selected.
+9. Open the .elu exporter, set the Filter Mode to "Selected" and enable the "Map Prop" switch.
+10. Export as "\<name of your map\>_\<name of the object\>.elu" to the same directory as your map.
+    * For example: TestMap_Test_Flag.elu
+11. Export and test. At this point you should have a basic flag to play with.
+    * Flags have extra properties for controlling their movement. These properties are written to "flag.xml" during map export.
+    * Wind direction and power do what you expect them to, but "Random" seems to be the only wind type that works properly.
+    * Flag objects don't collide with world geometry, but the limiter can define an axis-aligned field for simple interactions.
+    * Flags are more interesting when they brush up against window shutters or drape down onto the floor. Get creative!
+
+*Pro Tip: Painting with the brush tools may end up smearing the colors causing vertices to change their behavior. Make use of the Vertex Selection Mask and Set Vertex Colors (Ctrl + X) tools for better control.*
+
+*Pro Tip: A single .elu can contain multiple flag meshes, but only the one matching the naming convention will be configurable by flag.xml's extra properties. For best results, always make flag meshes independant and uniquely named.*
 
 
 ## Model Export (.elu)

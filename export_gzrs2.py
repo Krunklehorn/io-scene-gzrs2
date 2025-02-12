@@ -82,8 +82,6 @@ def exportRS2(self, context):
     #   sea_:   it's wet
 
     # TODO: Verify blitzkrieg data
-    # TODO: Verify flag data
-    # TODO: Verify smoke data
 
     # Gather data into lists
     blSpawnSoloObjs     = []
@@ -329,10 +327,7 @@ def exportRS2(self, context):
             return { 'CANCELLED' }
 
     # Sort materials
-    blWorldMats     = tuple(sorted(blWorldMats,     key = lambda x: (x.gzrs2.priority, x.name)))
-    # blPropMats      = tuple(sorted(blPropMats,      key = lambda x: (x.gzrs2.priority, x.name)))
-
-    # TODO: Do we need to include base prop materials?
+    blWorldMats = tuple(sorted(blWorldMats, key = lambda x: (x.gzrs2.priority, x.name)))
 
     rsMatCount = len(blWorldMats)
     rsLightCount = len(blLightObjs)
