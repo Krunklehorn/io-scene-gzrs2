@@ -267,7 +267,7 @@ Realspace supports cloth physics on any prop with vertex colors, up to 165 trian
 
 Mappers can use this to create things like flags or curtains with extra controls to have them blow in the wind or lay flat across a surface.
 
-1. Add a new plane mesh to the scene and subdivide it 8 times. A 9x9 grid of quads is 162 triangles which is just below the limit.
+1. Add a new plane mesh to the scene and subdivide it 8 times. A 9x9 grid of quads is 162 triangles.
 2. Change it's type to "Prop" and subtype to "Flag".
 3. In the "Filename" field, enter: \<name of your map\>_\<name of the object\>
     * For example: TestMap_Test_Flag
@@ -286,10 +286,10 @@ Mappers can use this to create things like flags or curtains with extra controls
 10. Export as "\<name of your map\>_\<name of the object\>.elu" to the same directory as your map.
     * For example: TestMap_Test_Flag.elu
 11. Export and test. At this point you should have a basic flag to play with.
-    * Flags have extra properties for controlling their movement. These properties are written to "flag.xml" during map export.
-    * Wind direction and power do what you expect them to, but "Random" seems to be the only wind type that works properly.
-    * Flag objects don't collide with world geometry, but the limiter can define an axis-aligned field for simple interactions.
-    * Flags are more interesting when they brush up against window shutters or drape down onto the floor. Get creative!
+    * Map export writes extra properties to "flags.xml" for controlling flag movement.
+    * Wind direction and power behave as expected, but "Random" is the only wind type that works properly.
+    * Flag objects don't collide with the world, but the limiter can define an axis-aligned field to help that.
+    * Flags are more interesting when they brush against window shutters or drape onto the floor. Get creative!
 
 *Pro Tip: Painting with the brush tools may end up smearing the colors causing vertices to change their behavior. Make use of the Vertex Selection Mask and Set Vertex Colors (Ctrl + X) tools for better control.*
 
