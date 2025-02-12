@@ -286,7 +286,7 @@ Mappers can use this to create things like flags or curtains with extra controls
 10. Export as "\<name of your map\>_\<name of the object\>.elu" to the same directory as your map.
     * For example: TestMap_Test_Flag.elu
 11. Export and test. At this point you should have a basic flag to play with.
-    * Map export writes extra properties to "flags.xml" for controlling flag movement.
+    * Map export writes extra properties to "flag.xml" for controlling flag movement.
     * Wind direction and power behave as expected, but "Random" is the only wind type that works properly.
     * Flag objects don't collide with the world, but the limiter can define an axis-aligned field to help that.
     * Flags are more interesting when they brush against window shutters or drape onto the floor. Get creative!
