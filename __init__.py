@@ -151,6 +151,130 @@ class GZRS2_OT_Specify_Path_MRF(Operator):
 
         return { 'FINISHED' }
 
+class GZRS2_OT_Unfold_Vertex_Data(Operator):
+    bl_idname = 'gzrs2.unfold_vertex_data'
+    bl_label = "Unfold Vertex Data"
+    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_description = "Copies vertex group data across an object's local x-axis according to Realspace2's bone naming convention. Clears the opposing side while duplicating data along the center"
+
+    sourceHand: EnumProperty(
+        name = 'Source',
+        items = (('LEFT',       'Left',      ""),
+                 ('RIGHT',      'Right',     ""))
+    )
+
+    @classmethod
+    def poll(cls, context):
+        blObj = context.active_object
+
+        if blObj is None or blObj.type != 'MESH':
+            return False
+
+        if blObj.mode != 'OBJECT':
+            return False
+
+        if len(blObj.vertex_groups) < 2:
+            return False
+
+        blMesh = blObj.data
+
+        if blMesh is None or blMesh.gzrs2.meshType != 'PROP':
+            return False
+
+        if len(blMesh.vertices) < 2:
+            return False
+
+        return True
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        blPropObj = context.active_object
+        blPropMesh = blPropObj.data
+
+        leftHand = self.sourceHand == 'LEFT'
+
+        sourcePrefix = 'Bip01 L ' if leftHand else 'Bip01 R '
+        targetPrefix = 'Bip01 R ' if leftHand else 'Bip01 L '
+
+        vertexGroups = blPropObj.vertex_groups
+
+        sourceSet = set((getOrNone(vertexGroup.name.split(sourcePrefix), 1), vertexGroup) for vertexGroup in vertexGroups)
+        targetSet = set((getOrNone(vertexGroup.name.split(targetPrefix), 1), vertexGroup) for vertexGroup in vertexGroups)
+
+        sourceSet = set(filter(lambda x: x[0] is not None and x[0] != '', sourceSet))
+        targetSet = set(filter(lambda x: x[0] is not None and x[0] != '', targetSet))
+
+        sourceSuffixes = set(suffix for suffix, _ in sourceSet)
+
+        # Remove target groups with no source
+        targetSet = set(filter(lambda x: x[0] in sourceSuffixes, targetSet))
+
+        targetSuffixes = set(suffix for suffix, _ in targetSet)
+
+        # Create source groups with no target
+        for sourceSuffix in sourceSuffixes:
+            if sourceSuffix not in targetSuffixes:
+                targetSet.add((sourceSuffix, blPropObj.vertex_groups.new(name = targetPrefix + sourceSuffix)))
+                targetSuffixes.add(sourceSuffix)
+
+        # Remove target side vertices from source groups
+        for vertex in blPropMesh.vertices:
+            for _, sourceGroup in sourceSet:
+                if any((    leftHand and vertex.co.x <= -MESH_UNFOLD_THRESHOLD,
+                        not leftHand and vertex.co.x >=  MESH_UNFOLD_THRESHOLD)):
+                    sourceGroup.remove((vertex.index,))
+
+        # Remove all vertices from target groups
+        for vertex in blPropMesh.vertices:
+            for _, targetGroup in targetSet:
+                targetGroup.remove((vertex.index,))
+
+        # Gather vertex data
+        vertexData = tuple((vertex.index, vertex.co, vertex.groups) for vertex in blPropMesh.vertices)
+        modifiedSuffixes = set()
+
+        def commitVertexData(data):
+            for index, groups in data:
+                groupSet = set((getOrNone(vertexGroups[vgroupInfo.group].name.split(sourcePrefix), 1), vgroupInfo.weight) for vgroupInfo in groups)
+                groupSet = set(filter(lambda x: x[0] is not None and x[0] != '', groupSet))
+                relevantPairs = tuple((tg, sw, ts) for ss, sw in groupSet for ts, tg in targetSet if ts == ss)
+
+                for targetGroup, sourceWeight, suffix in relevantPairs:
+                    targetGroup.add((index,), sourceWeight, 'REPLACE')
+                    modifiedSuffixes.add(suffix)
+
+        # Duplicate source data along the center
+        centerData = tuple(filter(lambda x: abs(x[1].x) < MESH_UNFOLD_THRESHOLD, vertexData))
+        centerData = tuple((index, groups) for index, _, groups in centerData)
+
+        commitVertexData(centerData)
+
+        # Copy source data to the target side
+        sideData = tuple((v, coord.copy(), groups) for v, coord, groups in vertexData)
+        sideData = tuple(filter(lambda x: abs(x[1].x) >= MESH_UNFOLD_THRESHOLD, sideData))
+        sideData = tuple((v1, v2, c1, c2, g1, g2) for v1, c1, g1 in sideData for v2, c2, g2 in sideData if v1 != v2)
+        sideData = tuple((v1, v2, c1, c2, g1, g2) if v1 < v2 else (v2, v1, c2, c1, g2, g1) for v1, v2, c1, c2, g1, g2 in sideData)
+        sideData = set((v1, v2, c1.freeze(), c2.freeze(), g1, g2) for v1, v2, c1, c2, g1, g2 in sideData)
+        sideData = tuple(filter(lambda x: vec3IsClose(x[2], Vector((-x[3].x, x[3].y, x[3].z)), MESH_UNFOLD_THRESHOLD), sideData))
+
+        if leftHand:
+            sideData = tuple(filter(lambda x: x[2].x >= MESH_UNFOLD_THRESHOLD, sideData))
+            sideData = tuple((index, groups) for _, index, _, _, groups, _ in sideData)
+        else:
+            sideData = tuple(filter(lambda x: x[3].x <= -MESH_UNFOLD_THRESHOLD, sideData))
+            sideData = tuple((index, groups) for index, _, _, _, _, groups in sideData)
+
+        commitVertexData(sideData)
+
+        if len(centerData) > 0 and len(sideData) > 0 and len(modifiedSuffixes) == 0:
+            self.report({ 'WARNING' }, f"GZRS2: No relevant pairs detected. Verify your group names match the Realspace2 convention: 'Bip01 <L/R> <bonename> '.")
+        else:
+            self.report({ 'INFO' }, f"GZRS2: Successfully modified { len(modifiedSuffixes) } pairs of vertex groups.")
+
+        return { 'FINISHED' }
+
 class GZRS2_OT_Apply_Material_Preset(Operator):
     bl_idname = 'gzrs2.apply_material_preset'
     bl_label = "Please select a GunZ 1 material preset..."
@@ -2933,8 +3057,6 @@ class GZRS2_PT_Realspace_Mesh(Panel):
         column = layout.column()
         column.prop(props, 'meshType')
 
-        column = layout.column()
-
         if props.meshType == 'WORLD':
             column.prop(props, 'worldCollision')
             column.prop(props, 'worldDetail')
@@ -2959,8 +3081,11 @@ class GZRS2_PT_Realspace_Mesh(Panel):
             row.label(text = "Suffix:")
             row.label(text = splitname[1])
 
-            if props.propSubtype == 'FLAG':
-                column = layout.column()
+            column = layout.column()
+
+            if props.propSubtype == 'NONE':
+                column.operator(GZRS2_OT_Unfold_Vertex_Data.bl_idname, text = "Unfold Vertex Data")
+            elif props.propSubtype == 'FLAG':
                 column.prop(props, 'flagDirection')
                 column.prop(props, 'flagPower')
                 column.prop(props, 'flagWindType')
@@ -3614,6 +3739,7 @@ class GZRS2_PT_Realspace_Material(Panel):
 classes = (
     GZRS2_OT_Specify_Path_MRS,
     GZRS2_OT_Specify_Path_MRF,
+    GZRS2_OT_Unfold_Vertex_Data,
     GZRS2_OT_Apply_Material_Preset,
     GZRS2_OT_Toggle_Lightmap_Mix,
     GZRS2_OT_Toggle_Lightmap_Mod4,
