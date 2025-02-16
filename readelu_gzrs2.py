@@ -849,7 +849,7 @@ def readEluRS3Meshes(self, path, file, version, meshCount, state):
         state.eluMeshes.append(EluMeshNode(path, version, meshName, parentName, drawFlags, localMatrix,
                                            vertices, normals, uv1s, uv2s,
                                            colors, tuple(faces), tuple(weights), tuple(slots),
-                                           slotIDs, isDummy, None, matID))
+                                           slotIDs, isDummy, matID))
 
     if state.logEluMeshNodes:
         print("===== Mesh Summary =====")
