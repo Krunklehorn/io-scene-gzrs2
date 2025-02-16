@@ -1496,16 +1496,21 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
                 weight = eluMesh.weights[face.ipos[v]]
 
                 for d in range(weight.degree):
-                    if meshVersion <= ELU_5007: boneName = weight.meshNames[d]
-                    else:                           boneName = state.eluMeshes[weight.meshIDs[d]].meshName
+                    if meshVersion <= ELU_5007:     boneName = weight.meshNames[d]
+                    else:                           boneName = getOrNone(eluMeshNames, weight.meshIDs[d])
 
                     if boneName in eluMeshNames:    state.gzrsValidBones.add(boneName)
                     else:                           invalidBones.add(boneName)
 
+                    value = weight.values[d]
+
+                    if value < ELU_WEIGHT_THRESHOLD:
+                        continue
+
                     if boneName not in meshGroups:
                         meshGroups[boneName] = blMeshObj.vertex_groups.new(name = boneName)
 
-                    meshGroups[boneName].add((index,), weight.values[d], 'REPLACE')
+                    meshGroups[boneName].add((index,), value, 'REPLACE')
 
                 index += 1
 
