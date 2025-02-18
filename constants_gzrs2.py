@@ -140,7 +140,7 @@ ELU_PHYS_KEYS =                 4
 
 ELU_MAX_TRIS =                  int(1024 * 100 / 3)
 ELU_WEIGHT_THRESHOLD =          0.001
-ELU_MAX_CLOTH_TRIS =            165
+ELU_MAX_FLAG_TRIS =             165
 
 ANI_ID =                        ELU_ID
 
