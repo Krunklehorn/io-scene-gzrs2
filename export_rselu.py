@@ -529,9 +529,15 @@ def exportElu(self, context):
                 usesDummies = True
 
             if version >= ELU_5005 and hasColors:
-                if not state.uncapLimits and eluMeshObj.data.gzrs2.propSubtype == 'FLAG' and faceCount > ELU_MAX_FLAG_TRIS:
-                    self.report({ 'ERROR' }, f"GZRS2: Prop mesh of type 'Flag' with too many triangles, maximum is { ELU_MAX_FLAG_TRIS }: { meshName }")
-                    return { 'CANCELLED' }
+                if not state.uncapLimits:
+                    if eluMeshObj.data.gzrs2.propSubtype != 'FLAG' and faceCount > ELU_MAX_COAT_TRIS:
+                        self.report({ 'ERROR' }, f"GZRS2: Character cloth mesh with too many triangles, maximum for coats is { ELU_MAX_COAT_TRIS }: { meshName }")
+                        return { 'CANCELLED' }
+                    elif eluMeshObj.data.gzrs2.propSubtype == 'FLAG' and faceCount > ELU_MAX_FLAG_TRIS:
+                        self.report({ 'ERROR' }, f"GZRS2: Flag cloth mesh with too many triangles, maximum for flags is { ELU_MAX_FLAG_TRIS }: { meshName }")
+                        return { 'CANCELLED' }
+
+                # TODO: Cloth character meshes either must be single material or must not use sub-materials?
 
                 colorCount = vertexCount
                 colors = []
