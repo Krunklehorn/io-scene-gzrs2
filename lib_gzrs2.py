@@ -1017,7 +1017,7 @@ def setupColMesh(name, collection, context, extension, state):
                 bpy.ops.mesh.tris_convert_to_quads(face_threshold = 0.0174533, shape_threshold = 0.0174533)
 
             bpy.ops.mesh.dissolve_limited(angle_limit = 0.0174533)
-            bpy.ops.mesh.delete_loose(use_faces = True)
+            bpy.ops.mesh.delete_loose()
             bpy.ops.mesh.select_all(action = 'SELECT')
             bpy.ops.mesh.normals_make_consistent(inside = True)
             bpy.ops.mesh.select_all(action = 'DESELECT')
