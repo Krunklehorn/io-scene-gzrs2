@@ -1481,7 +1481,6 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
 
     if doWeights:
         modifier = blMeshObj.modifiers.new("Armature", 'ARMATURE')
-        modifier.use_deform_preserve_volume = True
 
         index = 0
 
