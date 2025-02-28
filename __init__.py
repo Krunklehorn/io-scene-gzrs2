@@ -216,8 +216,11 @@ class GZRS2_OT_Preprocess_Geometry(Operator):
         bpy.ops.mesh.select_all(action = 'SELECT')
         bpy.ops.mesh.delete_loose()
         bpy.ops.mesh.select_all(action = 'SELECT')
-        bpy.ops.mesh.vert_connect_nonplanar(angle_limit = 0.0174533)
-        bpy.ops.mesh.vert_connect_concave()
+
+        if blMesh.gzrs2.meshType in ('WORLD', 'COLLISION'):
+            bpy.ops.mesh.vert_connect_nonplanar(angle_limit = 0.0174533)
+            bpy.ops.mesh.vert_connect_concave()
+
         bpy.ops.mesh.select_all(action = 'DESELECT')
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
