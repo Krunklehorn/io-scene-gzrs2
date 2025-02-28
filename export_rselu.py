@@ -537,8 +537,6 @@ def exportElu(self, context):
                         self.report({ 'ERROR' }, f"GZRS2: Flag cloth mesh with too many triangles, maximum for flags is { ELU_MAX_FLAG_TRIS }: { meshName }")
                         return { 'CANCELLED' }
 
-                # TODO: Cloth character meshes either must be single material or must not use sub-materials?
-
                 colorCount = vertexCount
                 colors = []
 

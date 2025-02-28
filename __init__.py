@@ -1,4 +1,4 @@
-import os, math
+import os, math, bmesh
 
 from mathutils import Vector, Matrix
 
@@ -148,6 +148,81 @@ class GZRS2_OT_Specify_Path_MRF(Operator):
             return { 'CANCELLED' }
 
         context.preferences.addons[__package__].preferences.rs3DataDir = self.dataPath
+
+        return { 'FINISHED' }
+
+class GZRS2_OT_Preprocess_Geometry(Operator):
+    bl_idname = 'gzrs2.preprocess_geometry'
+    bl_label = "Preprocess Geometry"
+    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_description = "Dissolves degenerate and co-linear vertices, deletes loose pieces then splits non-planar and concave faces"
+
+    @classmethod
+    def poll(cls, context):
+        blObj = context.active_object
+
+        if blObj is None or blObj.type != 'MESH':
+            return False
+
+        if blObj.mode != 'OBJECT':
+            return False
+
+        blMesh = blObj.data
+
+        if blMesh is None or blMesh.gzrs2.meshType not in ('WORLD', 'COLLISION', 'NAVIGATION'):
+            return False
+
+        return True
+
+    def execute(self, context):
+        blObj = context.active_object
+        blMesh = blObj.data
+
+        for viewLayer in context.scene.view_layers:
+            viewLayer.objects.active = blObj
+
+        counts = countInfoReports(context)
+
+        bpy.ops.object.select_all(action = 'DESELECT')
+        blObj.select_set(True)
+
+        bpy.ops.object.mode_set(mode = 'EDIT')
+
+        bpy.ops.mesh.select_mode(type = 'VERT')
+        bpy.ops.mesh.select_all(action = 'SELECT')
+        bpy.ops.mesh.dissolve_degenerate(threshold = RS_COORD_THRESHOLD)
+
+        # Dissolve co-linear points on boundary edges
+        bpy.ops.mesh.select_all(action = 'DESELECT')
+        bm = bmesh.from_edit_mesh(blMesh)
+
+        for vertices, vertexCount in tuple((face.verts, len(face.verts)) for face in bm.faces):
+            triplets = tuple((vertices[v], vertices[(v + 1) % vertexCount], vertices[(v - 1 + vertexCount) % vertexCount]) for v in range(vertexCount))
+            triplets = tuple(filter(lambda x: len(x[0].link_edges) == 2, triplets))
+
+            for vertex, nextVertex, prevVertex in triplets:
+                edge1 = nextVertex.co - vertex.co
+                edge2 = prevVertex.co - vertex.co
+
+                edge1.normalize()
+                edge2.normalize()
+
+                if math.isclose(edge1.dot(edge2), -1.0, abs_tol = RS_DOT_THRESHOLD):
+                    vertex.select_set(True)
+
+        bmesh.update_edit_mesh(blMesh)
+        bpy.ops.mesh.dissolve_verts()
+
+        bpy.ops.mesh.select_all(action = 'SELECT')
+        bpy.ops.mesh.delete_loose()
+        bpy.ops.mesh.select_all(action = 'SELECT')
+        bpy.ops.mesh.vert_connect_nonplanar(angle_limit = 0.0174533)
+        bpy.ops.mesh.vert_connect_concave()
+        bpy.ops.mesh.select_all(action = 'DESELECT')
+
+        bpy.ops.object.mode_set(mode = 'OBJECT')
+
+        deleteInfoReports(context, counts)
 
         return { 'FINISHED' }
 
@@ -3098,6 +3173,9 @@ class GZRS2_PT_Realspace_Mesh(Panel):
                 column2.prop(props, 'flagLimitCompare')
                 column2.enabled = props.flagUseLimit
 
+        if props.meshType in ('WORLD', 'COLLISION', 'NAVIGATION'):
+            column.operator(GZRS2_OT_Preprocess_Geometry.bl_idname, text = "Pre-process Geometry")
+
 class GZRS2LightProperties(PropertyGroup):
     lightType: EnumProperty(
         name = 'Type',
@@ -3739,6 +3817,7 @@ class GZRS2_PT_Realspace_Material(Panel):
 classes = (
     GZRS2_OT_Specify_Path_MRS,
     GZRS2_OT_Specify_Path_MRF,
+    GZRS2_OT_Preprocess_Geometry,
     GZRS2_OT_Unfold_Vertex_Data,
     GZRS2_OT_Apply_Material_Preset,
     GZRS2_OT_Toggle_Lightmap_Mix,

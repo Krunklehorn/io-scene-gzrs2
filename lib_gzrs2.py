@@ -2240,7 +2240,7 @@ def createColTriangles(polygons):
         vertexPairs = enumerate(polygon.vertices)
         vertexPairs = tuple((v1, v2, vertex1, vertex2) for v1, vertex1 in vertexPairs for v2, vertex2 in vertexPairs if v1 != v2)
 
-        for v1, v2, vertex1, vertex2 in vertexPairs:
+        for _, _, vertex1, vertex2 in vertexPairs:
             if vec3IsClose(vertex1, vertex2, RS_COORD_THRESHOLD):
                 raise GZRS2DegeneratePolygonError("GZRS2: createColTriangles() found a degenerate polygon! Try running Cleanup->Split Concave Faces or turn on the Mesh Analyzer and set it to \"Degenerate\"!")
 
@@ -2319,8 +2319,6 @@ def getPartitionPolygon(plane, boundsPolygons):
     matrix = rotation @ translation
 
     vertices = sorted(vertices, key = lambda x: calcVertexPlaneAngle(x, matrix))
-
-    # TODO: Try importing planes to check if yours are buggy
 
     # Positive must face away
     posVertices = tuple(vertex.copy() for vertex in reversed(vertices))
