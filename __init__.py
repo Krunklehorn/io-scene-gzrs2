@@ -221,6 +221,9 @@ class GZRS2_OT_Preprocess_Geometry(Operator):
             bpy.ops.mesh.vert_connect_nonplanar(angle_limit = 0.0174533)
             bpy.ops.mesh.vert_connect_concave()
 
+        bpy.ops.mesh.select_all(action = 'SELECT')
+        bpy.ops.mesh.dissolve_degenerate(threshold = RS_COORD_THRESHOLD)
+
         bpy.ops.mesh.select_all(action = 'DESELECT')
 
         bpy.ops.object.mode_set(mode = 'OBJECT')
