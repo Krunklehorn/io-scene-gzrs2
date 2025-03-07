@@ -3800,9 +3800,12 @@ class GZRS2_PT_Realspace_Material(Panel):
         row.enabled = meshType == 'PROP' or serverProfile == 'DUELISTS'
 
         row = column.row()
-        if shaderValid and addValid:    row.prop(shader.inputs[27], 'default_value', text = "Emission") # Emission Strength
-        else:                           row.prop(matProps, 'fakeEmission')
-        row.enabled = bool(shaderValid and addValid)
+        if shaderValid and addValid:
+            row.prop(shader.inputs[27], 'default_value', text = "Emission") # Emission Strength
+            row.enabled = True
+        else:
+            row.prop(matProps, 'fakeEmission')
+            row.enabled = False
 
         row = column.row()
         row.prop(matProps, 'sound')
