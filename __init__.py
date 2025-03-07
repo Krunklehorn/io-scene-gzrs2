@@ -3547,9 +3547,9 @@ class GZRS2MaterialProperties(PropertyGroup):
         name = 'Exponent',
         default = 0.0,
         min = 0.0,
-        max = 3.402823e+38,
+        max = 100.0,
         soft_min = 0.0,
-        soft_max = 3.402823e+38,
+        soft_max = 100.0,
         subtype = 'UNSIGNED'
     )
 

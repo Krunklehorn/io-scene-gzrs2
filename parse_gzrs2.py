@@ -96,7 +96,7 @@ def parseRsXML(self, xmlRs, tagName, serverProfile, state):
                 nodeEntry[nodeName] = int(data)
             elif serverProfile == 'DUELISTS' and nodeName == 'SHADOWRES':
                 nodeEntry[nodeName] = int(data)
-            elif nodeName == 'INTENSITY':
+            elif nodeName in('POWER', 'INTENSITY'):
                 nodeEntry[nodeName] = float(data)
             elif serverProfile == 'DUELISTS' and nodeName in ('INNERCONE', 'OUTERCONE', 'SHADOWBIAS'):
                 nodeEntry[nodeName] = float(data)

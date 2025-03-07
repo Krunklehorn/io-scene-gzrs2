@@ -369,6 +369,8 @@ def importRS2(self, context):
 
         props.sound = materialSound
 
+        if 'POWER' in xmlRsMat:     props.exponent = xmlRsMat['POWER']
+
         processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state)
 
         state.blXmlRsMats.append(blMat)
