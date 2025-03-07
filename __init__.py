@@ -422,6 +422,9 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
             if link.from_node in relevantNodes or link.to_node in relevantNodes:
                 links.remove(link)
 
+        if shaderValid and addValid:
+            blMat.gzrs2.fakeEmission = shader.inputs[27].default_value # Emission Strength
+
         # We assume the setup functions modify valid inputs and only create what is missing
         blMat, tree, links, nodes, shader, output, info, transparent, mix = setupMatBase(blMat.name, blMat = blMat, shader = shader, output = output, info = info, transparent = transparent, mix = mix)
 
@@ -460,8 +463,6 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
             add = setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, shader, transparent, mix, add = add)
 
         setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
-
-        blMat.gzrs2.fakeEmission = 0.0
 
         return { 'FINISHED' }
 
@@ -3544,12 +3545,13 @@ class GZRS2MaterialProperties(PropertyGroup):
     )
 
     fakeEmission: FloatProperty(
-        name = 'Exponent',
+        name = 'Emission',
         default = 0.0,
         min = 0.0,
         max = 100.0,
         soft_min = 0.0,
         soft_max = 100.0,
+        precision = 3,
         subtype = 'UNSIGNED'
     )
 
@@ -3586,6 +3588,8 @@ class GZRS2_PT_Realspace_Material(Panel):
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
+
+        serverProfile = context.preferences.addons[__package__].preferences.serverProfile
 
         blObj = context.active_object
         blMesh = blObj.data
@@ -3780,19 +3784,32 @@ class GZRS2_PT_Realspace_Material(Panel):
         lightmixLabel =     '' if lightmixValid         is None else ('Invalid' if lightmixValid ==         False else 'Valid')
 
         column = layout.column()
-        column.prop(matProps, 'ambient')
+
+        row = column.row()
+        row.prop(matProps, 'ambient')
+        row.enabled = meshType == 'PROP' or serverProfile == 'DUELISTS'
+
         column.prop(matProps, 'diffuse')
-        column.prop(matProps, 'specular')
-        column.prop(matProps, 'exponent')
-        if shaderValid and addValid:    column.prop(shader.inputs[27], 'default_value', text = "Emission") # Emission Strength
-        else:                           column.prop(matProps, 'fakeEmission', text = "Emission")
 
-        column = layout.column()
-        column.prop(matProps, 'sound')
-        column.enabled = meshType == 'WORLD' and '_mt_' not in blMat.name
+        row = column.row()
+        row.prop(matProps, 'specular')
+        row.enabled = meshType == 'PROP' or serverProfile == 'DUELISTS'
 
-        column = layout.column()
-        column.operator(GZRS2_OT_Apply_Material_Preset.bl_idname, text = "Change Preset")
+        row = column.row()
+        row.prop(matProps, 'exponent')
+        row.enabled = meshType == 'PROP' or serverProfile == 'DUELISTS'
+
+        row = column.row()
+        if shaderValid and addValid:    row.prop(shader.inputs[27], 'default_value', text = "Emission") # Emission Strength
+        else:                           row.prop(matProps, 'fakeEmission')
+        row.enabled = bool(shaderValid and addValid)
+
+        row = column.row()
+        row.prop(matProps, 'sound')
+        row.enabled = meshType == 'WORLD' and '_mt_' not in blMat.name
+
+        row = column.row()
+        row.operator(GZRS2_OT_Apply_Material_Preset.bl_idname, text = "Change Preset")
 
         box = layout.box()
         column = box.column()
@@ -3810,13 +3827,15 @@ class GZRS2_PT_Realspace_Material(Panel):
         row.label(text = mixLabel)
         row = column.row()
         row.label(text = "Clip Math:")
-        row.label(text = clipLabel)
+        row.label(text = clipLabel if meshType == 'PROP' else 'N/A')
+        row.enabled = meshType == 'PROP'
         row = column.row()
         row.label(text = "Add Shader:")
-        row.label(text = addLabel)
+        row.label(text = addLabel if meshType == 'PROP' else 'N/A')
+        row.enabled = meshType == 'PROP'
         row = column.row()
         row.label(text = "Lightmap Mix:")
-        row.label(text = lightmixLabel)
+        row.label(text = lightmixLabel if meshType == 'WORLD' else 'N/A')
         row.enabled = meshType == 'WORLD'
 
         box = layout.box()

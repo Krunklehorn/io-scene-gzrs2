@@ -409,7 +409,10 @@ def exportRS2(self, context):
             file.write("\t\t\t<DIFFUSE>{:f} {:f} {:f}</DIFFUSE>\n".format(*props.diffuse[:3]))
             file.write("\t\t\t<AMBIENT>{:f} {:f} {:f}</AMBIENT>\n".format(*props.ambient[:3]))
             file.write("\t\t\t<SPECULAR>{:f} {:f} {:f}</SPECULAR>\n".format(*props.specular[:3]))
-            file.write("\t\t\t<POWER>{:f}</POWER>\n".format(props.exponent))
+
+            if serverProfile == 'DUELISTS':
+                file.write("\t\t\t<POWER>{:f}</POWER>\n".format(props.exponent))
+
             file.write(f"\t\t\t<DIFFUSEMAP>{ texpath }</DIFFUSEMAP>\n")
             if twosided:      file.write(f"\t\t\t<TWOSIDED/>\n")
             if additive:      file.write(f"\t\t\t<ADDITIVE/>\n")

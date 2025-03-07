@@ -516,7 +516,7 @@ def importRS2(self, context):
             blLightObj = bpy.data.objects.new(lightName, blLight)
             blLightObj.location = light['POSITION']
 
-            if serverProfile == 'DUELISTS':
+            if serverProfile == 'DUELISTS' and isinstance(direction, Vector):
                 rot = direction.to_track_quat('Y', 'Z').to_matrix()
                 blLightObj.rotation_euler = (rot.to_4x4() @ reorientSpotlight).to_euler()
 
@@ -533,8 +533,15 @@ def importRS2(self, context):
             props.attEnd = attEnd
 
             if serverProfile == 'DUELISTS':
+                # Must change type and retrieve new ID to assign fields, oh Blender!
+                blLight.type = 'SPOT'
+                blLight = blLightObj.data
+
                 blLight.spot_size = outercone
                 blLight.spot_blend = 0.0 if pointlight else 1.0 - (innercone / outercone)
+
+                blLight.type = 'POINT' if pointlight else 'SPOT'
+                blLight = blLightObj.data
 
                 props.duelistsRange = light['RANGE']
                 props.duelistsShadowBias = light['SHADOWBIAS']

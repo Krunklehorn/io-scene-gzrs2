@@ -675,8 +675,10 @@ def setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, destinati
     add.select = False
 
     if source:
+        fakeEmission = blMat.gzrs2.fakeEmission
+
         links.new(source.outputs[0], destination.inputs[26]) # Emission Color
-        destination.inputs[27].default_value = 1.0 # Emission Strength
+        destination.inputs[27].default_value = fakeEmission if fakeEmission > 0.0 else 1.0 # Emission Strength
 
     links.new(destination.outputs[0], add.inputs[0])
     links.new(transparent.outputs[0], add.inputs[1])
