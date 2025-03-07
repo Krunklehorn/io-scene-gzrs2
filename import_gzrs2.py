@@ -52,7 +52,9 @@ from .lib_gzrs2 import *
 def importRS2(self, context):
     state = GZRS2State()
 
-    rs2DataDir = os.path.dirname(context.preferences.addons[__package__].preferences.rs2DataDir)
+    packagePrefs = context.preferences.addons[__package__].preferences
+    rs2DataDir = os.path.dirname(packagePrefs.rs2DataDir)
+    serverProfile = packagePrefs.serverProfile
 
     if self.texSearchMode == 'PATH':
         if not rs2DataDir:
@@ -177,15 +179,15 @@ def importRS2(self, context):
         if not smokexmlpath:    self.report({ 'INFO' }, "GZRS2: Smoke requested but smoke.xml not found, no smoke to generate.")
 
     if xmlRs:
-        state.xmlRsMats =                       parseRsXML(self, xmlRs, 'MATERIAL', state)
-        state.xmlGlbs =                         parseRsXML(self, xmlRs, 'GLOBAL', state)
+        state.xmlRsMats =                       parseRsXML(self, xmlRs, 'MATERIAL',         serverProfile, state)
+        state.xmlGlbs =                         parseRsXML(self, xmlRs, 'GLOBAL',           serverProfile, state)
 
-        if state.doLights:      state.xmlLits = parseRsXML(self, xmlRs, 'LIGHT', state)
-        if state.doProps:       state.xmlObjs = parseRsXML(self, xmlRs, 'OBJECT', state)
-        if state.doDummies:     state.xmlDums = parseRsXML(self, xmlRs, 'DUMMY', state)
-        if state.doOcclusion:   state.xmlOccs = parseRsXML(self, xmlRs, 'OCCLUSION', state)
-        if state.doFog:         state.xmlFogs = parseRsXML(self, xmlRs, 'FOG', state)
-        if state.doSounds:      state.xmlAmbs = parseRsXML(self, xmlRs, 'AMBIENTSOUND', state)
+        if state.doLights:      state.xmlLits = parseRsXML(self, xmlRs, 'LIGHT',            serverProfile, state)
+        if state.doProps:       state.xmlObjs = parseRsXML(self, xmlRs, 'OBJECT',           serverProfile, state)
+        if state.doDummies:     state.xmlDums = parseRsXML(self, xmlRs, 'DUMMY',            serverProfile, state)
+        if state.doOcclusion:   state.xmlOccs = parseRsXML(self, xmlRs, 'OCCLUSION',        serverProfile, state)
+        if state.doFog:         state.xmlFogs = parseRsXML(self, xmlRs, 'FOG',              serverProfile, state)
+        if state.doSounds:      state.xmlAmbs = parseRsXML(self, xmlRs, 'AMBIENTSOUND',     serverProfile, state)
 
     if state.doMisc:
         if xmlSpawn:            state.xmlItms = parseSpawnXML(self, xmlSpawn, state)
@@ -486,6 +488,8 @@ def importRS2(self, context):
         blBakeMesh, blBakeObj = setupUnifiedMesh(f"{ state.filename }_Bake", setupRsTreeMesh, treePolygons = state.rsOctreePolygons, treeVerts = state.rsOctreeVerts, isBakeMesh = True)
 
     if state.doLights:
+        reorientSpotlight = Matrix.Rotation(math.radians(90.0), 4, 'X')
+
         for light in state.xmlLits:
             lightName = light['name']
             lightNameLower = lightName.lower()
@@ -497,9 +501,22 @@ def importRS2(self, context):
             castshadow = light['CASTSHADOW']
             softness = calcLightSoftness(attStart, attEnd)
 
-            blLight = bpy.data.lights.new(lightName, 'POINT')
+            if serverProfile == 'VANILLA':
+                blLight = bpy.data.lights.new(lightName, 'POINT')
+            elif serverProfile == 'DUELISTS':
+                direction = light['DIRECTION']
+                innercone = math.radians(max(0.0, min(180.0, light['INNERCONE'])))
+                outercone = math.radians(max(0.0, min(180.0, light['OUTERCONE'])))
+                pointlight = math.isclose(outercone, 0.0, abs_tol = RS_LIGHT_THRESHOLD)
+
+                blLight = bpy.data.lights.new(lightName, 'POINT' if pointlight else 'SPOT')
+
             blLightObj = bpy.data.objects.new(lightName, blLight)
             blLightObj.location = light['POSITION']
+
+            if serverProfile == 'DUELISTS':
+                rot = direction.to_track_quat('Y', 'Z').to_matrix()
+                blLightObj.rotation_euler = (rot.to_4x4() @ reorientSpotlight).to_euler()
 
             blLight.color = light['COLOR']
             blLight.energy = calcLightEnergy(blLightObj, context)
@@ -512,6 +529,14 @@ def importRS2(self, context):
             props.intensity = intensity
             props.attStart = attStart
             props.attEnd = attEnd
+
+            if serverProfile == 'DUELISTS':
+                blLight.spot_size = outercone
+                blLight.spot_blend = 0.0 if pointlight else 1.0 - (innercone / outercone)
+
+                props.duelistsRange = light['RANGE']
+                props.duelistsShadowBias = light['SHADOWBIAS']
+                props.duelistsShadowResolution = light['SHADOWRES'] # TODO: Power of two?
 
             state.blLights.append(blLight)
             state.blLightObjs.append(blLightObj)

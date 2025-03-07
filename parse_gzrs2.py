@@ -61,7 +61,7 @@ def parseUnknown(self, data, nodeName, xmlName, tagName):
 
     return True
 
-def parseRsXML(self, xmlRs, tagName, state):
+def parseRsXML(self, xmlRs, tagName, serverProfile, state):
     elements = xmlRs.getElementsByTagName(tagName)
     nodeEntries = []
 
@@ -94,9 +94,15 @@ def parseRsXML(self, xmlRs, tagName, state):
                 nodeEntry[nodeName] = data.strip().lower() == 'true'
             elif nodeName in ('R', 'G', 'B'):
                 nodeEntry[nodeName] = int(data)
+            elif serverProfile == 'DUELISTS' and nodeName == 'SHADOWRES':
+                nodeEntry[nodeName] = int(data)
             elif nodeName == 'INTENSITY':
                 nodeEntry[nodeName] = float(data)
+            elif serverProfile == 'DUELISTS' and nodeName in ('INNERCONE', 'OUTERCONE', 'SHADOWBIAS'):
+                nodeEntry[nodeName] = float(data)
             elif nodeName in ('ATTENUATIONSTART', 'ATTENUATIONEND', 'RADIUS', 'fog_min', 'fog_max', 'far_z'):
+                nodeEntry[nodeName] = parseDistance(data, state.convertUnits)
+            elif serverProfile == 'DUELISTS' and nodeName == 'RANGE':
                 nodeEntry[nodeName] = parseDistance(data, state.convertUnits)
             elif nodeName in ('DIFFUSE', 'AMBIENT', 'SPECULAR', 'COLOR'):
                 try:                nodeEntry[nodeName] = tuple(float(s) for s in data.split(' '))

@@ -660,6 +660,12 @@ class GZRS2Preferences(AddonPreferences):
         subtype = 'DIR_PATH'
     )
 
+    serverProfile: EnumProperty(
+        name = 'Server Profile',
+        items = (('VANILLA',    'Vanilla',      ""),
+                 ('DUELISTS',   'Duelists',     ""))
+    )
+
     def draw(self, context):
         layout = self.layout
         layout.label(text = "Working Directories")
@@ -681,6 +687,8 @@ class GZRS2Preferences(AddonPreferences):
         row.label(text = self.rs2DataDir)
         row.operator(GZRS2_OT_Specify_Path_MRS.bl_idname, text = "Set .mrs (GunZ 1) data path...")
 
+        box = layout.box()
+
         column = box.column()
         column.label(text = "Valid data subdirectories for .mrf include:")
         column.label(text = "\'Data\' and \'EngineRes\'")
@@ -689,6 +697,9 @@ class GZRS2Preferences(AddonPreferences):
         row = column.row()
         row.label(text = self.rs3DataDir)
         row.operator(GZRS2_OT_Specify_Path_MRF.bl_idname, text = "Set .mrf (GunZ 2) data path...")
+
+        column = layout.column()
+        column.prop(self, 'serverProfile')
 
 
 class ImportGZRS2(Operator, ImportHelper):
@@ -3228,6 +3239,36 @@ class GZRS2LightProperties(PropertyGroup):
         unit = 'LENGTH'
     )
 
+    duelistsRange: FloatProperty(
+        name = 'Range',
+        default = 5.0,
+        min = 0.0,
+        max = 3.402823e+38,
+        soft_min = 0.0,
+        soft_max = 3.402823e+38,
+        subtype = 'UNSIGNED',
+        unit = 'LENGTH'
+    )
+
+    duelistsShadowBias: FloatProperty(
+        name = 'Shadow Bias',
+        default = 0.001,
+        min = -3.402823e+38,
+        max = 3.402823e+38,
+        soft_min = -3.402823e+38,
+        soft_max = 3.402823e+38
+    )
+
+    duelistsShadowResolution: IntProperty(
+        name = 'Shadow Res.',
+        default = 256,
+        min = 256,
+        max = 2**31 - 1,
+        soft_min = 256,
+        soft_max = 2**31 - 1,
+        subtype = 'PIXEL'
+    )
+
     @classmethod
     def register(cls):
         bpy.types.Light.gzrs2 = PointerProperty(type = cls)
@@ -3252,6 +3293,8 @@ class GZRS2_PT_Realspace_Light(Panel):
         layout = self.layout
         layout.use_property_split = True
 
+        serverProfile = context.preferences.addons[__package__].preferences.serverProfile
+
         blLight = context.active_object.data
         props = blLight.gzrs2
 
@@ -3269,6 +3312,12 @@ class GZRS2_PT_Realspace_Light(Panel):
         column.prop(props, 'intensity')
         column.prop(props, 'attStart')
         column.prop(props, 'attEnd')
+
+        if serverProfile == 'DUELISTS':
+            column.separator()
+            column.prop(props, 'duelistsRange')
+            column.prop(props, 'duelistsShadowBias')
+            column.prop(props, 'duelistsShadowResolution')
 
         worldProps = ensureWorld(context).gzrs2
 

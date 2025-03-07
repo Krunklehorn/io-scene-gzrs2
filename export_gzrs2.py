@@ -24,6 +24,8 @@ from .lib_gzrs2 import *
 def exportRS2(self, context):
     state = GZRS2ExportState()
 
+    serverProfile = context.preferences.addons[__package__].preferences.serverProfile
+
     state.convertUnits      = self.convertUnits
     state.filterMode        = self.filterMode
     state.includeChildren   = self.includeChildren and self.filterMode == 'SELECTED'
@@ -337,6 +339,7 @@ def exportRS2(self, context):
     rsSoundCount = len(blSoundObjs)
 
     rsMatTexpaths = []
+    reorientSpotlight = Matrix.Rotation(math.radians(-90.0), 4, 'X')
     reorientCamera = Matrix.Rotation(math.radians(-90.0), 4, 'X')
 
     propFilenames = set()
@@ -420,7 +423,10 @@ def exportRS2(self, context):
             progress += 1
             windowManager.progress_update(progress)
 
-            loc = blLightObj.matrix_world.to_translation()
+            worldMatrix = blLightObj.matrix_world @ reorientSpotlight
+
+            loc = worldMatrix.to_translation()
+            rot = worldMatrix.to_quaternion() @ Vector((0, 1, 0))
 
             blLight = blLightObj.data
             props = blLight.gzrs2
@@ -446,11 +452,26 @@ def exportRS2(self, context):
 
             file.write(f"\t\t<LIGHT name=\"{ lightName }\">\n")
             file.write("\t\t\t<POSITION>{:f} {:f} {:f}</POSITION>\n".format(*tokenizeVec3(loc, 'POSITION', state.convertUnits, True)))
+
+            if serverProfile == 'DUELISTS':
+                file.write("\t\t\t<DIRECTION>{:f} {:f} {:f}</DIRECTION>\n".format(*tokenizeVec3(rot, 'DIRECTION', state.convertUnits, True)))
+
             file.write("\t\t\t<COLOR>{:f} {:f} {:f}</COLOR>\n".format(*blLight.color))
             file.write("\t\t\t<INTENSITY>{:f}</INTENSITY>\n".format(intensity))
             file.write("\t\t\t<ATTENUATIONSTART>{:f}</ATTENUATIONSTART>\n".format(tokenizeDistance(props.attStart, state.convertUnits)))
             file.write("\t\t\t<ATTENUATIONEND>{:f}</ATTENUATIONEND>\n".format(tokenizeDistance(props.attEnd, state.convertUnits)))
             if blLight.use_shadow:  file.write(f"\t\t\t<CASTSHADOW/>\n")
+
+            if serverProfile == 'DUELISTS':
+                outercone = blLight.spot_size
+                innercone = outercone * (1.0 - blLight.spot_blend)
+
+                file.write("\t\t\t<RANGE>{:f}</RANGE>\n".format(tokenizeDistance(props.duelistsRange, state.convertUnits)))
+                file.write("\t\t\t<INNERCONE>{:f}</INNERCONE>\n".format(math.degrees(innercone)))
+                file.write("\t\t\t<OUTERCONE>{:f}</OUTERCONE>\n".format(math.degrees(outercone)))
+                file.write("\t\t\t<SHADOWBIAS>{:f}</SHADOWBIAS>\n".format(props.duelistsShadowBias))
+                file.write("\t\t\t<SHADOWRES>{:d}</SHADOWRES>\n".format(props.duelistsShadowResolution)) # TODO: Power of two?
+
             file.write("\t\t</LIGHT>\n")
 
         if rsLightCount > 0:    file.write("\t</LIGHTLIST>\n")
