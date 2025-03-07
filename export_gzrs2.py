@@ -460,7 +460,6 @@ def exportRS2(self, context):
             file.write("\t\t\t<INTENSITY>{:f}</INTENSITY>\n".format(intensity))
             file.write("\t\t\t<ATTENUATIONSTART>{:f}</ATTENUATIONSTART>\n".format(tokenizeDistance(props.attStart, state.convertUnits)))
             file.write("\t\t\t<ATTENUATIONEND>{:f}</ATTENUATIONEND>\n".format(tokenizeDistance(props.attEnd, state.convertUnits)))
-            if blLight.use_shadow:  file.write(f"\t\t\t<CASTSHADOW/>\n")
 
             if serverProfile == 'DUELISTS':
                 outercone = blLight.spot_size
@@ -472,6 +471,7 @@ def exportRS2(self, context):
                 file.write("\t\t\t<SHADOWBIAS>{:f}</SHADOWBIAS>\n".format(props.duelistsShadowBias))
                 file.write("\t\t\t<SHADOWRES>{:d}</SHADOWRES>\n".format(props.duelistsShadowResolution)) # TODO: Power of two?
 
+            if blLight.use_shadow:  file.write(f"\t\t\t<CASTSHADOW/>\n")
             file.write("\t\t</LIGHT>\n")
 
         if rsLightCount > 0:    file.write("\t</LIGHTLIST>\n")
