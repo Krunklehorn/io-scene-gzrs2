@@ -399,11 +399,37 @@ def exportRS2(self, context):
             if texpath == False:
                 self.report({ 'ERROR' }, f"GZRS2: Directory requested but image filepath does not contain a valid data subdirectory! { m }, { exportName }, { texture.image.filepath }")
 
-            if len(texpath) >= RS_PATH_LENGTH:
-                self.report({ 'ERROR' }, f"GZRS2: RS texture path has too many characters! Max length is { RS_PATH_LENGTH }! { m }, { exportName }, { texpath }")
-                return { 'CANCELLED' }
+            if serverProfile == 'DUELISTS':
+                duelistsNormalTexpath = os.path.join(props.duelistsNormalTexDir, props.duelistsNormalTexBase)
+                duelistsSpecularTexpath = os.path.join(props.duelistsSpecularTexDir, props.duelistsSpecularTexBase)
+                duelistsEmissiveTexpath = os.path.join(props.duelistsEmissiveTexDir, props.duelistsEmissiveTexBase)
+
+            def verifyPathLength(texpath):
+                if len(texpath) >= RS_PATH_LENGTH:
+                    self.report({ 'ERROR' }, f"GZRS2: RS texture path has too many characters! Max length is { RS_PATH_LENGTH }! { m }, { exportName }, { texpath }")
+                    return True
+
+                return False
+
+            error = verifyPathLength(texpath)
+
+            if serverProfile == 'DUELISTS':
+                error |= verifyPathLength(duelistsNormalTexpath)
+                error |= verifyPathLength(duelistsSpecularTexpath)
+                error |= verifyPathLength(duelistsEmissiveTexpath)
+
+            if error: return { 'CANCELLED' }
 
             rsMatTexpaths.append(texpath)
+
+            # TODO: Fix bug with texpaths during .rs reading when Duelists data is included
+
+            '''
+            if serverProfile == 'DUELISTS':
+                rsMatTexpaths.append(duelistsNormalTexpath)
+                rsMatTexpaths.append(duelistsSpecularTexpath)
+                rsMatTexpaths.append(duelistsEmissiveTexpath)
+            '''
 
             file.write(f"\t\t<MATERIAL name=\"{ exportName }\">\n")
             file.write("\t\t\t<DIFFUSE>{:f} {:f} {:f}</DIFFUSE>\n".format(*props.diffuse[:3]))
@@ -411,13 +437,28 @@ def exportRS2(self, context):
             file.write("\t\t\t<SPECULAR>{:f} {:f} {:f}</SPECULAR>\n".format(*props.specular[:3]))
 
             if serverProfile == 'DUELISTS':
+                specularIntensity = shader.inputs[12].default_value if shaderValid else 0.0 # Specular IOR Level
+                emissiveIntensity = shader.inputs[27].default_value if shaderValid else 0.0 # Emission Strength
+
+                specularIntensity = min(specularIntensity, 0.5) * 2.0
+
                 file.write("\t\t\t<POWER>{:f}</POWER>\n".format(props.exponent))
+                file.write("\t\t\t<SPECULARINTENSITY>{:f}</SPECULARINTENSITY>\n".format(specularIntensity))
+                file.write("\t\t\t<EMISSIVEINTENSITY>{:f}</EMISSIVEINTENSITY>\n".format(emissiveIntensity))
+                file.write("\t\t\t<HEIGHTOFFSET>{:f}</HEIGHTOFFSET>\n".format(props.duelistsHeightOffset))
 
             file.write(f"\t\t\t<DIFFUSEMAP>{ texpath }</DIFFUSEMAP>\n")
-            if twosided:      file.write(f"\t\t\t<TWOSIDED/>\n")
-            if additive:      file.write(f"\t\t\t<ADDITIVE/>\n")
-            if usealphatest:  file.write(f"\t\t\t<USEALPHATEST/>\n")
-            if useopacity:    file.write(f"\t\t\t<USEOPACITY/>\n")
+
+            if serverProfile == 'DUELISTS':
+                file.write(f"\t\t\t<NORMALMAP>{ duelistsNormalTexpath }</NORMALMAP>\n")
+                file.write(f"\t\t\t<SPECULARMAP>{ duelistsSpecularTexpath }</SPECULARMAP>\n")
+                file.write(f"\t\t\t<EMISSIVEMAP>{ duelistsEmissiveTexpath }</EMISSIVEMAP>\n")
+
+            if twosided:        file.write(f"\t\t\t<TWOSIDED/>\n")
+            if additive:        file.write(f"\t\t\t<ADDITIVE/>\n")
+            if usealphatest:    file.write(f"\t\t\t<USEALPHATEST/>\n")
+            if useopacity:      file.write(f"\t\t\t<USEOPACITY/>\n")
+
             file.write("\t\t</MATERIAL>\n")
 
         if rsMatCount > 0:      file.write("\t</MATERIALLIST>\n")
@@ -468,12 +509,13 @@ def exportRS2(self, context):
             if serverProfile == 'DUELISTS':
                 outercone = blLight.spot_size
                 innercone = outercone * (1.0 - blLight.spot_blend)
+                shadowResolution = 2 ** props.duelistsShadowResolution
 
                 file.write("\t\t\t<RANGE>{:f}</RANGE>\n".format(tokenizeDistance(props.duelistsRange, state.convertUnits)))
                 file.write("\t\t\t<INNERCONE>{:f}</INNERCONE>\n".format(math.degrees(innercone)))
                 file.write("\t\t\t<OUTERCONE>{:f}</OUTERCONE>\n".format(math.degrees(outercone)))
                 file.write("\t\t\t<SHADOWBIAS>{:f}</SHADOWBIAS>\n".format(props.duelistsShadowBias))
-                file.write("\t\t\t<SHADOWRES>{:d}</SHADOWRES>\n".format(props.duelistsShadowResolution)) # TODO: Power of two?
+                file.write("\t\t\t<SHADOWRES>{:d}</SHADOWRES>\n".format(shadowResolution))
 
             if blLight.use_shadow:  file.write(f"\t\t\t<CASTSHADOW/>\n")
             file.write("\t\t</LIGHT>\n")

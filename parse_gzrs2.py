@@ -90,15 +90,23 @@ def parseRsXML(self, xmlRs, tagName, serverProfile, state):
                         data = os.path.normpath(data)
 
                 nodeEntry[nodeName] = data
+            elif serverProfile == 'DUELISTS' and nodeName in ('NORMALMAP', 'SPECULARMAP', 'EMISSIVEMAP'):
+                if data is not None:
+                    data = data.strip()
+
+                    if data:
+                        data = os.path.normpath(data)
+
+                nodeEntry[nodeName] = data
             elif nodeName == 'fog_enable':
                 nodeEntry[nodeName] = data.strip().lower() == 'true'
             elif nodeName in ('R', 'G', 'B'):
                 nodeEntry[nodeName] = int(data)
-            elif serverProfile == 'DUELISTS' and nodeName == 'SHADOWRES':
+            elif serverProfile == 'DUELISTS' and nodeName in 'SHADOWRES':
                 nodeEntry[nodeName] = int(data)
-            elif nodeName in('POWER', 'INTENSITY'):
+            elif nodeName == 'INTENSITY':
                 nodeEntry[nodeName] = float(data)
-            elif serverProfile == 'DUELISTS' and nodeName in ('INNERCONE', 'OUTERCONE', 'SHADOWBIAS'):
+            elif serverProfile == 'DUELISTS' and nodeName in ('POWER', 'SPECULARINTENSITY', 'HEIGHTOFFSET', 'EMISSIVEINTENSITY', 'INNERCONE', 'OUTERCONE', 'SHADOWBIAS'):
                 nodeEntry[nodeName] = float(data)
             elif nodeName in ('ATTENUATIONSTART', 'ATTENUATIONEND', 'RADIUS', 'fog_min', 'fog_max', 'far_z'):
                 nodeEntry[nodeName] = parseDistance(data, state.convertUnits)

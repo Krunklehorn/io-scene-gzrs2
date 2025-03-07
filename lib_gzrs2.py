@@ -686,32 +686,62 @@ def setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, destinati
 
     return add
 
-def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state):
-    texpath = xmlRsMat.get('DIFFUSEMAP')
-    texBase, _, _, texDir = decomposePath(texpath)
+def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, serverProfile, state):
+    def processTexType(texType, *, offset = 0):
+        texpath = xmlRsMat.get(texType)
+        texBase, _, _, texDir = decomposePath(texpath)
 
-    # TODO: Don't return on failure, continue with color preset
+        if texBase == None:
+            # self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with no texture name: { texBase }")
+            return True, None, None, None, None
 
-    if texBase == None:
-        # self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with no texture name: { texBase }")
-        return
+        if texBase == '':
+            self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with an empty texture name: { texBase }")
+            return True, None, None, None, None
 
-    if texBase == '':
-        self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with an empty texture name: { texBase }")
-        return
+        if not isValidTexBase(texBase):
+            self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with an invalid texture name: { blMat.name }, { texBase }")
+            return True, None, None, None, None
 
-    if not isValidTexBase(texBase):
-        self.report({ 'WARNING' }, f"GZRS2: .rs.xml material with an invalid texture name: { blMat.name }, { texBase }")
-        return
+        success, texpath, loadFake = textureSearchLoadFake(self, texBase, texDir, False, state)
 
-    success, texpath, loadFake = textureSearchLoadFake(self, texBase, texDir, False, state)
+        if not success:
+            self.report({ 'WARNING' }, f"GZRS2: Texture not found for .rs.xml material: { blMat.name }, { texType }, { texBase }")
 
-    if not success:
-        self.report({ 'WARNING' }, f"GZRS2: Texture not found for .rs.xml material: { blMat.name }, { texBase }")
+        return False, getMatImageTextureNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440 + offset, 300 + offset, loadFake, state), texpath, texBase, texDir
 
-    texture = getMatImageTextureNode(bpy, blMat, nodes, texpath, 'STRAIGHT', -440, 300, loadFake, state)
+    # TODO: Create material presets for Duelists profile to allow configuration using shader nodes
 
     props = blMat.gzrs2
+    error = False
+
+    if serverProfile == 'DUELISTS':
+        result, duelistsNormal, texpath, texBase, texDir = processTexType('NORMALMAP', offset = -40)
+        error |= result
+
+        if not result:
+            props.duelistsNormalTexBase = texBase
+            props.duelistsNormalTexDir = texDir
+
+        result, duelistsSpecular, texpath, texBase, texDir = processTexType('SPECULARMAP', offset = -80)
+        error |= result
+
+        if not result:
+            props.duelistsSpecularTexBase = texBase
+            props.duelistsSpecularTexDir = texDir
+
+        result, duelistsEmissive, texpath, texBase, texDir = processTexType('EMISSIVEMAP', offset = -120)
+        error |= result
+
+        if not result:
+            props.duelistsEmissiveTexBase = texBase
+            props.duelistsEmissiveTexDir = texDir
+
+    result, texture, texpath, texBase, texDir = processTexType('DIFFUSEMAP')
+    error |= result
+
+    if error: return
+
     props.overrideTexpath   = texDir != ''
     props.writeDirectory    = texDir != ''
     props.texBase           = texBase
@@ -745,19 +775,19 @@ def processRS3TexLayer(self, texlayer, blMat, tree, links, nodes, shader, emissi
     useopacity = texType == 'OPACITYMAP'
 
     if texType not in XMLELU_TEXTYPES:
-        self.report({ 'ERROR' }, f"GZRS2: Unsupported texture type for .elu.xml material: { texBase }, { texType }")
+        self.report({ 'WARNING' }, f"GZRS2: Unsupported texture type for .elu.xml material: { texBase }, { texType }")
         return useopacity
 
     if texBase == None:
-        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with no texture name: { texBase }, { texType }")
+        # self.report({ 'WARNING' }, f"GZRS2: .elu.xml material with no texture name: { texBase }, { texType }")
         return useopacity
 
     if texBase == '':
-        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with an empty texture name: { texBase }, { texType }")
+        self.report({ 'WARNING' }, f"GZRS2: .elu.xml material with an empty texture name: { texBase }, { texType }")
         return useopacity
 
     if not isValidTexBase(texBase):
-        self.report({ 'ERROR' }, f"GZRS2: .elu.xml material with an invalid texture name: { texBase }, { texType }")
+        self.report({ 'WARNING' }, f"GZRS2: .elu.xml material with an invalid texture name: { texBase }, { texType }")
         return useopacity
 
     success, texpath, loadFake = textureSearchLoadFake(self, texBase, '', True, state)
@@ -787,7 +817,7 @@ def processRS3TexLayer(self, texlayer, blMat, tree, links, nodes, shader, emissi
 
         links.new(texture.outputs[0], shader.inputs[26]) # Emission Color
 
-        shader.inputs[27].default_value = emission # Emission Strength
+        shader.inputs[27].default_value = blMat.gzrs2.fakeEmission = emission # Emission Strength
     elif texType == 'OPACITYMAP':
         texture = getMatImageTextureNode(bpy, blMat, nodes, texpath, 'CHANNEL_PACKED', -540, 300, loadFake, state)
         texture.select = False
@@ -1220,7 +1250,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     blMat, tree, links, nodes, shader, _, _, transparent, mix = setupMatBase(matName)
 
     shader.inputs[6].default_value = glossiness / 100.0 # Metallic
-    shader.inputs[12].default_value = specular / 100.0 # Specular IOR Level
+    shader.inputs[12].default_value = specular / 100.0 / 2.0 # Specular IOR Level
 
     usealphatest = alphatest > 0
     useopacity = False

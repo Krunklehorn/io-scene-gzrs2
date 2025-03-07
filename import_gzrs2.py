@@ -369,9 +369,17 @@ def importRS2(self, context):
 
         props.sound = materialSound
 
-        if 'POWER' in xmlRsMat:     props.exponent = xmlRsMat['POWER']
+        processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, serverProfile, state)
 
-        processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, state)
+        # TODO: Remove exponent, tie to roughness
+        # TODO: power = (roughness - 1.0) * 1000.0
+        # TODO: roughness = 1.0 - (power / 1000.0)
+
+        if serverProfile == 'DUELISTS':
+            if 'POWER'              in xmlRsMat: props.exponent                     = xmlRsMat['POWER']
+            if 'SPECULARINTENSITY'  in xmlRsMat: shader.inputs[12].default_value    = min(xmlRsMat['SPECULARINTENSITY'] / 2.0, 0.5) # Specular IOR Level
+            if 'EMISSIVEINTENSITY'  in xmlRsMat: shader.inputs[27].default_value    = props.fakeEmission = xmlRsMat['EMISSIVEINTENSITY'] # Emission Strength
+            if 'HEIGHTOFFSET'       in xmlRsMat: props.duelistsHeightOffset         = xmlRsMat['HEIGHTOFFSET']
 
         state.blXmlRsMats.append(blMat)
 
@@ -545,7 +553,7 @@ def importRS2(self, context):
 
                 props.duelistsRange = light['RANGE']
                 props.duelistsShadowBias = light['SHADOWBIAS']
-                props.duelistsShadowResolution = light['SHADOWRES'] # TODO: Power of two?
+                props.duelistsShadowResolution = int(math.log2(min(light['SHADOWRES'], 1)))
 
             state.blLights.append(blLight)
             state.blLightObjs.append(blLightObj)

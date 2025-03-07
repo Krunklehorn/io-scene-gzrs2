@@ -397,6 +397,8 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
     def execute(self, context):
         bpy.ops.ed.undo_push()
 
+        serverProfile = context.preferences.addons[__package__].preferences.serverProfile
+
         blObj = context.active_object
         meshType = blObj.data.gzrs2.meshType
 
@@ -425,11 +427,19 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         if shaderValid and addValid:
             blMat.gzrs2.fakeEmission = shader.inputs[27].default_value # Emission Strength
 
+        if serverProfile == 'DUELISTS' and shaderValid:
+            specularIntensity = shader.inputs[12].default_value # Specular IOR Level
+            emissionIntensity = shader.inputs[27].default_value # Emission Strength
+
         # We assume the setup functions modify valid inputs and only create what is missing
         blMat, tree, links, nodes, shader, output, info, transparent, mix = setupMatBase(blMat.name, blMat = blMat, shader = shader, output = output, info = info, transparent = transparent, mix = mix)
 
         if meshType == 'WORLD':
             _, _, lightmix, _ = setupMatNodesLightmap(blMat, tree, links, nodes, shader, lightmap = lightmap, lightmix = lightmix)
+
+        if serverProfile == 'DUELISTS' and shaderValid:
+            shader.inputs[12].default_value = min(specularIntensity, 0.5) # Specular IOR Level
+            shader.inputs[27].default_value = blMat.gzrs2.fakeEmission = emissionIntensity # Emission Strength
 
         if self.materialPreset == 'COLORED':
             return { 'FINISHED' }
@@ -463,6 +473,10 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
             add = setupMatNodesAdditive(blMat, tree, links, nodes, additive, source, shader, transparent, mix, add = add)
 
         setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
+
+        if serverProfile == 'DUELISTS' and shaderValid:
+            shader.inputs[12].default_value = min(specularIntensity, 0.5) # Specular IOR Level
+            shader.inputs[27].default_value = blMat.gzrs2.fakeEmission = emissionIntensity # Emission Strength
 
         return { 'FINISHED' }
 
@@ -3257,17 +3271,17 @@ class GZRS2LightProperties(PropertyGroup):
         min = -3.402823e+38,
         max = 3.402823e+38,
         soft_min = -3.402823e+38,
-        soft_max = 3.402823e+38
+        soft_max = 3.402823e+38,
+        precision = 3
     )
 
     duelistsShadowResolution: IntProperty(
         name = 'Shadow Res.',
-        default = 256,
-        min = 256,
-        max = 2**31 - 1,
-        soft_min = 256,
-        soft_max = 2**31 - 1,
-        subtype = 'PIXEL'
+        default = 8,
+        min = 8,
+        max = 12,
+        soft_min = 8,
+        soft_max = 12
     )
 
     @classmethod
@@ -3318,7 +3332,19 @@ class GZRS2_PT_Realspace_Light(Panel):
             column.separator()
             column.prop(props, 'duelistsRange')
             column.prop(props, 'duelistsShadowBias')
-            column.prop(props, 'duelistsShadowResolution')
+
+            row = column.row()
+            split = row.split(factor = 0.4125)
+            split.alignment = 'RIGHT'
+            split.label(text = "Shadow Res.")
+            split.alignment = 'LEFT'
+
+            row2 = split.row()
+            row2.use_property_decorate = False
+            row2.prop(props, 'duelistsShadowResolution', text = "")
+            row2.label(text = str(2 ** props.duelistsShadowResolution) + " px")
+
+            row.label(text = "", icon = 'DECORATE')
 
         worldProps = ensureWorld(context).gzrs2
 
@@ -3552,6 +3578,51 @@ class GZRS2MaterialProperties(PropertyGroup):
         soft_min = 0.0,
         soft_max = 100.0,
         precision = 3,
+        subtype = 'UNSIGNED'
+    )
+
+    # Duelists
+
+    duelistsNormalTexBase: StringProperty(
+        name = 'Basename',
+        default = '',
+        subtype = 'FILE_NAME'
+    )
+
+    duelistsNormalTexDir: StringProperty(
+        name = 'Directory',
+        default = ''
+    )
+
+    duelistsSpecularTexBase: StringProperty(
+        name = 'Basename',
+        default = '',
+        subtype = 'FILE_NAME'
+    )
+
+    duelistsSpecularTexDir: StringProperty(
+        name = 'Directory',
+        default = ''
+    )
+
+    duelistsEmissiveTexBase: StringProperty(
+        name = 'Basename',
+        default = '',
+        subtype = 'FILE_NAME'
+    )
+
+    duelistsEmissiveTexDir: StringProperty(
+        name = 'Directory',
+        default = ''
+    )
+
+    duelistsHeightOffset: FloatProperty(
+        name = 'Height Offset',
+        default = 0.0,
+        min = 0.0,
+        max = 100.0,
+        soft_min = 0.0,
+        soft_max = 100.0,
         subtype = 'UNSIGNED'
     )
 
@@ -3799,13 +3870,19 @@ class GZRS2_PT_Realspace_Material(Panel):
         row.prop(matProps, 'exponent')
         row.enabled = meshType == 'PROP' or serverProfile == 'DUELISTS'
 
+        if serverProfile == 'DUELISTS':
+            column.prop(shader.inputs[12], 'default_value', text = "Specular") # Specular IOR Level
+
         row = column.row()
-        if shaderValid and addValid:
+        if shaderValid and addValid or serverProfile == 'DUELISTS':
             row.prop(shader.inputs[27], 'default_value', text = "Emission") # Emission Strength
             row.enabled = True
         else:
             row.prop(matProps, 'fakeEmission')
             row.enabled = False
+
+        if serverProfile == 'DUELISTS':
+            column.prop(matProps, 'duelistsHeightOffset')
 
         row = column.row()
         row.prop(matProps, 'sound')
@@ -3844,6 +3921,9 @@ class GZRS2_PT_Realspace_Material(Panel):
         box = layout.box()
         column = box.column()
 
+        if serverProfile == 'DUELISTS':
+            column.label(text = "Diffuse Map:")
+
         row = column.row()
         row.use_property_split = False
         row.prop(matProps, 'overrideTexpath')
@@ -3852,7 +3932,8 @@ class GZRS2_PT_Realspace_Material(Panel):
         if matProps.overrideTexpath:
             column.prop(matProps, 'texBase')
             column.prop(matProps, 'texDir')
-            column.label(text = "Tip: Use \"..\\\" to go up one folder.")
+            if serverProfile == 'VANILLA':
+                column.label(text = "Tip: Use \"..\\\" to go up one folder.")
         else:
             row = column.row()
             row.label(text = "Basename:")
@@ -3860,6 +3941,31 @@ class GZRS2_PT_Realspace_Material(Panel):
             row = column.row()
             row.label(text = "Directory:")
             row.label(text = texDir if shaderValid else 'N/A')
+
+        if serverProfile == 'DUELISTS':
+            box = layout.box()
+            column = box.column()
+
+            column.label(text = "Normal Map:")
+            column.prop(matProps, 'duelistsNormalTexBase')
+            column.prop(matProps, 'duelistsNormalTexDir')
+
+            box = layout.box()
+            column = box.column()
+
+            column.label(text = "Specular Map:")
+            column.prop(matProps, 'duelistsSpecularTexBase')
+            column.prop(matProps, 'duelistsSpecularTexDir')
+
+            box = layout.box()
+            column = box.column()
+
+            column.label(text = "Emissive Map:")
+            column.prop(matProps, 'duelistsEmissiveTexBase')
+            column.prop(matProps, 'duelistsEmissiveTexDir')
+
+            column = layout.column()
+            column.label(text = "Tip: Use \"..\\\" to go up one folder.")
 
         box = layout.box()
         column = box.column()
