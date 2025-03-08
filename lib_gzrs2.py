@@ -713,33 +713,27 @@ def processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transp
     # TODO: Create material presets for Duelists profile to allow configuration using shader nodes
 
     props = blMat.gzrs2
-    error = False
 
     if serverProfile == 'DUELISTS':
         result, duelistsNormal, texpath, texBase, texDir = processTexType('NORMALMAP', offset = -40)
-        error |= result
 
         if not result:
             props.duelistsNormalTexBase = texBase
             props.duelistsNormalTexDir = texDir
 
         result, duelistsSpecular, texpath, texBase, texDir = processTexType('SPECULARMAP', offset = -80)
-        error |= result
 
         if not result:
             props.duelistsSpecularTexBase = texBase
             props.duelistsSpecularTexDir = texDir
 
         result, duelistsEmissive, texpath, texBase, texDir = processTexType('EMISSIVEMAP', offset = -120)
-        error |= result
 
         if not result:
             props.duelistsEmissiveTexBase = texBase
             props.duelistsEmissiveTexDir = texDir
 
-    result, texture, texpath, texBase, texDir = processTexType('DIFFUSEMAP')
-    error |= result
-
+    error, texture, texpath, texBase, texDir = processTexType('DIFFUSEMAP')
     if error: return
 
     props.overrideTexpath   = texDir != ''

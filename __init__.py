@@ -3943,7 +3943,7 @@ class GZRS2_PT_Realspace_Material(Panel):
             column.prop(matProps, 'texBase')
             column.prop(matProps, 'texDir')
             if serverProfile == 'VANILLA':
-                column.label(text = "Tip: Use \"..\\\" to go up one folder.")
+                column.label(text = "Tip: Use \'..\\\' to go up one folder.")
         else:
             row = column.row()
             row.label(text = "Basename:")
@@ -3974,8 +3974,9 @@ class GZRS2_PT_Realspace_Material(Panel):
             column.prop(matProps, 'duelistsEmissiveTexBase')
             column.prop(matProps, 'duelistsEmissiveTexDir')
 
-            column = layout.column()
-            column.label(text = "Tip: Use \"..\\\" to go up one folder.")
+            box = layout.box()
+            column = box.column()
+            column.label(text = "Tip: Use \'..\\\' to go up one folder.")
 
         box = layout.box()
         column = box.column()
