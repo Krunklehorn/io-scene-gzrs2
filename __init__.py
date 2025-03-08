@@ -424,6 +424,7 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
             if link.from_node in relevantNodes or link.to_node in relevantNodes:
                 links.remove(link)
 
+        # Backup values
         if shaderValid and addValid:
             blMat.gzrs2.fakeEmission = shader.inputs[27].default_value # Emission Strength
 
@@ -437,6 +438,7 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         if meshType == 'WORLD':
             _, _, lightmix, _ = setupMatNodesLightmap(blMat, tree, links, nodes, shader, lightmap = lightmap, lightmix = lightmix)
 
+        # Restore values
         if serverProfile == 'DUELISTS' and shaderValid:
             shader.inputs[12].default_value = min(specularIntensity, 0.5) # Specular IOR Level
             shader.inputs[27].default_value = blMat.gzrs2.fakeEmission = emissionIntensity # Emission Strength
@@ -474,6 +476,7 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
 
         setMatFlagsTransparency(blMat, usealphatest or useopacity or additive, twosided = twosided)
 
+        # Restore values
         if serverProfile == 'DUELISTS' and shaderValid:
             shader.inputs[12].default_value = min(specularIntensity, 0.5) # Specular IOR Level
             shader.inputs[27].default_value = blMat.gzrs2.fakeEmission = emissionIntensity # Emission Strength
@@ -3256,7 +3259,7 @@ class GZRS2LightProperties(PropertyGroup):
 
     duelistsRange: FloatProperty(
         name = 'Range',
-        default = 5.0,
+        default = 10.0,
         min = 0.0,
         max = 3.402823e+38,
         soft_min = 0.0,
@@ -3325,12 +3328,19 @@ class GZRS2_PT_Realspace_Light(Panel):
 
         column.prop(props, 'lightSubtype')
         column.prop(props, 'intensity')
-        column.prop(props, 'attStart')
-        column.prop(props, 'attEnd')
+
+        if serverProfile == 'VANILLA':
+            column.prop(props, 'attStart')
+            column.prop(props, 'attEnd')
+        elif serverProfile == 'DUELISTS':
+            if blLight.type == 'POINT':
+                column.prop(props, 'attStart')
+                column.prop(props, 'attEnd')
+            elif blLight.type == 'SPOT':
+                column.prop(props, 'duelistsRange')
 
         if serverProfile == 'DUELISTS':
             column.separator()
-            column.prop(props, 'duelistsRange')
             column.prop(props, 'duelistsShadowBias')
 
             row = column.row()

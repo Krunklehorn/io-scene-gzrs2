@@ -1250,7 +1250,7 @@ def setupXmlEluMat(self, elupath, xmlEluMat, state):
     blMat, tree, links, nodes, shader, _, _, transparent, mix = setupMatBase(matName)
 
     shader.inputs[6].default_value = glossiness / 100.0 # Metallic
-    shader.inputs[12].default_value = specular / 100.0 / 2.0 # Specular IOR Level
+    shader.inputs[12].default_value = min(specular / 100.0 / 2.0, 0.5) # Specular IOR Level
 
     usealphatest = alphatest > 0
     useopacity = False

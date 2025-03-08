@@ -371,10 +371,6 @@ def importRS2(self, context):
 
         processRS2Texlayer(self, blMat, xmlRsMat, tree, links, nodes, shader, transparent, mix, serverProfile, state)
 
-        # TODO: Remove exponent, tie to roughness
-        # TODO: power = (roughness - 1.0) * 1000.0
-        # TODO: roughness = 1.0 - (power / 1000.0)
-
         if serverProfile == 'DUELISTS':
             if 'POWER'              in xmlRsMat: props.exponent                     = xmlRsMat['POWER']
             if 'SPECULARINTENSITY'  in xmlRsMat: shader.inputs[12].default_value    = min(xmlRsMat['SPECULARINTENSITY'] / 2.0, 0.5) # Specular IOR Level
