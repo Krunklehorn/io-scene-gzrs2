@@ -549,7 +549,7 @@ def importRS2(self, context):
 
                 props.duelistsRange = light['RANGE']
                 props.duelistsShadowBias = light['SHADOWBIAS']
-                props.duelistsShadowResolution = int(math.log2(min(light['SHADOWRES'], 1)))
+                props.duelistsShadowResolution = int(math.log2(max(light['SHADOWRES'], 1)))
 
             state.blLights.append(blLight)
             state.blLightObjs.append(blLightObj)
