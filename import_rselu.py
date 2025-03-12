@@ -124,7 +124,7 @@ def importElu(self, context):
     for eluMesh in state.eluMeshes:
         meshName = eluMesh.meshName
 
-        if meshName.startswith(('Bip', 'Bone', 'Dummy')):
+        if meshName.startswith(ELU_BONE_PREFIXES):
             state.gzrsValidBones.add(meshName)
 
         if eluMesh.isDummy:
@@ -182,7 +182,7 @@ def importElu(self, context):
             state.blBonePairs.append((eluMesh, editBone))
 
         for child, childBone in state.blBonePairs:
-            if child.meshName in ('Bip01', 'Bone01', 'Dummy01'):
+            if child.meshName in ELU_BONE_PREFIXES_ROOT:
                 continue
 
             found = False
@@ -198,7 +198,7 @@ def importElu(self, context):
                 self.report({ 'WARNING' }, f"GZRS2: Parent not found for .elu child bone: { child.meshName }, { child.parentName }")
 
         for eluMesh, editBone in state.blBonePairs:
-            if editBone.name in ('Bip01', 'Bone01', 'Dummy01'):
+            if editBone.name in ELU_BONE_PREFIXES_ROOT:
                 continue
             elif len(editBone.children) > 0:
                 length = 0
@@ -249,7 +249,7 @@ def importElu(self, context):
             isBone = child.meshName in state.gzrsValidBones
             noParentBone = child.parentName not in state.gzrsValidBones
             isNubDummy = isBone and child.isDummy and 'Nub' in child.meshName
-            isNotRoot = child.meshName not in ('Bip01', 'Bone01', 'Dummy01')
+            isNotRoot = child.meshName not in ELU_BONE_PREFIXES_ROOT
 
             if isNubDummy or noParentBone and isNotRoot:
                 continue

@@ -143,6 +143,9 @@ ELU_WEIGHT_THRESHOLD =          0.001
 ELU_MAX_COAT_TRIS =             2000
 ELU_MAX_FLAG_TRIS =             165
 
+ELU_BONE_PREFIXES =             ('Bip', 'Bone', 'Dummy', 'obj_Bip', 'obj_Bone', 'obj_Dummy')
+ELU_BONE_PREFIXES_ROOT =        ('Bip01', 'Bone01', 'Dummy01', 'obj_Bip01', 'obj_Bone01', 'obj_Dummy01')
+
 ANI_ID =                        ELU_ID
 
 ANI_0012 =                      0x0012

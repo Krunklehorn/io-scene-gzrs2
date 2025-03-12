@@ -588,7 +588,7 @@ def importRS2(self, context):
             print()
 
         for eluMesh in state.eluMeshes:
-            if eluMesh.meshName.startswith(('Bip', 'Bone', 'Dummy')):
+            if eluMesh.meshName.startswith(ELU_BONE_PREFIXES):
                 state.gzrsValidBones.add(eluMesh.meshName)
 
             if eluMesh.isDummy:
