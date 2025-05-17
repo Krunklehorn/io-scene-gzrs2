@@ -266,7 +266,7 @@ def exportRS2(self, context):
 
     blOccObjs           = tuple(sorted(blOccObjs,           key = sortOcclusion))
 
-    blCameraObjs        = tuple(sorted(blCameraObjs,        key = lambda x: sortCamera))
+    blCameraObjs        = tuple(sorted(blCameraObjs,        key = sortCamera))
     blCameraWaitObjs    = tuple(sorted(blCameraWaitObjs,    key = lambda x: (x.data.gzrs2.cameraIndex,  x.name)))
     blCameraTrackObjs   = tuple(sorted(blCameraTrackObjs,   key = lambda x: (x.data.gzrs2.cameraIndex,  x.name)))
 
