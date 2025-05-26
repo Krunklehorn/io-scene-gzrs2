@@ -163,12 +163,18 @@ def matchRSDataDirectory(self, dirpath, dirbase, isRS3, state):
 
     for token in RS3_VALID_DATA_SUBDIRS if isRS3 else RS2_VALID_DATA_SUBDIRS:
         if token.lower() == dirbase.lower():
-            state.rs2DataDir = os.path.dirname(dirpath)
+            if isRS3:
+                state.rs3DataDir = os.path.dirname(dirpath)
+            else:
+                state.rs2DataDir = os.path.dirname(dirpath)
             return True
 
         for dirname in dirnames:
             if token.lower() == dirname.lower():
-                state.rs2DataDir = dirpath
+                if isRS3:
+                    state.rs3DataDir = dirpath
+                else:
+                    state.rs2DataDir = dirpath
                 return True
 
     return False
@@ -178,7 +184,8 @@ def ensureRS3DataDict(self, state):
 
     for dirpath, _, filenames in os.walk(state.rs3DataDir):
         for filename in filenames:
-            if os.path.splitext(filename)[-1].lower() in RS3_DATA_DICT_EXTENSIONS:
+            ext = os.path.splitext(filename)[-1].lower()
+            if ext[ext.find(".")+1:] in RS3_DATA_DICT_EXTENSIONS:
                 resourcepath = pathExists(os.path.join(dirpath, filename))
 
                 if not resourcepath:
