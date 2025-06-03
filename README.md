@@ -12,28 +12,43 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 ![Beta Select](meta/steambetaselect_241122.jpg)
 
+
 # Latest Update
 
 [***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.7***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.7)
 
-* NEW: .rs export, yes, that's full map export!
-  * Currently in beta, works fine for small, boxy test maps
-  * Check the GitHub page for requirements and known issues
-* NEW: World lightmap selector and "Prepare for Bake" operator
-  * Sets the active image texture node of all world materials
-  * Sets the active UV channel of all world meshes
-  * Disables the lightmap mix
-  * Marks the selected image as a fake user
-* Fixed .rs import 'Bake' mode
-* .col import now reads both solid and hull collision geometry
-* .col import can now read cut planes for debugging
+* NEW: "Pre-process Geometry" operator!
+  * Available on World, Navigation and Collision meshes
+  * Dissolves degenerate and co-linear vertices, deletes loose pieces then splits non-planar and concave faces
+  * Useful for overcoming geometry errors during map export
+* NEW: Server profile for Duelists!
+  * Light properties: Range, Shadow Bias, Shadow Resolution
+  * Material properties: Specular Power (IOR Level), Normal/Specular/Emissive texture paths, Height Offset
+  * .rs.xml LIGHT tags: DIRECTION, RANGE, INNERCONE, OUTERCONE, SHADOWBIAS, SHADOWRES
+  * .rs.xml MATERIAL tags: POWER, SPECULARINTENSITY, EMISSIVEINTENSITY, HEIGHTOFFSET, NORMALMAP, SPECULARMAP, EMISSIVEMAP
+* Armature modifiers no longer enable volume preservation upon import
+* Valid bone and bone root prefixes now include "obj_" variants
+* RobinNorling: Fixed GunZ 2 texture loading
+* Overhauled project folder structure
 * Other minor fixes
 
 
-# Current Import Features
+# Summary
 
-* Fully supported filetypes: .elu, .ani, .col, .cl2, .nav
-* Mostly supported filetypes: .rs, .lm
+1. [Import](#import-features)
+2. [Export](#export-features)
+  * [Maps](#map-export-rs-beta---mapping-guide)
+  * [Models](#model-export-elu)
+  * [Navmeshes](#navmesh-export-nav)
+  * [Lightmaps](#lightmap-export-lm)
+3. [Planned Features](#planned-features-long-term)
+5. [Screenshots](#screenshots)
+5. [Special Thanks](#special-thanks)
+
+
+# Import Features
+
+* Fully supported filetypes: .rs, .elu, .ani, .col, .cl2, .nav, .lm
 * Partially supported filetypes: .scene.xml, .prop.xml
 
 <!-- -->
@@ -44,8 +59,20 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 * Reinterprets light data to be useful in Blender
 * Displays lightmaps using a linked node group for quick toggling
 
+### Known Issues
 
-# Current Export Features
+* GunZ 1: handful of .elus with improper bone weights (woman-parts_eola)
+* GunZ 1: some elus with reversed winding-order/flipped normals (woman-parts27, woman-parts_sum08, woman-parts_santa, etc.)
+* GunZ 1: some maps with a ton of skipped dummies (Halloween Town)
+
+<!-- -->
+
+* GunZ 2: some objects are not oriented correctly (spotlights)
+* GunZ 2: embedded scene hierarchies are not parsed yet (lighting_candlestick_y02, lighting_chandelier_g01, etc.)
+* GunZ 2: materials do not support composition layers yet (weird colored terrain)
+
+
+# Export Features
 
 ## Map Export (.rs) (Beta!) - [Mapping Guide](https://github.com/Krunklehorn/io-scene-gzrs2/wiki)
 
@@ -69,15 +96,8 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 ### Known Issues
 
-* FALLING THROUGH FLOOR: You must ensure collision meshes are completely sealed!
-  * Collision geometry should form a closed surface with no overlaps, holes or concave polygons.
-  * Collision geometry should should appear red when viewed from out of bounds through the 'Face Orientation' overlay.
-  * Future updates *may* address this with leak detection, orientation checks and/or CSG union pre-processing.
-* PROPS WON'T SHOW UP: Props (.elu) have a "Filename" property which the exporter writes to .rs.xml under 'OBJECTLIST'.
-  * The props themselves must be exported through the .elu exporter by setting the filter mode to "Selected".
-  * Flag props have a strict naming convention, refer to the guide for details.
-* RE-EXPORT IS UNTESTED: Don't expect it to work without some effort, most vanilla maps require touch ups.
-* CRITICAL ERROR: You probably have a concave polygon somewhere. Try running Cleanup->Split Concave Faces or turn on the Mesh Analyzer and set it to "Degenerate".
+Moved: [Mapping Guide](https://github.com/Krunklehorn/io-scene-gzrs2/wiki)
+
 
 ## Model Export (.elu)
 
@@ -122,6 +142,7 @@ Some parameters can be configured for special behavior:
 | Is Animated | File name of the connected texture ||
 | Frame Count / Frame Speed / Frame Gap | File name of the connected texture ||
 
+
 ## Navmesh Export (.nav)
 
 * Automatically triangulates quads and ngons
@@ -141,7 +162,7 @@ Some parameters can be configured for special behavior:
   * contact Krunk#6051 for information on how to implement this
 
 
-# Planned Features
+# Planned Features (Long Term)
 
 * GunZ 1: alpha .elu versions: 0x11, 0x5001, 0x5002 and 0x5003
 * GunZ 1: lightmap export UV generation
@@ -151,19 +172,6 @@ Some parameters can be configured for special behavior:
 * GunZ 2: .env.xml support
 * GunZ 2: embedded scene hierarchies (ex: props with attached lights)
 * GunZ 2: texture composition layers (terrain)
-
-
-# Known Issues
-
-* GunZ 1: handful of .elus with improper bone weights (woman-parts_eola)
-* GunZ 1: some elus with reversed winding-order/flipped normals (woman-parts27, woman-parts_sum08, woman-parts_santa, etc.)
-* GunZ 1: some maps with a ton of skipped dummies (Halloween Town)
-
-<!-- -->
-
-* GunZ 2: some objects are not oriented correctly (spotlights)
-* GunZ 2: embedded scene hierarchies are not parsed yet (lighting_candlestick_y02, lighting_chandelier_g01, etc.)
-* GunZ 2: materials do not support composition layers yet (weird colored terrain)
 
 
 # Screenshots
