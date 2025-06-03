@@ -2056,7 +2056,7 @@ class ExportGZRS2(Operator, ExportHelper):
 
     mod4Fix: BoolProperty(
         name = 'MOD4',
-        description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag.",
+        description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag",
         default = True
     )
 
@@ -2304,7 +2304,7 @@ class ExportRSLM(Operator, ExportHelper):
 
     mod4Fix: BoolProperty(
         name = 'MOD4',
-        description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag.",
+        description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag",
         default = True
     )
 
