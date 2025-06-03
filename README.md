@@ -18,14 +18,14 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 [***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.7***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.7)
 
 * NEW: "Pre-process Geometry" operator!
-  * Available on World, Navigation and Collision meshes
-  * Dissolves degenerate and co-linear vertices, deletes loose pieces then splits non-planar and concave faces
-  * Useful for overcoming geometry errors during map export
+    * Available on World, Navigation and Collision meshes
+    * Dissolves degenerate and co-linear vertices, deletes loose pieces then splits non-planar and concave faces
+    * Useful for overcoming geometry errors during map export
 * NEW: Server profile for Duelists!
-  * Light properties: Range, Shadow Bias, Shadow Resolution
-  * Material properties: Specular Power (IOR Level), Normal/Specular/Emissive texture paths, Height Offset
-  * .rs.xml LIGHT tags: DIRECTION, RANGE, INNERCONE, OUTERCONE, SHADOWBIAS, SHADOWRES
-  * .rs.xml MATERIAL tags: POWER, SPECULARINTENSITY, EMISSIVEINTENSITY, HEIGHTOFFSET, NORMALMAP, SPECULARMAP, EMISSIVEMAP
+    * Light properties: Range, Shadow Bias, Shadow Resolution
+    * Material properties: Specular Power (IOR Level), Normal/Specular/Emissive texture paths, Height Offset
+    * .rs.xml LIGHT tags: DIRECTION, RANGE, INNERCONE, OUTERCONE, SHADOWBIAS, SHADOWRES
+    * .rs.xml MATERIAL tags: POWER, SPECULARINTENSITY, EMISSIVEINTENSITY, HEIGHTOFFSET, NORMALMAP, SPECULARMAP, EMISSIVEMAP
 * Armature modifiers no longer enable volume preservation upon import
 * Valid bone and bone root prefixes now include "obj_" variants
 * RobinNorling: Fixed GunZ 2 texture loading
@@ -37,10 +37,10 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 1. [Import](#import-features)
 2. [Export](#export-features)
-  * [Maps](#map-export-rs-beta---mapping-guide)
-  * [Models](#model-export-elu)
-  * [Navmeshes](#navmesh-export-nav)
-  * [Lightmaps](#lightmap-export-lm)
+    * [Maps](#map-export-rs-beta---mapping-guide)
+    * [Models](#model-export-elu)
+    * [Navmeshes](#navmesh-export-nav)
+    * [Lightmaps](#lightmap-export-lm)
 3. [Planned Features](#planned-features-long-term)
 5. [Screenshots](#screenshots)
 5. [Special Thanks](#special-thanks)
@@ -80,13 +80,13 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 * Exports empties, meshes, lights and cameras
 * Requires at least one world mesh
 * Requires at least one collision mesh or a world mesh with the 'Collision' switch enabled
-  * Collision geometry should form a closed surface with no overlaps, holes or concave polygons
-  * Collision geometry should should appear red when viewed from out of bounds through the 'Face Orientation' overlay
+    * Collision geometry should form a closed surface with no overlaps, holes or concave polygons
+    * Collision geometry should should appear red when viewed from out of bounds through the 'Face Orientation' overlay
 * Ignores anything not marked by the type system...
-  * Empty: Spawn, Flare, Sound, Smoke, Item, Occlusion
-  * Mesh: World, Collision, Navigation
-  * Light: Static, Dynamic
-  * Camera: Wait, Track
+    * Empty: Spawn, Flare, Sound, Smoke, Item, Occlusion
+    * Mesh: World, Collision, Navigation
+    * Light: Static, Dynamic
+    * Camera: Wait, Track
 
 ### Untested Features
 
@@ -146,7 +146,7 @@ Some parameters can be configured for special behavior:
 ## Navmesh Export (.nav)
 
 * Automatically triangulates quads and ngons
-  * For best results, user should do so manually
+    * For best results, user should do so manually
 * Selected mesh must be manifold
 
 
@@ -154,12 +154,12 @@ Some parameters can be configured for special behavior:
 
 * overwrite only
 * supports image data as well as UVs
-  * requires a GunZ 1 .rs file for the same map in the same directory
-  * UV export requires an active mesh object with valid UVs in channel 2
+    * requires a GunZ 1 .rs file for the same map in the same directory
+    * UV export requires an active mesh object with valid UVs in channel 2
 * includes experimental "version 4" for bugfixes and DXT1 support (thanks to DeffJay)
-  * version 4 lightmaps take less space and load faster, resolutions up to 8k are now viable
-  * for private servers only, v4 lightmaps do not work with vanilla GunZ
-  * contact Krunk#6051 for information on how to implement this
+    * version 4 lightmaps take less space and load faster, resolutions up to 8k are now viable
+    * for private servers only, v4 lightmaps do not work with vanilla GunZ
+    * contact Krunk#6051 for information on how to implement this
 
 
 # Planned Features (Long Term)
