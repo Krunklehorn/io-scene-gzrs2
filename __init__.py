@@ -2,11 +2,11 @@ import os, math, bmesh
 
 from mathutils import Vector, Matrix
 
-from . import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rsnav, import_rslm, import_rsani
-from . import export_gzrs2, export_rselu, export_rsnav, export_rslm
+from .importing import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rsnav, import_rslm, import_rsani
+from .exporting import export_gzrs2, export_rselu, export_rsnav, export_rslm
 
 from .constants_gzrs2 import *
-from .lib_gzrs2 import *
+from .lib.lib_gzrs2 import *
 
 bl_info = {
     'name': 'GZRS2/3 Format',
@@ -28,6 +28,7 @@ if 'bpy' in locals():
     if 'import_rsnav'   in locals(): importlib.reload(import_rsnav)
     if 'import_rslm'    in locals(): importlib.reload(import_rslm)
     if 'import_rsani'   in locals(): importlib.reload(import_rsani)
+    if 'export_gzrs2'   in locals(): importlib.reload(export_gzrs2)
     if 'export_rselu'   in locals(): importlib.reload(export_rselu)
     if 'export_rsnav'   in locals(): importlib.reload(export_rsnav)
     if 'export_rslm'    in locals(): importlib.reload(export_rslm)

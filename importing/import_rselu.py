@@ -39,16 +39,16 @@ import re as regex
 from contextlib import redirect_stdout
 from mathutils import Vector, Matrix
 
-from .constants_gzrs2 import *
-from .classes_gzrs2 import *
-from .parse_gzrs2 import *
-from .readelu_gzrs2 import *
-from .lib_gzrs2 import *
+from ..constants_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..parse_gzrs2 import *
+from ..reading.readelu_gzrs2 import *
+from ..lib.lib_gzrs2 import *
 
 def importElu(self, context):
     state = GZRS2State()
 
-    rs2DataDir = os.path.dirname(context.preferences.addons[__package__].preferences.rs2DataDir)
+    rs2DataDir = os.path.dirname(context.preferences.addons['io_scene_gzrs2'].preferences.rs2DataDir)
 
     if self.texSearchMode == 'PATH':
         if not rs2DataDir:

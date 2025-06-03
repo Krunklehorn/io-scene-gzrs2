@@ -10,9 +10,9 @@
 
 import bpy, os, io, math
 
-from .classes_gzrs2 import *
-from .io_gzrs2 import *
-from .lib_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..io_gzrs2 import *
+from ..lib.lib_gzrs2 import *
 
 def exportLm(self, context):
     state = RSLMExportState()

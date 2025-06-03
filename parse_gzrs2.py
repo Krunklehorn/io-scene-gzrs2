@@ -6,7 +6,7 @@ from mathutils import Vector
 
 from .constants_gzrs2 import *
 from .classes_gzrs2 import *
-from .lib_gzrs2 import *
+from .lib.lib_gzrs2 import *
 
 def filterNodes(childNodes):
     for child in filter(lambda x: x.nodeType == x.ELEMENT_NODE, childNodes):

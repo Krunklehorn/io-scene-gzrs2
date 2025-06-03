@@ -20,10 +20,10 @@ from contextlib import redirect_stdout
 from mathutils import Vector, Matrix
 from mathutils.kdtree import KDTree
 
-from .constants_gzrs2 import *
-from .classes_gzrs2 import *
-from .readani_gzrs2 import *
-from .lib_gzrs2 import *
+from ..constants_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..reading.readani_gzrs2 import *
+from ..lib.lib_gzrs2 import *
 
 def importAni(self, context):
     state = GZRS2State()

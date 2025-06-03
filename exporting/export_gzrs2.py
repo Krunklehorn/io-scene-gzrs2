@@ -15,16 +15,16 @@ import xml.dom.minidom as minidom
 from contextlib import redirect_stdout
 from mathutils import Vector, Matrix, Quaternion
 
-from .constants_gzrs2 import *
-from .classes_gzrs2 import *
-from .parse_gzrs2 import *
-from .io_gzrs2 import *
-from .lib_gzrs2 import *
+from ..constants_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..parse_gzrs2 import *
+from ..io_gzrs2 import *
+from ..lib.lib_gzrs2 import *
 
 def exportRS2(self, context):
     state = GZRS2ExportState()
 
-    serverProfile = context.preferences.addons[__package__].preferences.serverProfile
+    serverProfile = context.preferences.addons['io_scene_gzrs2'].preferences.serverProfile
 
     state.convertUnits      = self.convertUnits
     state.filterMode        = self.filterMode

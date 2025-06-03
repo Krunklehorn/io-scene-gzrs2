@@ -36,10 +36,10 @@ import bpy, os
 
 from contextlib import redirect_stdout
 
-from .constants_gzrs2 import *
-from .classes_gzrs2 import *
-from .readcol_gzrs2 import *
-from .lib_gzrs2 import *
+from ..constants_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..reading.readcol_gzrs2 import *
+from ..lib.lib_gzrs2 import *
 
 def importCol(self, context):
     state = GZRS2State()

@@ -36,10 +36,10 @@ import bpy, os, io
 
 from mathutils import Vector, Matrix
 
-from .constants_gzrs2 import *
-from .classes_gzrs2 import *
-from .io_gzrs2 import *
-from .lib_gzrs2 import *
+from ..constants_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..io_gzrs2 import *
+from ..lib.lib_gzrs2 import *
 
 def exportElu(self, context):
     state = RSELUExportState()

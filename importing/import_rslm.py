@@ -10,10 +10,10 @@
 
 import bpy, os
 
-from .constants_gzrs2 import *
-from .classes_gzrs2 import *
-from .readlm_gzrs2 import *
-from .lib_gzrs2 import *
+from ..constants_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..reading.readlm_gzrs2 import *
+from ..lib.lib_gzrs2 import *
 
 def importLm(self, context):
     state = GZRS2State()

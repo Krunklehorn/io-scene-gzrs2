@@ -9,10 +9,10 @@
 
 import os, io
 
-from .constants_gzrs2 import *
-from .classes_gzrs2 import *
-from .io_gzrs2 import *
-from .lib_gzrs2 import *
+from ..constants_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..io_gzrs2 import *
+from ..lib.lib_gzrs2 import *
 
 def readNav(self, file, path, state):
     file.seek(0, os.SEEK_END)

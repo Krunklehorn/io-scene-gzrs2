@@ -38,21 +38,21 @@ import xml.dom.minidom as minidom
 from contextlib import redirect_stdout
 from mathutils import Vector, Matrix
 
-from .constants_gzrs2 import *
-from .classes_gzrs2 import *
-from .parse_gzrs2 import *
-from .readrs_gzrs2 import *
-from .readbsp_gzrs2 import *
-from .readcol_gzrs2 import *
-from .readnav_gzrs2 import *
-from .readlm_gzrs2 import *
-from .readelu_gzrs2 import *
-from .lib_gzrs2 import *
+from ..constants_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..parse_gzrs2 import *
+from ..reading.readrs_gzrs2 import *
+from ..reading.readbsp_gzrs2 import *
+from ..reading.readcol_gzrs2 import *
+from ..reading.readnav_gzrs2 import *
+from ..reading.readlm_gzrs2 import *
+from ..reading.readelu_gzrs2 import *
+from ..lib.lib_gzrs2 import *
 
 def importRS2(self, context):
     state = GZRS2State()
 
-    packagePrefs = context.preferences.addons[__package__].preferences
+    packagePrefs = context.preferences.addons['io_scene_gzrs2'].preferences
     rs2DataDir = os.path.dirname(packagePrefs.rs2DataDir)
     serverProfile = packagePrefs.serverProfile
 

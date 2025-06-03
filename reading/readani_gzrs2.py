@@ -18,10 +18,10 @@ import math, io
 
 from mathutils import Vector, Matrix, Quaternion
 
-from .constants_gzrs2 import *
-from .classes_gzrs2 import *
-from .io_gzrs2 import *
-from .lib_gzrs2 import *
+from ..constants_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..io_gzrs2 import *
+from ..lib.lib_gzrs2 import *
 
 def readVisData(file, version, state):
     visKeyCount = 0

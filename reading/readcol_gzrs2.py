@@ -34,9 +34,9 @@
 
 import os, io
 
-from .constants_gzrs2 import *
-from .classes_gzrs2 import *
-from .io_gzrs2 import *
+from ..constants_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..io_gzrs2 import *
 
 def readCol(self, file, path, state):
     file.seek(0, os.SEEK_END)

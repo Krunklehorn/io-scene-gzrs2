@@ -9,10 +9,10 @@
 
 import bpy, os
 
-from .constants_gzrs2 import *
-from .classes_gzrs2 import *
-from .readnav_gzrs2 import *
-from .lib_gzrs2 import *
+from ..constants_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..reading.readnav_gzrs2 import *
+from ..lib.lib_gzrs2 import *
 
 def importNav(self, context):
     state = GZRS2State()

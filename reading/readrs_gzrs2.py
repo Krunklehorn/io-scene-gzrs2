@@ -27,12 +27,9 @@
 
 import os, io, math
 
-# import struct
-# from struct import unpack
-
-from .constants_gzrs2 import *
-from .classes_gzrs2 import *
-from .io_gzrs2 import *
+from ..constants_gzrs2 import *
+from ..classes_gzrs2 import *
+from ..io_gzrs2 import *
 
 def readRs(self, file, path, state):
     file.seek(0, os.SEEK_END)
