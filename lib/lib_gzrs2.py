@@ -2271,7 +2271,7 @@ def createColTriangles(polygons):
 
         for _, _, vertex1, vertex2 in vertexPairs:
             if vec3IsClose(vertex1, vertex2, RS_COORD_THRESHOLD):
-                raise GZRS2DegeneratePolygonError("GZRS2: createColTriangles() found a degenerate polygon! Try running Cleanup->Split Concave Faces or turn on the Mesh Analyzer and set it to \"Intersect\"!")
+                raise GZRS2DegeneratePolygonError("GZRS2: createColTriangles() found a degenerate polygon! Try using the \"Pre-process Geometry\" operation or turn on the Mesh Analyzer and set it to \"Intersect\" to search for issues!")
 
     for polygon in polygons:
         for v in range(polygon.vertexCount - 2):
