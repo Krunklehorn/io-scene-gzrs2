@@ -2176,6 +2176,8 @@ def createOctreeNode(octPolygons, octPlanes, bbmin, bbmax, depthLimit, windowMan
 
     if depth < depthLimit and len(octPolygons) > TREE_MAX_NODE_POLYGON_COUNT:
         plane = None
+        positive = None
+        negative = None
 
         if depth < len(octPlanes):
             plane = octPlanes[depth]
@@ -2207,6 +2209,8 @@ def createOctreeNode(octPolygons, octPlanes, bbmin, bbmax, depthLimit, windowMan
 def createBsptreeNode(bspPolygons, bspPlanes, bbmin, bbmax, windowManager, *, depth = 0):
     windowManager.progress_update(random.randint(0, 1))
     plane = None
+    positive = None
+    negative = None
 
     if depth < len(bspPlanes):
         plane = bspPlanes[depth]
