@@ -885,7 +885,7 @@ def importRS2(self, context):
     if doExtras:
         if state.doCollision:
             colName = f"{ state.filename }_Collision"
-            colExt = os.path.splitext(bpy.path.basename(colpath))[-1].lower()
+            colExt = bpy.path.basename(colpath).split(os.extsep)[-1].lower()
             blColObjHull, blColObjSolid = setupColMesh(colName, rootExtras, context, colExt, state)
 
             blColObjHull.hide_render = True
