@@ -66,6 +66,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 * GunZ 1: some maps with a ton of skipped dummies (Halloween Town)
 * GunZ 1: some collision meshes with minor shape errors due to hole filling during cleanup (Town)
 * GunZ 1: some animations rotate 90 degrees to the left when played, must be fixed manually
+* GunZ 1: cleanup routines don't respect unit conversion
 
 <!-- -->
 
@@ -167,7 +168,6 @@ Some parameters can be configured for special behavior:
 # Planned Features (Long Term)
 
 * GunZ 1: alpha .elu versions: 0x11, 0x5001, 0x5002 and 0x5003
-* GunZ 1: lightmap export UV generation
 
 <!-- -->
 
