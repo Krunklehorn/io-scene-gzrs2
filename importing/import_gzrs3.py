@@ -66,7 +66,7 @@ def importRS3(self, context):
 
     state.convertUnits      = self.convertUnits
     state.texSearchMode     = self.texSearchMode
-    state.doCleanup         = self.doCleanup
+    state.doEluCleanup      = self.doEluCleanup
 
     if self.panelLogging:
         print()
@@ -196,7 +196,7 @@ def importRS3(self, context):
             for xmlEluMat in materials:
                 setupXmlEluMat(self, elupath, xmlEluMat, state)
 
-    if state.doCleanup and state.logCleanup:
+    if state.doEluCleanup and state.logCleanup:
         print()
         print("=== Actor Cleanup ===")
         print()

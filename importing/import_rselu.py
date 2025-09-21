@@ -64,7 +64,7 @@ def importElu(self, context):
     state.isMapProp             = self.isMapProp
     state.doBoneRolls           = self.doBoneRolls
     state.doTwistConstraints    = self.doTwistConstraints
-    state.doCleanup             = self.doCleanup
+    state.doEluCleanup          = self.doEluCleanup
 
     if self.panelLogging:
         print()
@@ -116,7 +116,7 @@ def importElu(self, context):
         for xmlEluMat in state.xmlEluMats[elupath]:
             setupXmlEluMat(self, elupath, xmlEluMat, state)
 
-    if state.doCleanup and state.logCleanup:
+    if state.doEluCleanup and state.logCleanup:
         print()
         print("=== Elu Mesh Cleanup ===")
         print()

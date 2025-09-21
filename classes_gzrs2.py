@@ -30,7 +30,9 @@ class GZRS2State:
     doFogDriver:        bool = False
     doBoneRolls:        bool = False
     doTwistConstraints: bool = False
-    doCleanup:          bool = False
+    doRsCleanup:        bool = False
+    doEluCleanup:       bool = False
+    doColCleanup:       bool = False
 
     logRsHeaders:       bool = False
     logRsPortals:       bool = False

@@ -744,6 +744,12 @@ class ImportGZRS2(Operator, ImportHelper):
         default = False
     )
 
+    panelCleanup: BoolProperty(
+        name = 'Cleanup',
+        description = "Process meshes after import",
+        default = True
+    )
+
     panelLogging: BoolProperty(
         name = 'Logging',
         description = "Log details to the console",
@@ -853,9 +859,21 @@ class ImportGZRS2(Operator, ImportHelper):
         default = True
     )
 
-    doCleanup: BoolProperty(
-        name = 'Cleanup',
+    doRsCleanup: BoolProperty(
+        name = 'RS',
         description = "Deletes loose geometry, removes doubles and sets each mesh to render smooth",
+        default = True
+    )
+
+    doEluCleanup: BoolProperty(
+        name = 'Elu',
+        description = "Deletes loose geometry, removes doubles and sets each mesh to render smooth",
+        default = True
+    )
+
+    doColCleanup: BoolProperty(
+        name = 'Col',
+        description = "A combination of knife intersection, three types of dissolve, merge by distance, tris-to-quads, and hole filling",
         default = True
     )
 
@@ -1052,8 +1070,6 @@ class GZRS2_PT_Import_Main(Panel):
         column.prop(operator, 'doBounds')
         column.enabled = operator.meshMode != 'BAKE'
 
-        layout.prop(operator, 'doCleanup')
-
 class GZRS2_PT_Import_Drivers(Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
@@ -1077,6 +1093,31 @@ class GZRS2_PT_Import_Drivers(Panel):
 
         layout.prop(operator, 'doLightDrivers')
         layout.prop(operator, 'doFogDriver')
+
+class GZRS2_PT_Import_Cleanup(Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Cleanup'
+    bl_parent_id = 'FILE_PT_operator'
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == 'IMPORT_SCENE_OT_gzrs2'
+
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, 'panelCleanup', text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelCleanup
+
+        layout.prop(operator, 'doRsCleanup')
+        layout.prop(operator, 'doEluCleanup')
+        layout.prop(operator, 'doColCleanup')
 
 class GZRS2_PT_Import_Logging(Panel):
     bl_space_type = 'FILE_BROWSER'
@@ -1163,7 +1204,7 @@ class ImportGZRS3(Operator, ImportHelper):
                  ('SKIP',       'Skip',         "Don't search for or load any textures (fastest)"))
     )
 
-    doCleanup: BoolProperty(
+    doEluCleanup: BoolProperty(
         name = 'Cleanup',
         description = "Deletes loose geometry, removes doubles and sets each mesh to render smooth",
         default = True
@@ -1242,7 +1283,7 @@ class GZRS3_PT_Import_Main(Panel):
         layout.prop(operator, 'convertUnits')
         layout.prop(operator, 'texSearchMode')
 
-        layout.prop(operator, 'doCleanup')
+        layout.prop(operator, 'doEluCleanup')
 
 class GZRS3_PT_Import_Logging(Panel):
     bl_space_type = 'FILE_BROWSER'
@@ -1331,7 +1372,7 @@ class ImportRSELU(Operator, ImportHelper):
         default = True
     )
 
-    doCleanup: BoolProperty(
+    doEluCleanup: BoolProperty(
         name = 'Cleanup',
         description = "Deletes loose geometry, removes doubles and sets each mesh to render smooth",
         default = True
@@ -1411,7 +1452,7 @@ class RSELU_PT_Import_Main(Panel):
         column.prop(operator, 'doTwistConstraints')
         column.enabled = operator.doBoneRolls
 
-        layout.prop(operator, 'doCleanup')
+        layout.prop(operator, 'doEluCleanup')
 
 class RSELU_PT_Import_Logging(Panel):
     bl_space_type = 'FILE_BROWSER'
@@ -1600,7 +1641,7 @@ class ImportRSCOL(Operator, ImportHelper):
         default = False
     )
 
-    doCleanup: BoolProperty(
+    doColCleanup: BoolProperty(
         name = 'Cleanup',
         description = "A combination of knife intersection, three types of dissolve, merge by distance, tris-to-quads, and hole filling",
         default = True
@@ -1661,7 +1702,7 @@ class RSCOL_PT_Import_Main(Panel):
         layout.prop(operator, 'convertUnits')
         layout.prop(operator, 'doPlanes')
 
-        layout.prop(operator, 'doCleanup')
+        layout.prop(operator, 'doColCleanup')
 
 class RSCOL_PT_Import_Logging(Panel):
     bl_space_type = 'FILE_BROWSER'
@@ -4023,6 +4064,7 @@ classes = (
     ImportGZRS2,
     GZRS2_PT_Import_Main,
     GZRS2_PT_Import_Drivers,
+    GZRS2_PT_Import_Cleanup,
     GZRS2_PT_Import_Logging,
     ImportGZRS3,
     GZRS3_PT_Import_Main,

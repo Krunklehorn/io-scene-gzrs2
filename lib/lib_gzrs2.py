@@ -998,12 +998,12 @@ def setupColMesh(name, collection, context, extension, state):
 
     counts = countInfoReports(context)
 
-    if state.doCleanup and state.logCleanup:
+    if state.doColCleanup and state.logCleanup:
         print()
         print("=== Col Mesh Cleanup ===")
         print()
 
-    if state.doCleanup:
+    if state.doColCleanup:
         # TODO: convertUnits should affect thresholds
         def subCleanup():
             for _ in range(10):
@@ -1614,7 +1614,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
     for viewLayer in context.scene.view_layers:
         viewLayer.objects.active = blMeshObj
 
-    if state.doCleanup:
+    if state.doEluCleanup:
         # TODO: convertUnits should affect thresholds
         def cleanupFunc(blObj):
             counts = countInfoReports(context)

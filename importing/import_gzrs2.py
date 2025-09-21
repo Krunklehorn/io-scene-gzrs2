@@ -82,7 +82,9 @@ def importRS2(self, context):
     state.doBounds          = self.doBounds         and self.meshMode != 'BAKE'
     state.doLightDrivers    = self.doLightDrivers
     state.doFogDriver       = self.doFogDriver
-    state.doCleanup         = self.doCleanup
+    state.doRsCleanup       = self.doRsCleanup      and self.panelCleanup
+    state.doEluCleanup      = self.doEluCleanup     and self.panelCleanup
+    state.doColCleanup      = self.doColCleanup     and self.panelCleanup
 
     if self.panelLogging:
         print()
@@ -404,7 +406,7 @@ def importRS2(self, context):
             b += 1
             o += 1
 
-    if state.doCleanup and state.logCleanup:
+    if state.doRsCleanup and state.logCleanup:
         print()
         print("=== RS Mesh Cleanup ===")
         print()
@@ -450,7 +452,7 @@ def importRS2(self, context):
         for viewLayer in context.scene.view_layers:
             viewLayer.objects.active = blObj
 
-        if state.doCleanup and not isBakeMesh:
+        if state.doRsCleanup and not isBakeMesh:
             if state.logCleanup:
                 print(blMesh.name)
                 cleanupFunc(blObj)
@@ -479,7 +481,7 @@ def importRS2(self, context):
                 for viewLayer in context.scene.view_layers:
                     viewLayer.objects.active = blMeshObj
 
-                if state.doCleanup:
+                if state.doRsCleanup:
                     if state.logCleanup:
                         print(blMesh.name)
                         cleanupFunc(blMeshObj)
@@ -582,7 +584,7 @@ def importRS2(self, context):
                 for xmlEluMat in materials:
                     setupXmlEluMat(self, elupath, xmlEluMat, state)
 
-        if state.doCleanup and state.logCleanup:
+        if state.doEluCleanup and state.logCleanup:
             print()
             print("=== Elu Mesh Cleanup ===")
             print()

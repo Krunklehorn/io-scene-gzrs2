@@ -45,7 +45,7 @@ def importCol(self, context):
     state = GZRS2State()
 
     state.convertUnits      = self.convertUnits
-    state.doCleanup         = self.doCleanup
+    state.doColCleanup      = self.doColCleanup
     state.doPlanes          = self.doPlanes
 
     if self.panelLogging:
