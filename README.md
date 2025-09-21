@@ -59,12 +59,13 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 * Reinterprets light data to be useful in Blender
 * Displays lightmaps using a linked node group for quick toggling
 
-### Known Issues
+### Known Import Issues
 
 * GunZ 1: handful of .elus with improper bone weights (woman-parts_eola)
 * GunZ 1: some elus with reversed winding-order/flipped normals (woman-parts27, woman-parts_sum08, woman-parts_santa, etc.)
 * GunZ 1: some maps with a ton of skipped dummies (Halloween Town)
-* GunZ 1: some .anis rotate 90 degrees to the left when played (user can fix by manually rotating after import)
+* GunZ 1: some collision meshes with minor shape errors due to hole filling during cleanup (Town)
+* GunZ 1: some animations rotate 90 degrees to the left when played, must be fixed manually
 
 <!-- -->
 
@@ -95,7 +96,7 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 * Occlusion planes for props
 * Camera empties
 
-### Known Issues
+### Known Export Issues
 
 Moved: [Mapping Guide](https://github.com/Krunklehorn/io-scene-gzrs2/wiki)
 
