@@ -507,8 +507,13 @@ def exportRS2(self, context):
             file.write("\t\t\t<ATTENUATIONEND>{:f}</ATTENUATIONEND>\n".format(tokenizeDistance(props.attEnd, state.convertUnits)))
 
             if serverProfile == 'DUELISTS':
-                outercone = blLight.spot_size
-                innercone = outercone * (1.0 - blLight.spot_blend)
+                if blLight.type == 'POINT':
+                    innercone = 0.0
+                    outercone = 0.0
+                elif blLight.type == 'SPOT':
+                    outercone = blLight.spot_size
+                    innercone = outercone * (1.0 - blLight.spot_blend)
+                
                 shadowResolution = 2 ** props.duelistsShadowResolution
 
                 file.write("\t\t\t<RANGE>{:f}</RANGE>\n".format(tokenizeDistance(props.duelistsRange, state.convertUnits)))
