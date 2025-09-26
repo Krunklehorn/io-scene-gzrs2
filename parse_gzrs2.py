@@ -12,8 +12,17 @@ def filterNodes(childNodes):
     for child in filter(lambda x: x.nodeType == x.ELEMENT_NODE, childNodes):
         yield (child, child.nodeName.strip(), child.firstChild and child.firstChild.nodeValue)
 
+def floatNaN(data):
+    if 'nan' in data.lower():
+        if not data[0].startswith('-'):
+            return 1.0
+        else:
+            return -1.0
+    else:
+        return float(data)
+
 def parseDistance(data, convertUnits):
-    value = float(data)
+    value = floatNaN(data)
     if convertUnits: value *= 0.01
 
     return value
@@ -22,7 +31,7 @@ def parseDegrees(data):
     return -(data + 180) % 360
 
 def parseVec3(data, nodeName, convertUnits, flipY):
-    vec = Vector((float(s) for s in data.split(' ')))
+    vec = Vector((floatNaN(s) for s in data.split(' ')))
     if nodeName in ('POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT') and convertUnits: vec *= 0.01
     if flipY and nodeName in ('POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT'): vec.y = -vec.y
     if nodeName in ('DIRECTION', 'UP'): vec.normalize()
@@ -45,7 +54,7 @@ def tokenizeVec3(data, nodeName, convertUnits, flipY):
     return data[:3]
 
 def parseXYZ(node, nodeName, convertUnits, flipY):
-    vec = Vector((float(node.getAttribute('x')), float(node.getAttribute('y')), float(node.getAttribute('z'))))
+    vec = Vector((floatNaN(node.getAttribute('x')), floatNaN(node.getAttribute('y')), floatNaN(node.getAttribute('z'))))
     if nodeName in ('POSITION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION', 'OCCLUDERPOINT') and convertUnits: vec *= 0.01
     if flipY and nodeName in ('POSITION', 'DIRECTION', 'UP', 'OCCLUDERPOINT'): vec.y = -vec.y
     if nodeName in ('DIRECTION', 'UP'): vec.normalize()
@@ -105,19 +114,17 @@ def parseRsXML(self, xmlRs, tagName, serverProfile, state):
             elif serverProfile == 'DUELISTS' and nodeName in 'SHADOWRES':
                 nodeEntry[nodeName] = int(data)
             elif nodeName == 'INTENSITY':
-                nodeEntry[nodeName] = float(data)
+                nodeEntry[nodeName] = floatNaN(data)
             elif serverProfile == 'DUELISTS' and nodeName in ('POWER', 'SPECULARINTENSITY', 'HEIGHTOFFSET', 'EMISSIVEINTENSITY', 'INNERCONE', 'OUTERCONE', 'SHADOWBIAS'):
-                nodeEntry[nodeName] = float(data)
+                nodeEntry[nodeName] = floatNaN(data)
             elif nodeName in ('ATTENUATIONSTART', 'ATTENUATIONEND', 'RADIUS', 'fog_min', 'fog_max', 'far_z'):
                 nodeEntry[nodeName] = parseDistance(data, state.convertUnits)
             elif serverProfile == 'DUELISTS' and nodeName == 'RANGE':
                 nodeEntry[nodeName] = parseDistance(data, state.convertUnits)
             elif nodeName in ('DIFFUSE', 'AMBIENT', 'SPECULAR', 'COLOR'):
-                try:                nodeEntry[nodeName] = tuple(float(s) for s in data.split(' '))
-                except ValueError:  nodeEntry[nodeName] = bool(data)
+                nodeEntry[nodeName] = tuple(floatNaN(s) for s in data.split(' '))
             elif nodeName == 'fog_color':
-                try:                nodeEntry[nodeName] = tuple(float(s) for s in data.split(','))
-                except ValueError:  nodeEntry[nodeName] = bool(data)
+                nodeEntry[nodeName] = tuple(floatNaN(s) for s in data.split(','))
             elif nodeName in ('POSITION', 'DIRECTION', 'CENTER', 'MIN_POSITION', 'MAX_POSITION'):
                 vec = parseVec3(data, nodeName, state.convertUnits, True)
 
@@ -169,7 +176,7 @@ def parseFlagXML(self, xmlFlag, state):
         flagEntry = {
             'NAME': flag.getAttribute('NAME'),
             'DIRECTION': parseDegrees(int(flag.getAttribute('DIRECTION'))),
-            'POWER': float(flag.getAttribute('POWER')),
+            'POWER': floatNaN(flag.getAttribute('POWER')),
             'windtypes': [],
             'limits': []
         }
@@ -188,7 +195,7 @@ def parseFlagXML(self, xmlFlag, state):
             limitEntry = {}
 
             if limit.hasAttribute('AXIS'):      limitEntry['AXIS']      = int(limit.getAttribute('AXIS'))
-            if limit.hasAttribute('POSITION'):  limitEntry['POSITION']  = parseDistance(float(limit.getAttribute('POSITION')), state.convertUnits)
+            if limit.hasAttribute('POSITION'):  limitEntry['POSITION']  = parseDistance(floatNaN(limit.getAttribute('POSITION')), state.convertUnits)
             if limit.hasAttribute('COMPARE'):   limitEntry['COMPARE']   = limit.getAttribute('COMPARE')
 
             # Flip y-axis
@@ -210,13 +217,13 @@ def parseSmokeXML(xmlSmoke):
         smokeEntry = {
             'NAME': smoke.getAttribute('NAME'),
             'DIRECTION': parseDegrees(int(smoke.getAttribute('DIRECTION'))),
-            'POWER': float(smoke.getAttribute('POWER')),
+            'POWER': floatNaN(smoke.getAttribute('POWER')),
             'DELAY': int(smoke.getAttribute('DELAY')),
-            'SIZE': float(smoke.getAttribute('SIZE'))
+            'SIZE': floatNaN(smoke.getAttribute('SIZE'))
         }
 
-        if smoke.hasAttribute('LIFE'):              smokeEntry['LIFE']              = float(smoke.getAttribute('LIFE'))
-        if smoke.hasAttribute('TOGGLEMINTIME'):     smokeEntry['TOGGLEMINTIME']     = float(smoke.getAttribute('TOGGLEMINTIME'))
+        if smoke.hasAttribute('LIFE'):              smokeEntry['LIFE']              = floatNaN(smoke.getAttribute('LIFE'))
+        if smoke.hasAttribute('TOGGLEMINTIME'):     smokeEntry['TOGGLEMINTIME']     = floatNaN(smoke.getAttribute('TOGGLEMINTIME'))
 
         smokeEntries.append(smokeEntry)
 
@@ -309,9 +316,9 @@ def parseSceneXML(self, xmlScene, xmlName, state):
             elif nodeName == 'PROPERTY':
                 for child, childName, data in filterNodes(node.childNodes):
                     if childName in ('SHADOWLUMINOSITY', 'POWER', 'SKYSPECULAR'):
-                        dirlightEntry[childName] = float(data)
+                        dirlightEntry[childName] = floatNaN(data)
                     elif childName in ('AMBIENT', 'DIFFUSE', 'SPECULAR'):
-                        dirlightEntry[childName] = tuple(float(s) for s in data.split(' '))
+                        dirlightEntry[childName] = tuple(floatNaN(s) for s in data.split(' '))
                     else:
                         dirlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'DIRLIGHT')
             else:
@@ -335,11 +342,11 @@ def parseSceneXML(self, xmlScene, xmlName, state):
                     if childName == 'USERENDERMINAREA':
                         spotlightEntry[childName] = data.strip().lower() == 'true'
                     elif childName == 'FOV':
-                        spotlightEntry[childName] = float(data)
+                        spotlightEntry[childName] = floatNaN(data)
                     elif childName in ('ATTENUATIONEND', 'ATTENUATIONSTART', 'INTENSITY', 'RENDERMINAREA'):
                         spotlightEntry[childName] = parseDistance(data, state.convertUnits)
                     elif childName == 'COLOR':
-                        spotlightEntry[childName] = tuple(float(s) for s in data.split(' '))
+                        spotlightEntry[childName] = tuple(floatNaN(s) for s in data.split(' '))
                     else:
                         spotlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'SPOTLIGHT')
             else:
@@ -361,11 +368,11 @@ def parseSceneXML(self, xmlScene, xmlName, state):
             elif nodeName == 'PROPERTY':
                 for child, childName, data in filterNodes(node.childNodes):
                     if childName == 'INTENSITY':
-                        pointlightEntry[childName] = float(data)
+                        pointlightEntry[childName] = floatNaN(data)
                     elif childName in ('ATTENUATIONEND', 'ATTENUATIONSTART'):
                         pointlightEntry[childName] = parseDistance(data, state.convertUnits)
                     elif childName in ('COLOR', 'AREARANGE'):
-                        pointlightEntry[childName] = tuple(float(s) for s in data.split(' '))
+                        pointlightEntry[childName] = tuple(floatNaN(s) for s in data.split(' '))
                     elif childName != 'FOV':
                         pointlightEntry[childName] = parseUnknown(self, data, childName, xmlName, 'POINTLIGHT')
             else:
@@ -505,9 +512,9 @@ def parseEluXML(self, xmlElu, state):
 
         for node, nodeName, data in filterNodes(material.childNodes):
             if nodeName in ('SPECULAR_LEVEL', 'GLOSSINESS', 'SELFILLUSIONSCALE'):
-                materialEntry[nodeName] = float(data)
+                materialEntry[nodeName] = floatNaN(data)
             elif nodeName in ('DIFFUSE', 'AMBIENT', 'SPECULAR'):
-                materialEntry[nodeName] = tuple(float(s) for s in data.split(' '))
+                materialEntry[nodeName] = tuple(floatNaN(s) for s in data.split(' '))
             elif nodeName == 'TEXTURELIST':
                 for layer, _, __ in filterNodes(node.childNodes):
                     for _, dataType, data in filterNodes(layer.childNodes):
@@ -526,7 +533,7 @@ def parseEluXML(self, xmlElu, state):
 
                 for value in node.childNodes:
                     if value.nodeType == value.ELEMENT_NODE and value.nodeName.strip() == 'ALPHATESTVALUE':
-                        materialEntry['ALPHATESTVALUE'] = float(value.firstChild and value.firstChild.nodeValue)
+                        materialEntry['ALPHATESTVALUE'] = floatNaN(value.firstChild and value.firstChild.nodeValue)
             else:
                 materialEntry[nodeName] = parseUnknown(self, data, nodeName, '.elu.xml', 'MATERIAL')
 
