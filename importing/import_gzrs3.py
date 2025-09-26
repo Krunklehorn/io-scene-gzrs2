@@ -178,7 +178,6 @@ def importRS3(self, context):
     for node in state.rs3Graph:
         openRS3Node(node)
 
-    bpy.ops.ed.undo_push()
     collections = bpy.data.collections
 
     rootMap =                   collections.new(state.filename)

@@ -55,8 +55,6 @@ def importAni(self, context):
         if readAni(self, file, anipath, state):
             return { 'CANCELLED' }
 
-    bpy.ops.ed.undo_push()
-
     context.scene.frame_set(0)
 
     aniType = type(state.aniNodes[0]) # We assume the entire list is homogeneous

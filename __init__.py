@@ -155,7 +155,7 @@ class GZRS2_OT_Specify_Path_MRF(Operator):
 class GZRS2_OT_Preprocess_Geometry(Operator):
     bl_idname = 'gzrs2.preprocess_geometry'
     bl_label = "Preprocess Geometry"
-    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_options = { 'REGISTER', 'INTERNAL', 'UNDO' }
     bl_description = "Dissolves degenerate and co-linear vertices, deletes loose pieces then splits non-planar and concave faces"
 
     @classmethod
@@ -236,7 +236,7 @@ class GZRS2_OT_Preprocess_Geometry(Operator):
 class GZRS2_OT_Unfold_Vertex_Data(Operator):
     bl_idname = 'gzrs2.unfold_vertex_data'
     bl_label = "Unfold Vertex Data"
-    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_options = { 'REGISTER', 'INTERNAL', 'UNDO' }
     bl_description = "Copies vertex group data across an object's local x-axis according to Realspace2's bone naming convention. Clears the opposing side while duplicating data along the center"
 
     sourceHand: EnumProperty(
@@ -360,7 +360,7 @@ class GZRS2_OT_Unfold_Vertex_Data(Operator):
 class GZRS2_OT_Apply_Material_Preset(Operator):
     bl_idname = 'gzrs2.apply_material_preset'
     bl_label = "Please select a GunZ 1 material preset..."
-    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_options = { 'REGISTER', 'INTERNAL', 'UNDO' }
     bl_description = "Modify a material to make it compatible with the Realspace engine"
 
     materialPreset: EnumProperty(
@@ -396,8 +396,6 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
         self.layout.prop(self, 'materialPreset')
 
     def execute(self, context):
-        bpy.ops.ed.undo_push()
-
         serverProfile = context.preferences.addons[__package__].preferences.serverProfile
 
         blObj = context.active_object
@@ -487,7 +485,7 @@ class GZRS2_OT_Apply_Material_Preset(Operator):
 class GZRS2_OT_Toggle_Lightmap_Mix(Operator):
     bl_idname = 'gzrs2.toggle_lightmap_mix'
     bl_label = "Toggle Lightmap Mix"
-    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_options = { 'REGISTER', 'INTERNAL', 'UNDO' }
     bl_description = "Toggle the shader node controlling the mixing of lightmaps"
 
     @classmethod
@@ -510,7 +508,7 @@ class GZRS2_OT_Toggle_Lightmap_Mix(Operator):
 class GZRS2_OT_Toggle_Lightmap_Mod4(Operator):
     bl_idname = 'gzrs2.toggle_lightmap_mod4'
     bl_label = "Toggle Lightmap Mod4"
-    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_options = { 'REGISTER', 'INTERNAL', 'UNDO' }
     bl_description = "Toggle the shader node controlling the lightmap mod4 fix"
 
     @classmethod
@@ -533,7 +531,7 @@ class GZRS2_OT_Toggle_Lightmap_Mod4(Operator):
 class GZRS2_OT_Recalculate_Lights_Fog(Operator):
     bl_idname = 'gzrs2.recalculate_lights_fog'
     bl_label = "Recalculate Lights & Fog"
-    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_options = { 'REGISTER', 'INTERNAL', 'UNDO' }
     bl_description = "Recalculate Blender lights and fog volume based on associated Realspace properties"
 
     @classmethod
@@ -586,7 +584,7 @@ class GZRS2_OT_Recalculate_Lights_Fog(Operator):
 class GZRS2_OT_Prepare_Bake(Operator):
     bl_idname = 'gzrs2.prepare_bake'
     bl_label = "Prepare for Bake"
-    bl_options = { 'REGISTER', 'INTERNAL' }
+    bl_options = { 'REGISTER', 'INTERNAL', 'UNDO' }
     bl_description = "Applies the current world lightmap to all world materials and sets it as the active bake target"
 
     @classmethod
@@ -1891,7 +1889,7 @@ class RSLM_PT_Import_Logging(Panel):
 class ExportRSELU(Operator, ExportHelper):
     bl_idname = 'export_scene.rselu'
     bl_label = 'Export ELU'
-    bl_options = { 'UNDO', 'PRESET' }
+    bl_options = { 'PRESET' }
     bl_description = "Save an ELU file"
 
     filename_ext = '.elu'
@@ -2044,7 +2042,7 @@ class RSELU_PT_Export_Logging(Panel):
 class ExportGZRS2(Operator, ExportHelper):
     bl_idname = 'export_scene.gzrs2'
     bl_label = 'Export RS2'
-    bl_options = { 'UNDO', 'PRESET' }
+    bl_options = { 'PRESET' }
     bl_description = "Save an RS file"
 
     filename_ext = ".rs"
@@ -2215,7 +2213,7 @@ class GZRS2_PT_Export_Logging(Panel):
 class ExportRSNAV(Operator, ExportHelper):
     bl_idname = 'export_scene.rsnav'
     bl_label = 'Export NAV'
-    bl_options = { 'UNDO', 'PRESET' }
+    bl_options = { 'PRESET' }
     bl_description = "Save an NAV file"
 
     filename_ext = '.nav'
@@ -2311,7 +2309,7 @@ class RSNAV_PT_Export_Logging(Panel):
 class ExportRSLM(Operator, ExportHelper):
     bl_idname = 'export_scene.rslm'
     bl_label = 'Export LM'
-    bl_options = { 'UNDO', 'PRESET' }
+    bl_options = { 'PRESET' }
     bl_description = "Save an LM file"
 
     filename_ext = '.lm'

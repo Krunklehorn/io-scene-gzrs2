@@ -292,7 +292,6 @@ def importRS2(self, context):
     doDrivers =             self.panelDrivers and (state.doLightDrivers or state.doFogDriver)
     doExtras =              state.doCollision or state.doNavigation or state.doDummies or state.doOcclusion or state.doFog or state.doBounds or doDrivers
 
-    bpy.ops.ed.undo_push()
     collections = bpy.data.collections
 
     rootMap =                   collections.new(state.filename)

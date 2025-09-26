@@ -104,7 +104,6 @@ def importElu(self, context):
         if readElu(self, file, elupath, state):
             return { 'CANCELLED' }
 
-    bpy.ops.ed.undo_push()
     collections = bpy.data.collections
 
     rootMesh = collections.new(state.filename)
