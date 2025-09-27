@@ -113,9 +113,9 @@ def readCol(self, file, path, state):
                     print("Normal:             ({:>6.03f}, {:>6.03f}, {:>6.03f})".format(*normal))
                     print()
 
-            return Col1TreeNode(plane, solid, positive, negative, tuple(triangles))
-
             n += 1
+
+            return Col1TreeNode(plane, solid, positive, negative, tuple(triangles))
 
         state.col1Root = openCol1Node()
     else:
