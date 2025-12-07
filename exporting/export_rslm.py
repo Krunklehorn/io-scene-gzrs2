@@ -113,7 +113,7 @@ def exportLm(self, context):
     # numCells = worldProps.lightmapNumCells
     numCells = 1
 
-    success, imageDatas, imageSizes = generateLightmapData(self, lightmapImage, numCells, state)
+    imageDatas, imageSizes = generateLightmapData(self, lightmapImage, numCells, state)
 
     if not imageDatas or not imageSizes:
         return { 'CANCELLED' }
