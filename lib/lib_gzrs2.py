@@ -1772,7 +1772,7 @@ def largerSubtuple(x, y):
 def getUniqueMatLists(blMeshObjs):
     matListSet = set(tuple(matSlot.material for matSlot in blMeshObj.material_slots) for blMeshObj in blMeshObjs)
     matListSet = set(filter(lambda x: len(x) > 0, matListSet))
-    matListSet = set(max(largerSubtuple(matList1, matList2) for matList2 in matListSet) for matList1 in matListSet)
+    matListSet = set(largerSubtuple(matList1, matList2) for matList2 in matListSet for matList1 in matListSet)
 
     return matListSet
 
