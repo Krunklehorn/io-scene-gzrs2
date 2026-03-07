@@ -3,7 +3,7 @@ import os, math, bmesh
 from mathutils import Vector, Matrix
 
 from .importing import import_gzrs2, import_gzrs3, import_rselu, import_rscol, import_rsnav, import_rslm, import_rsani
-from .exporting import export_gzrs2, export_rselu, export_rsnav, export_rslm
+from .exporting import export_gzrs2, export_rscol, export_rselu, export_rsnav, export_rslm
 
 from .constants_gzrs2 import *
 from .lib.lib_gzrs2 import *
@@ -29,6 +29,7 @@ if 'bpy' in locals():
     if 'import_rslm'    in locals(): importlib.reload(import_rslm)
     if 'import_rsani'   in locals(): importlib.reload(import_rsani)
     if 'export_gzrs2'   in locals(): importlib.reload(export_gzrs2)
+    if 'export_rscol'   in locals(): importlib.reload(export_rscol)
     if 'export_rselu'   in locals(): importlib.reload(export_rselu)
     if 'export_rsnav'   in locals(): importlib.reload(export_rsnav)
     if 'export_rslm'    in locals(): importlib.reload(export_rslm)
@@ -1886,6 +1887,284 @@ class RSLM_PT_Import_Logging(Panel):
         layout.prop(operator, 'logLmHeaders')
         layout.prop(operator, 'logLmImages')
 
+class ExportGZRS2(Operator, ExportHelper):
+    bl_idname = 'export_scene.gzrs2'
+    bl_label = 'Export RS2'
+    bl_options = { 'PRESET' }
+    bl_description = "Save an RS file"
+
+    filename_ext = ".rs"
+    filter_glob: StringProperty(
+        default = "*.rs",
+        options = { 'HIDDEN' }
+    )
+
+    panelMain: BoolProperty(
+        name = 'Main',
+        description = "Main panel of options",
+        default = True
+    )
+
+    panelLogging: BoolProperty(
+        name = 'Logging',
+        description = "Log details to the console",
+        default = False
+    )
+
+    convertUnits: BoolProperty(
+        name = 'Convert Units',
+        description = "Convert measurements from meters to centimeters",
+        default = True
+    )
+
+    filterMode: EnumProperty(
+        name = 'Filter Mode',
+        items = (('ALL',        'All',          "Exports all relevant objects"),
+                 ('SELECTED',   'Selected',     "Limit export to selected objects"),
+                 ('VISIBLE',    'Visible',      "Limit export to visible objects"))
+    )
+
+    includeChildren: BoolProperty(
+        name = 'Include Children',
+        description = "Include children of selected objects",
+        default = True
+    )
+
+    purgeUnused: BoolProperty(
+        name = 'Purge Unused',
+        description = "Always checks for files to backup. Ensures map data from a previous export does not conflict with the current one",
+        default = True
+    )
+
+    lmVersion4: BoolProperty(
+        name = 'Version 4',
+        description = "Fixes bit depth issues and makes use of DXT1 compression, not compatible with vanilla GunZ",
+        default = False
+    )
+
+    mod4Fix: BoolProperty(
+        name = 'MOD4',
+        description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag",
+        default = True
+    )
+
+    logRs: BoolProperty(
+        name = 'Rs',
+        description = "Log Rs data",
+        default = True
+    )
+
+    logBsp: BoolProperty(
+        name = 'Bsp',
+        description = "Log Bsp data",
+        default = True
+    )
+
+    logCol: BoolProperty(
+        name = 'Col',
+        description = "Log Col data",
+        default = True
+    )
+
+    logLm: BoolProperty(
+        name = 'Lm',
+        description = "Log Lm data",
+        default = True
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
+
+    def draw(self, context):
+        pass
+
+    def execute(self, context):
+        return export_gzrs2.exportRS2(self, context)
+
+class GZRS2_PT_Export_Main(Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Main'
+    bl_parent_id = 'FILE_PT_operator'
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelMain
+
+        layout.prop(operator, 'convertUnits')
+        layout.prop(operator, 'filterMode')
+
+        column = layout.column()
+        column.prop(operator, 'includeChildren')
+        column.enabled = operator.filterMode == 'SELECTED'
+
+        layout.prop(operator, 'purgeUnused')
+
+class GZRS2_PT_Export_Lightmap(Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Lightmap'
+    bl_parent_id = 'FILE_PT_operator'
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        layout.prop(operator, 'lmVersion4')
+
+        column = layout.column()
+        column.prop(operator, 'mod4Fix')
+        column.enabled = not operator.lmVersion4
+
+class GZRS2_PT_Export_Logging(Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
+
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelLogging
+
+        layout.prop(operator, "logRs")
+        layout.prop(operator, "logBsp")
+        layout.prop(operator, "logCol")
+        layout.prop(operator, "logLm")
+
+class ExportRSCOL(Operator, ExportHelper):
+    bl_idname = 'export_scene.rscol'
+    bl_label = 'Export COL'
+    bl_options = { 'PRESET' }
+    bl_description = "Save a COL file"
+
+    filename_ext = ".col"
+    filter_glob: StringProperty(
+        default = "*.col",
+        options = { 'HIDDEN' }
+    )
+
+    panelMain: BoolProperty(
+        name = 'Main',
+        description = "Main panel of options",
+        default = True
+    )
+
+    panelLogging: BoolProperty(
+        name = 'Logging',
+        description = "Log details to the console",
+        default = False
+    )
+
+    convertUnits: BoolProperty(
+        name = 'Convert Units',
+        description = "Convert measurements from meters to centimeters",
+        default = True
+    )
+
+    filterMode: EnumProperty(
+        name = 'Filter Mode',
+        items = (('ALL',        'All',          "Exports all relevant objects"),
+                 ('SELECTED',   'Selected',     "Limit export to selected objects"),
+                 ('VISIBLE',    'Visible',      "Limit export to visible objects"))
+    )
+
+    includeChildren: BoolProperty(
+        name = 'Include Children',
+        description = "Include children of selected objects",
+        default = True
+    )
+
+    logCol: BoolProperty(
+        name = 'Col',
+        description = "Log Col data",
+        default = True
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is None or context.active_object.mode == 'OBJECT'
+
+    def draw(self, context):
+        pass
+
+    def execute(self, context):
+        return export_rscol.exportCol(self, context)
+
+class RSCOL_PT_Export_Main(Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Main'
+    bl_parent_id = 'FILE_PT_operator'
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_rscol'
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelMain
+
+        layout.prop(operator, 'convertUnits')
+        layout.prop(operator, 'filterMode')
+
+        column = layout.column()
+        column.prop(operator, 'includeChildren')
+        column.enabled = operator.filterMode == 'SELECTED'
+
+class RSCOL_PT_Export_Logging(Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Logging'
+    bl_parent_id = 'FILE_PT_operator'
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_rscol'
+
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelLogging
+
+        layout.prop(operator, "logCol")
+
 class ExportRSELU(Operator, ExportHelper):
     bl_idname = 'export_scene.rselu'
     bl_label = 'Export ELU'
@@ -2038,177 +2317,6 @@ class RSELU_PT_Export_Logging(Panel):
         column.prop(operator, 'logVerboseIndices')
         column.prop(operator, 'logVerboseWeights')
         column.enabled = operator.logEluMeshNodes
-
-class ExportGZRS2(Operator, ExportHelper):
-    bl_idname = 'export_scene.gzrs2'
-    bl_label = 'Export RS2'
-    bl_options = { 'PRESET' }
-    bl_description = "Save an RS file"
-
-    filename_ext = ".rs"
-    filter_glob: StringProperty(
-        default = "*.rs",
-        options = { 'HIDDEN' }
-    )
-
-    panelMain: BoolProperty(
-        name = 'Main',
-        description = "Main panel of options",
-        default = True
-    )
-
-    panelLogging: BoolProperty(
-        name = 'Logging',
-        description = "Log details to the console",
-        default = False
-    )
-
-    convertUnits: BoolProperty(
-        name = 'Convert Units',
-        description = "Convert measurements from meters to centimeters",
-        default = True
-    )
-
-    filterMode: EnumProperty(
-        name = 'Filter Mode',
-        items = (('ALL',        'All',          "Exports all relevant objects"),
-                 ('SELECTED',   'Selected',     "Limit export to selected objects"),
-                 ('VISIBLE',    'Visible',      "Limit export to visible objects"))
-    )
-
-    includeChildren: BoolProperty(
-        name = 'Include Children',
-        description = "Include children of selected objects",
-        default = True
-    )
-
-    purgeUnused: BoolProperty(
-        name = 'Purge Unused',
-        description = "Always checks for files to backup. Ensures map data a previous export does not conflict with the current one",
-        default = True
-    )
-
-    lmVersion4: BoolProperty(
-        name = 'Version 4',
-        description = "Fixes bit depth issues and makes use of DXT1 compression, not compatible with vanilla GunZ",
-        default = False
-    )
-
-    mod4Fix: BoolProperty(
-        name = 'MOD4',
-        description = "Compresses the color range to compensate for the D3DTOP_MODULATE4X flag",
-        default = True
-    )
-
-    logRs: BoolProperty(
-        name = 'Rs',
-        description = "Log Rs data",
-        default = True
-    )
-
-    logBsp: BoolProperty(
-        name = 'Bsp',
-        description = "Log Bsp data",
-        default = True
-    )
-
-    logCol: BoolProperty(
-        name = 'Col',
-        description = "Log Col data",
-        default = True
-    )
-
-    logLm: BoolProperty(
-        name = 'Lm',
-        description = "Log Lm data",
-        default = True
-    )
-
-    @classmethod
-    def poll(cls, context):
-        return context.active_object is None or context.active_object.mode == 'OBJECT'
-
-    def draw(self, context):
-        pass
-
-    def execute(self, context):
-        return export_gzrs2.exportRS2(self, context)
-
-class GZRS2_PT_Export_Main(Panel):
-    bl_space_type = 'FILE_BROWSER'
-    bl_region_type = 'TOOL_PROPS'
-    bl_label = 'Main'
-    bl_parent_id = 'FILE_PT_operator'
-
-    @classmethod
-    def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
-
-    def draw(self, context):
-        layout = self.layout
-        operator = context.space_data.active_operator
-
-        layout.use_property_split = True
-        layout.use_property_decorate = False
-        layout.enabled = operator.panelMain
-
-        layout.prop(operator, 'convertUnits')
-        layout.prop(operator, 'filterMode')
-
-        column = layout.column()
-        column.prop(operator, 'includeChildren')
-        column.enabled = operator.filterMode == 'SELECTED'
-
-        layout.prop(operator, 'purgeUnused')
-
-class GZRS2_PT_Export_Lightmap(Panel):
-    bl_space_type = 'FILE_BROWSER'
-    bl_region_type = 'TOOL_PROPS'
-    bl_label = 'Lightmap'
-    bl_parent_id = 'FILE_PT_operator'
-
-    @classmethod
-    def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
-
-    def draw(self, context):
-        layout = self.layout
-        operator = context.space_data.active_operator
-
-        layout.use_property_split = True
-        layout.use_property_decorate = False
-
-        layout.prop(operator, 'lmVersion4')
-
-        column = layout.column()
-        column.prop(operator, 'mod4Fix')
-        column.enabled = not operator.lmVersion4
-
-class GZRS2_PT_Export_Logging(Panel):
-    bl_space_type = 'FILE_BROWSER'
-    bl_region_type = 'TOOL_PROPS'
-    bl_label = 'Logging'
-    bl_parent_id = 'FILE_PT_operator'
-
-    @classmethod
-    def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
-
-    def draw_header(self, context):
-        self.layout.prop(context.space_data.active_operator, 'panelLogging', text = "")
-
-    def draw(self, context):
-        layout = self.layout
-        operator = context.space_data.active_operator
-
-        layout.use_property_split = True
-        layout.use_property_decorate = False
-        layout.enabled = operator.panelLogging
-
-        layout.prop(operator, "logRs")
-        layout.prop(operator, "logBsp")
-        layout.prop(operator, "logCol")
-        layout.prop(operator, "logLm")
 
 class ExportRSNAV(Operator, ExportHelper):
     bl_idname = 'export_scene.rsnav'
@@ -4085,6 +4193,9 @@ classes = (
     GZRS2_PT_Export_Main,
     GZRS2_PT_Export_Lightmap,
     GZRS2_PT_Export_Logging,
+    ExportRSCOL,
+    RSCOL_PT_Export_Main,
+    RSCOL_PT_Export_Logging,
     ExportRSELU,
     RSELU_PT_Export_Main,
     RSELU_PT_Export_Logging,
@@ -4119,6 +4230,7 @@ def menu_func_import(self, context):
 
 def menu_func_export(self, context):
     self.layout.operator(ExportGZRS2.bl_idname, text = 'GunZ RS2 (.rs) (Beta)')
+    self.layout.operator(ExportRSCOL.bl_idname, text = 'GunZ COL (.col) (Beta)')
     self.layout.operator(ExportRSELU.bl_idname, text = 'GunZ ELU (.elu)')
     self.layout.operator(ExportRSNAV.bl_idname, text = 'GunZ NAV (.nav)')
     self.layout.operator(ExportRSLM.bl_idname, text = 'GunZ LM Overwrite (.lm)')
