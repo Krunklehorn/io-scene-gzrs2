@@ -853,13 +853,18 @@ def exportRS2(self, context):
         hasUV2s = uvLayer2 is not None
         hasCustomNormals = blMesh.has_custom_normals
 
-        matSlots = blWorldObj.material_slots
-        hasMatIDs = len(matSlots) > 0
+        blWorldMatSlots = blWorldObj.material_slots
+        blWorldMatCount = len(blWorldMatSlots)
+        hasMatIDs = blWorldMatCount > 0
 
         worldMatrix = blWorldObj.matrix_world
         worldVertices += tuple(worldMatrix @ vertex.co for vertex in blMesh.vertices)
 
         for polygon in blMesh.polygons:
+            if polygon.material_index >= blWorldMatCount:
+                self.report({ 'ERROR' }, f"GZRS2: World mesh with corrupt material indices! Verify all polygons are assigned to a valid material slot: { blWorldObj.name }")
+                return { 'CANCELLED' }
+            
             loopRange = range(polygon.loop_start, polygon.loop_start + polygon.loop_total)
 
             normal      = polygon.normal
@@ -867,7 +872,7 @@ def exportRS2(self, context):
             uv1s        = tuple(uvLayer1.uv[i].vector   for i in loopRange)             if hasUV1s              else tuple(Vector((0, 0)) for _ in loopRange)
             uv2s        = tuple(uvLayer2.uv[i].vector   for i in loopRange)             if hasUV2s              else tuple(Vector((0, 0)) for _ in loopRange)
             normals     = tuple(blMesh.loops[i].normal  for i in loopRange)             if hasCustomNormals     else tuple(normal for _ in loopRange)
-            matID       = blWorldMats.index(matSlots[polygon.material_index].material)  if hasMatIDs            else -1
+            matID       = blWorldMats.index(blWorldMatSlots[polygon.material_index].material)  if hasMatIDs            else -1
             drawFlags   = 0 # TODO
             area        = polygon.area
             detail      = props.worldDetail

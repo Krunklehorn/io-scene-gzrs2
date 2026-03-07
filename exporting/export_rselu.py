@@ -489,7 +489,7 @@ def exportElu(self, context):
             hasVGroups = vertexGroups is not None and blArmatureObj in blArmatureObjs and blArmature is not None
 
             if hasColors and (color1.data_type != 'FLOAT_COLOR' or color1.domain != 'POINT'):
-                self.report({ 'ERROR' }, f"GZRS2: Mesh with invalid color attribute! Colors must be stored as per-vertex float data! { meshName }")
+                self.report({ 'ERROR' }, f"GZRS2: Mesh with invalid color attribute! Colors must be stored as per-vertex float data: { meshName }")
                 return { 'CANCELLED' }
 
             vertexCount = len(blMesh.vertices)
@@ -502,9 +502,14 @@ def exportElu(self, context):
                 self.report({ 'ERROR' }, f"GZRS2: Mesh with too many triangles, maximum is { ELU_MAX_TRIS }, must split mesh before continuing: { meshName }")
                 return { 'CANCELLED' }
 
+            eluMeshMatCount = len(eluMeshObj.material_slots)
             hasCustomNormals = blMesh.has_custom_normals
 
             for triangle in blMesh.loop_triangles:
+                if triangle.material_index >= eluMeshMatCount:
+                    self.report({ 'ERROR' }, f"GZRS2: Mesh with corrupt material indices! Verify all polygons are assigned to a valid material slot: { meshName }")
+                    return { 'CANCELLED' }
+
                 indices = tuple(reversed(triangle.vertices))
                 uv1s = tuple(reversed(tuple(uvLayer1.uv[i].vector for i in triangle.loops))) if hasUV1s else tuple(Vector((0, 0)) for _ in range(3))
                 slotID = triangle.material_index
