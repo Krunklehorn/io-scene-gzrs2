@@ -2117,9 +2117,7 @@ def partitionPolygons(polygons, plane, *, markUsed = True, tuplize = True, gette
 
     return posPolygons, negPolygons
 
-def choosePlane(polygons, windowManager, *, checkCounts = False, getter = lambda x: x):
-    windowManager.progress_update(random.randint(0, 1000))
-
+def choosePlane(polygons, *, checkCounts = False, getter = lambda x: x):
     chosenCost = float('inf')
     chosenPolygon = None
     chosenPlane = None
@@ -2127,8 +2125,6 @@ def choosePlane(polygons, windowManager, *, checkCounts = False, getter = lambda
     for polygon1 in polygons:
         if polygon1.used:
             continue
-        
-        windowManager.progress_update(random.randint(0, 1000))
 
         counts = [0 for _ in range(5)]
 
@@ -2175,9 +2171,7 @@ def choosePlane(polygons, windowManager, *, checkCounts = False, getter = lambda
 
     return chosenPlane
 
-def createOctreeNode(octPolygons, octPlanes, bbmin, bbmax, depthLimit, windowManager, *, depth = 0):
-    windowManager.progress_update(random.randint(0, 1000))
-
+def createOctreeNode(octPolygons, octPlanes, bbmin, bbmax, depthLimit, *, depth = 0):
     if depth < depthLimit and len(octPolygons) > TREE_MAX_NODE_POLYGON_COUNT:
         plane = None
         positive = None
@@ -2203,16 +2197,14 @@ def createOctreeNode(octPolygons, octPlanes, bbmin, bbmax, depthLimit, windowMan
         posbbmin, posbbmax = calcPolygonBounds(posOctPolygons)
         negbbmin, negbbmax = calcPolygonBounds(negOctPolygons)
 
-        if len(posOctPolygons) > 0: positive = createOctreeNode(posOctPolygons, octPlanes, posbbmin, posbbmax, depthLimit, windowManager, depth = depth + 1)
-        if len(negOctPolygons) > 0: negative = createOctreeNode(negOctPolygons, octPlanes, negbbmin, negbbmax, depthLimit, windowManager, depth = depth + 1)
+        if len(posOctPolygons) > 0: positive = createOctreeNode(posOctPolygons, octPlanes, posbbmin, posbbmax, depthLimit, depth = depth + 1)
+        if len(negOctPolygons) > 0: negative = createOctreeNode(negOctPolygons, octPlanes, negbbmin, negbbmax, depthLimit, depth = depth + 1)
 
         return Rs2TreeNodeExport(bbmin, bbmax, plane, positive, negative, ())
 
     return Rs2TreeNodeExport(bbmin, bbmax, Vector((0, 0, 0, 0)), None, None, octPolygons)
 
-def createBsptreeNode(bspPolygons, bspPlanes, bbmin, bbmax, windowManager, *, depth = 0):
-    windowManager.progress_update(random.randint(0, 1000))
-
+def createBsptreeNode(bspPolygons, bspPlanes, bbmin, bbmax, *, depth = 0):
     plane = None
     positive = None
     negative = None
@@ -2222,7 +2214,7 @@ def createBsptreeNode(bspPolygons, bspPlanes, bbmin, bbmax, windowManager, *, de
         bspPlanes[depth] = None
 
     if plane is None:
-        plane = choosePlane(bspPolygons, windowManager, checkCounts = True, getter = lambda x: x.pos)
+        plane = choosePlane(bspPolygons, checkCounts = True, getter = lambda x: x.pos)
 
     if plane is not None:
         posBspPolygons, negBspPolygons = partitionPolygons(bspPolygons, plane, getter = lambda x: x.pos)
@@ -2230,8 +2222,8 @@ def createBsptreeNode(bspPolygons, bspPlanes, bbmin, bbmax, windowManager, *, de
         posbbmin, posbbmax = calcPolygonBounds(posBspPolygons)
         negbbmin, negbbmax = calcPolygonBounds(negBspPolygons)
 
-        if len(posBspPolygons) > 0: positive = createBsptreeNode(posBspPolygons, bspPlanes, posbbmin, posbbmax, windowManager, depth = depth + 1)
-        if len(negBspPolygons) > 0: negative = createBsptreeNode(negBspPolygons, bspPlanes, negbbmin, negbbmax, windowManager, depth = depth + 1)
+        if len(posBspPolygons) > 0: positive = createBsptreeNode(posBspPolygons, bspPlanes, posbbmin, posbbmax, depth = depth + 1)
+        if len(negBspPolygons) > 0: negative = createBsptreeNode(negBspPolygons, bspPlanes, negbbmin, negbbmax, depth = depth + 1)
 
         return Rs2TreeNodeExport(bbmin, bbmax, plane, positive, negative, ())
 
@@ -2271,9 +2263,7 @@ def createBoundsQuad(bbmin, bbmax, side):
 
     return Col1BoundaryPolygon(4, vertices, normal)
 
-def createColTriangles(polygons, windowManager):
-    windowManager.progress_update(random.randint(0, 1000))
-
+def createColTriangles(polygons):
     triangles = []
 
     for polygon in polygons:
@@ -2295,9 +2285,7 @@ def createColTriangles(polygons, windowManager):
 
     return tuple(triangles)
 
-def createVertexIndex(list, new, windowManager):
-    windowManager.progress_update(random.randint(0, 1000))
-
+def createVertexIndex(list, new):
     for i, item in enumerate(list):
         if vec3IsClose(item, new, RS_COORD_THRESHOLD):
             return i
@@ -2306,7 +2294,7 @@ def createVertexIndex(list, new, windowManager):
 
     return len(list) - 1
 
-def getPartitionPolygon(plane, boundsPolygons, windowManager):
+def getPartitionPolygon(plane, boundsPolygons):
     vertices = []
     outputPolygons = []
 
@@ -2327,11 +2315,11 @@ def getPartitionPolygon(plane, boundsPolygons, windowManager):
             sign1 = signs[i]
             sign2 = signs[o]
 
-            if sign1 == 0: createVertexIndex(vertices, v1, windowManager)
+            if sign1 == 0: createVertexIndex(vertices, v1)
             elif sign2 != 0 and sign1 != sign2:
                 pos, _ = calcPlaneEdgeIntersection(plane, v1, v2)
 
-                createVertexIndex(vertices, pos, windowManager)
+                createVertexIndex(vertices, pos)
 
         outputPolygons.append(polygon)
 
@@ -2368,9 +2356,7 @@ def getPartitionPolygon(plane, boundsPolygons, windowManager):
 
     return True, Col1BoundaryPolygon(vertexCount, posVertices, -up.copy()), Col1BoundaryPolygon(vertexCount, negVertices, up.copy()), outputPolygons
 
-def createColtreeNode(colPolygons, boundsPolygons, windowManager, *, depth = 0):
-    windowManager.progress_update(random.randint(0, 1000))
-
+def createColtreeNode(colPolygons, boundsPolygons, *, depth = 0):
     colPolygonCount = len(colPolygons)
     boundsPolygonCount = len(boundsPolygons)
 
@@ -2382,7 +2368,7 @@ def createColtreeNode(colPolygons, boundsPolygons, windowManager, *, depth = 0):
             return None
 
         boundsVertices = []
-        boundsIndices = tuple(tuple(createVertexIndex(boundsVertices, vertex, windowManager) for vertex in polygon.vertices) for polygon in boundsPolygons)
+        boundsIndices = tuple(tuple(createVertexIndex(boundsVertices, vertex) for vertex in polygon.vertices) for polygon in boundsPolygons)
         boundsVertices = tuple(boundsVertices)
 
         bevelPlanes = []
@@ -2470,7 +2456,7 @@ def createColtreeNode(colPolygons, boundsPolygons, windowManager, *, depth = 0):
         bevelPlanes = tuple(bevelPlanes)
 
         # print("\t" * depth, "Export solid:", len(boundsPolygons))
-        result = Col1TreeNode(Vector((0, 0, 0, 0)), True, None, None, createColTriangles(boundsPolygons, windowManager))
+        result = Col1TreeNode(Vector((0, 0, 0, 0)), True, None, None, createColTriangles(boundsPolygons))
 
         for plane in bevelPlanes:
             # print("\t" * depth, "Export bevel:", plane)
@@ -2478,11 +2464,11 @@ def createColtreeNode(colPolygons, boundsPolygons, windowManager, *, depth = 0):
 
         return result
 
-    if (plane := choosePlane(colPolygons, windowManager)):
+    if (plane := choosePlane(colPolygons)):
         # print("\t" * depth, "Plane:", plane)
         posColPolygons, negColPolygons = partitionPolygons(colPolygons, plane)
 
-        append, posPolygon, negPolygon, boundsPolygons = getPartitionPolygon(plane, boundsPolygons, windowManager)
+        append, posPolygon, negPolygon, boundsPolygons = getPartitionPolygon(plane, boundsPolygons)
         posBoundsPolygons, negBoundsPolygons = partitionPolygons(boundsPolygons, plane, markUsed = False, tuplize = False)
 
         if append:
@@ -2493,15 +2479,15 @@ def createColtreeNode(colPolygons, boundsPolygons, windowManager, *, depth = 0):
         negBoundsPolygons = tuple(negBoundsPolygons)
 
         # print("\t" * depth, "Positive:", len(posColPolygons), len(posBoundsPolygons))
-        positive = createColtreeNode(posColPolygons, posBoundsPolygons, windowManager, depth = depth + 1)
+        positive = createColtreeNode(posColPolygons, posBoundsPolygons, depth = depth + 1)
         # print("\t" * depth, "Negative:", len(negColPolygons), len(negBoundsPolygons))
-        negative = createColtreeNode(negColPolygons, negBoundsPolygons, windowManager, depth = depth + 1)
+        negative = createColtreeNode(negColPolygons, negBoundsPolygons, depth = depth + 1)
 
         # print("\t" * depth, "Export fork:", bool(positive), bool(negative))
         return Col1TreeNode(plane, False, positive, negative, ())
     
     # print("\t" * depth, "Export hull:", colPolygonCount)
-    return Col1TreeNode(Vector((0, 0, 0, 0)), False, None, None, createColTriangles(colPolygons, windowManager))
+    return Col1TreeNode(Vector((0, 0, 0, 0)), False, None, None, createColTriangles(colPolygons))
 
 def getTreeNodeCount(tree):
     count = 1

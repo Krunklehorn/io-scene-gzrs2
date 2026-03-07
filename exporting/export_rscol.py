@@ -120,10 +120,11 @@ def exportCol(self, context):
     coltreeBoundsQuads = tuple(createBoundsQuad(colBBMin, colBBMax, s) for s in range(6))
 
     windowManager.progress_end()
-    windowManager.progress_begin(0, 1000)
+    windowManager.progress_begin(0, 1)
+    windowManager.progress_update(0)
 
     try:
-        col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads, windowManager)
+        col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads)
     except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
         self.report({ 'ERROR' }, error.message)
         return { 'CANCELLED' }

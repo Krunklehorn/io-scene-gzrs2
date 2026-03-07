@@ -935,10 +935,11 @@ def exportRS2(self, context):
     depthLimit = calcDepthLimit(worldBBMin, worldBBMax)
 
     windowManager.progress_end()
-    windowManager.progress_begin(0, 1000)
+    windowManager.progress_begin(0, 1)
+    windowManager.progress_update(0)
 
     try:
-        rsOctreeRoot = createOctreeNode(rsOctreePolygons, octPlanes, worldBBMin, worldBBMax, depthLimit, windowManager)
+        rsOctreeRoot = createOctreeNode(rsOctreePolygons, octPlanes, worldBBMin, worldBBMax, depthLimit)
     except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
         self.report({ 'ERROR' }, error.message)
         return { 'CANCELLED' }
@@ -986,10 +987,11 @@ def exportRS2(self, context):
     rsBsptreePolygons = tuple(rsBsptreePolygons)
 
     windowManager.progress_end()
-    windowManager.progress_begin(0, 1000)
+    windowManager.progress_begin(0, 1)
+    windowManager.progress_update(0)
 
     try:
-        rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, bspPlanes, worldBBMin, worldBBMax, windowManager)
+        rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, bspPlanes, worldBBMin, worldBBMax)
     except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
         self.report({ 'ERROR' }, error.message)
         return { 'CANCELLED' }
@@ -1158,10 +1160,11 @@ def exportRS2(self, context):
     coltreeBoundsQuads = tuple(createBoundsQuad(colBBMin, colBBMax, s) for s in range(6))
 
     windowManager.progress_end()
-    windowManager.progress_begin(0, 1000)
+    windowManager.progress_begin(0, 1)
+    windowManager.progress_update(0)
 
     try:
-        col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads, windowManager)
+        col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads)
     except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
         self.report({ 'ERROR' }, error.message)
         return { 'CANCELLED' }
