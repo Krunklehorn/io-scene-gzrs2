@@ -2172,7 +2172,7 @@ def choosePlane(polygons, *, checkCounts = False, getter = lambda x: x):
     return chosenPlane
 
 def createOctreeNode(octPolygons, octPlanes, bbmin, bbmax, depthLimit, windowManager, *, depth = 0):
-    windowManager.progress_update(depth)
+    windowManager.progress_update(random.randint(0, 1000))
 
     if depth < depthLimit and len(octPolygons) > TREE_MAX_NODE_POLYGON_COUNT:
         plane = None
@@ -2207,7 +2207,7 @@ def createOctreeNode(octPolygons, octPlanes, bbmin, bbmax, depthLimit, windowMan
     return Rs2TreeNodeExport(bbmin, bbmax, Vector((0, 0, 0, 0)), None, None, octPolygons)
 
 def createBsptreeNode(bspPolygons, bspPlanes, bbmin, bbmax, windowManager, *, depth = 0):
-    windowManager.progress_update(random.randint(0, 1))
+    windowManager.progress_update(random.randint(0, 1000))
     plane = None
     positive = None
     negative = None
@@ -2360,7 +2360,7 @@ def getPartitionPolygon(plane, boundsPolygons):
     return True, Col1BoundaryPolygon(vertexCount, posVertices, -up.copy()), Col1BoundaryPolygon(vertexCount, negVertices, up.copy()), outputPolygons
 
 def createColtreeNode(colPolygons, boundsPolygons, windowManager, *, depth = 0):
-    windowManager.progress_update(random.randint(0, 1))
+    windowManager.progress_update(random.randint(0, 1000))
 
     colPolygonCount = len(colPolygons)
     boundsPolygonCount = len(boundsPolygons)

@@ -37,7 +37,7 @@ def exportRS2(self, context):
     if self.panelLogging:
         print()
         print("=======================================================================")
-        print("===========================  GZRS2 Import  ============================")
+        print("===========================  GZRS2 Export  ============================")
         print("=======================================================================")
         print(f"== { self.filepath }")
         print("=======================================================================")
@@ -935,7 +935,7 @@ def exportRS2(self, context):
     depthLimit = calcDepthLimit(worldBBMin, worldBBMax)
 
     windowManager.progress_end()
-    windowManager.progress_begin(0, depthLimit)
+    windowManager.progress_begin(0, 1000)
 
     try:
         rsOctreeRoot = createOctreeNode(rsOctreePolygons, octPlanes, worldBBMin, worldBBMax, depthLimit, windowManager)
@@ -986,7 +986,7 @@ def exportRS2(self, context):
     rsBsptreePolygons = tuple(rsBsptreePolygons)
 
     windowManager.progress_end()
-    windowManager.progress_begin(0, 1)
+    windowManager.progress_begin(0, 1000)
 
     try:
         rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, bspPlanes, worldBBMin, worldBBMax, windowManager)
@@ -1158,7 +1158,7 @@ def exportRS2(self, context):
     coltreeBoundsQuads = tuple(createBoundsQuad(colBBMin, colBBMax, s) for s in range(6))
 
     windowManager.progress_end()
-    windowManager.progress_begin(0, 1)
+    windowManager.progress_begin(0, 1000)
 
     try:
         col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads, windowManager)
@@ -1212,6 +1212,8 @@ def exportRS2(self, context):
                 writeDirection(file, triangle.normal, True)
 
         writeCol1Node(col1Root)
+
+    windowManager.progress_end()
 
     # Gather lightmap data
     lightmapImage = worldProps.lightmapImage
@@ -1306,7 +1308,5 @@ def exportRS2(self, context):
 
     # Dump Images
     dumpImageData(imageDatas, imageSizes, imageCount, directory, filename, state)
-
-    windowManager.progress_end()
 
     return { 'FINISHED' }
