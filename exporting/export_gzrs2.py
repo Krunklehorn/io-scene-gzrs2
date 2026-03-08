@@ -31,10 +31,13 @@ def exportRS2(self, context):
     state.includeChildren   = self.includeChildren and self.filterMode == 'SELECTED'
 
     state.purgeUnused       = self.purgeUnused
+
     state.doCollision       = self.doCollision
-    state.lmVersion4        = self.lmVersion4
-    state.mod4Fix           = self.mod4Fix and not self.lmVersion4
-    state.dumpImages        = self.dumpImages
+
+    state.doLightmap        = self.panelLightmap
+    state.lmVersion4        = self.lmVersion4                       and self.panelLightmap
+    state.mod4Fix           = self.mod4Fix and not self.lmVersion4  and self.panelLightmap
+    state.dumpImages        = self.dumpImages                       and self.panelLightmap
 
     if self.panelLogging:
         print()
@@ -618,48 +621,49 @@ def exportRS2(self, context):
         windowManager.progress_end()
 
     # Gather lightmap data
-    lightmapImage = worldProps.lightmapImage
+    if state.doLightmap:
+        lightmapImage = worldProps.lightmapImage
 
-    # Never atlas, we increase the lightmap resolution instead
-    # numCells = worldProps.lightmapNumCells
-    numCells = 1
+        # Never atlas, we increase the lightmap resolution instead
+        # numCells = worldProps.lightmapNumCells
+        numCells = 1
 
-    if lightmapImage:
-        imageDatas, imageSizes = generateLightmapData(self, lightmapImage, numCells, state)
+        if lightmapImage:
+            imageDatas, imageSizes = generateLightmapData(self, lightmapImage, numCells, state)
 
-        if not imageDatas or not imageSizes:
-            return { 'CANCELLED' }
-    else:
-        pixelCount = LM_MIN_SIZE ** 2
-        floats = tuple(1.0 for _ in range(pixelCount * 4))
-        imageData = packLmImageData(self, LM_MIN_SIZE, floats, state)
+            if not imageDatas or not imageSizes:
+                return { 'CANCELLED' }
+        else:
+            pixelCount = LM_MIN_SIZE ** 2
+            floats = tuple(1.0 for _ in range(pixelCount * 4))
+            imageData = packLmImageData(self, LM_MIN_SIZE, floats, state)
 
-        imageDatas, imageSizes = (imageData,), (LM_MIN_SIZE,)
+            imageDatas, imageSizes = (imageData,), (LM_MIN_SIZE,)
 
-    imageCount = len(imageDatas)
+        imageCount = len(imageDatas)
 
-    polygonOrder = bytearray(rsOPolygonCount * 4)
-    lightmapIDs = bytearray(rsOPolygonCount * 4)
-    lightmapUVs = bytearray(rsOVertexCount * 2 * 4)
+        polygonOrder = bytearray(rsOPolygonCount * 4)
+        lightmapIDs = bytearray(rsOPolygonCount * 4)
+        lightmapUVs = bytearray(rsOVertexCount * 2 * 4)
 
-    polygonOrderInts = memoryview(polygonOrder).cast('I')
-    lightmapIDsInts = memoryview(lightmapIDs).cast('I')
-    lightmapUVsFloats = memoryview(lightmapUVs).cast('f')
+        polygonOrderInts = memoryview(polygonOrder).cast('I')
+        lightmapIDsInts = memoryview(lightmapIDs).cast('I')
+        lightmapUVsFloats = memoryview(lightmapUVs).cast('f')
 
-    # Never atlas, we increase the lightmap resolution instead
-    for p in range(rsOPolygonCount):
-        polygonOrderInts[p] = p
-        lightmapIDsInts[p] = 0
+        # Never atlas, we increase the lightmap resolution instead
+        for p in range(rsOPolygonCount):
+            polygonOrderInts[p] = p
+            lightmapIDsInts[p] = 0
 
-    for v in range(rsOVertexCount):
-        uv2 = rsOctreeLmUVs[v]
+        for v in range(rsOVertexCount):
+            uv2 = rsOctreeLmUVs[v]
 
-        lightmapUVsFloats[v * 2 + 0] = uv2.x
-        lightmapUVsFloats[v * 2 + 1] = 1 - uv2.y
+            lightmapUVsFloats[v * 2 + 0] = uv2.x
+            lightmapUVsFloats[v * 2 + 1] = 1 - uv2.y
 
-    polygonOrderInts.release()
-    lightmapIDsInts.release()
-    lightmapUVsFloats.release()
+        polygonOrderInts.release()
+        lightmapIDsInts.release()
+        lightmapUVsFloats.release()
 
     windowManager.progress_begin(0, rsMatCount + rsLightCount + rsPropCount + rsDummyCount + rsOccCount + rsSoundCount)
     progress = 0
@@ -1310,57 +1314,58 @@ def exportRS2(self, context):
                     writeDirection(file, triangle.normal, True)
 
             writeCol1Node(col1Root)
-
-    # Write Lm
-    id = LM_ID
-    version = LM_VERSION_EXT if state.lmVersion4 else LM_VERSION
-    lmCPolygonCount = rsCPolygonCount # CONVEX polygon count!
-    lmONodeCount = rsONodeCount # OCTREE node count!
-
-    if state.logLm:
-        print("===================  Write Lm   ===================")
-        print()
-        print(f"Path:               { lmpath }")
-        print(f"ID:                 { hex(id) }")
-        print(f"Version:            { hex(version) }")
-        print()
-        print(f"Image Count:        { imageCount }")
-        print()
     
-    createBackupFile(lmpath, purgeUnused = state.purgeUnused)
+    # Write Lm
+    if state.doLightmap:
+        id = LM_ID
+        version = LM_VERSION_EXT if state.lmVersion4 else LM_VERSION
+        lmCPolygonCount = rsCPolygonCount # CONVEX polygon count!
+        lmONodeCount = rsONodeCount # OCTREE node count!
 
-    with open(lmpath, 'wb') as file:
-        writeUInt(file, id)
-        writeUInt(file, version)
+        if state.logLm:
+            print("===================  Write Lm   ===================")
+            print()
+            print(f"Path:               { lmpath }")
+            print(f"ID:                 { hex(id) }")
+            print(f"Version:            { hex(version) }")
+            print()
+            print(f"Image Count:        { imageCount }")
+            print()
+        
+        createBackupFile(lmpath, purgeUnused = state.purgeUnused)
 
-        writeUInt(file, lmCPolygonCount)
-        writeUInt(file, lmONodeCount)
-        writeUInt(file, imageCount)
+        with open(lmpath, 'wb') as file:
+            writeUInt(file, id)
+            writeUInt(file, version)
 
-        for i in range(imageCount):
-            imageData = imageDatas[i]
-            imageSize = imageSizes[i]
+            writeUInt(file, lmCPolygonCount)
+            writeUInt(file, lmONodeCount)
+            writeUInt(file, imageCount)
 
-            pixelCount = imageSize ** 2
+            for i in range(imageCount):
+                imageData = imageDatas[i]
+                imageSize = imageSizes[i]
 
-            if state.lmVersion4:
-                ddsSize = 76 + 32 + 20 + pixelCount // 2
-                writeUInt(file, ddsSize)
-                writeDDSHeader(file, imageSize, pixelCount, ddsSize)
-            else:
-                bmpSize = 14 + 40 + pixelCount * 3
-                writeUInt(file, bmpSize)
-                writeBMPHeader(file, imageSize, bmpSize)
+                pixelCount = imageSize ** 2
 
-            file.write(imageData)
+                if state.lmVersion4:
+                    ddsSize = 76 + 32 + 20 + pixelCount // 2
+                    writeUInt(file, ddsSize)
+                    writeDDSHeader(file, imageSize, pixelCount, ddsSize)
+                else:
+                    bmpSize = 14 + 40 + pixelCount * 3
+                    writeUInt(file, bmpSize)
+                    writeBMPHeader(file, imageSize, bmpSize)
 
-        file.write(polygonOrder)
-        file.write(lightmapIDs)
-        file.write(lightmapUVs)
+                file.write(imageData)
 
-        file.truncate()
+            file.write(polygonOrder)
+            file.write(lightmapIDs)
+            file.write(lightmapUVs)
 
-    if state.dumpImages:
-        dumpImageData(imageDatas, imageSizes, imageCount, directory, filename, state)
+            file.truncate()
+
+        if state.dumpImages:
+            dumpImageData(imageDatas, imageSizes, imageCount, directory, filename, state)
 
     return { 'FINISHED' }

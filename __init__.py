@@ -1905,6 +1905,12 @@ class ExportGZRS2(Operator, ExportHelper):
         default = True
     )
 
+    panelLightmap: BoolProperty(
+        name = 'Lightmap',
+        description = "Export lightmap data",
+        default = True
+    )
+
     panelLogging: BoolProperty(
         name = 'Logging',
         description = "Log details to the console",
@@ -2032,12 +2038,16 @@ class GZRS2_PT_Export_Lightmap(Panel):
     def poll(cls, context):
         return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
 
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, 'panelLightmap', text = "")
+
     def draw(self, context):
         layout = self.layout
         operator = context.space_data.active_operator
 
         layout.use_property_split = True
         layout.use_property_decorate = False
+        layout.enabled = operator.panelLightmap
 
         layout.prop(operator, 'lmVersion4')
 

@@ -442,8 +442,13 @@ class GZRS2ExportState:
     includeChildren:        bool = False
 
     purgeUnused:            bool = False
+    
+    doCollision:            bool = False
+
+    doLightmap:             bool = False
     lmVersion4:             bool = False
     mod4Fix:                bool = False
+    dumpImages:             bool = False
 
     logRs:                  bool = False
     logBsp:                 bool = False
@@ -596,6 +601,12 @@ class RSLMExportState:
     doUVs:              bool = False
     lmVersion4:         bool = False
     mod4Fix:            bool = False
+    dumpImages:         bool = False
 
     logLmHeaders:       bool = False
     logLmImages:        bool = False
+    
+    rsCPolygonCount:    int | None = None
+    rsONodeCount:       int | None = None
+    rsOPolygonCount:    int | None = None
+    rsOVertexCount:     int | None = None

@@ -31,7 +31,7 @@ def exportLm(self, context):
         print("=======================================================================")
         print()
 
-        state.logLmHeaders = self.logLmHeaders
+        state.logLmHeaders  = self.logLmHeaders
 
     lmpath = self.filepath
     directory = os.path.dirname(lmpath)

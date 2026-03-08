@@ -27,8 +27,8 @@ def importLm(self, context):
         print("=======================================================================")
         print()
 
-        state.logLmHeaders = self.logLmHeaders
-        state.logLmImages = self.logLmImages
+        state.logLmHeaders  = self.logLmHeaders
+        state.logLmImages   = self.logLmImages
 
     lmpath = self.filepath
     state.directory = os.path.dirname(lmpath)
