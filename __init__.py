@@ -4254,7 +4254,7 @@ classes = (
 
 def menu_func_import(self, context):
     self.layout.operator(ImportGZRS2.bl_idname, text = 'GunZ RS2 (.rs)')
-    self.layout.operator(ImportGZRS3.bl_idname, text = 'GunZ RS3 (.scene.xml/.prop.xml)')
+    self.layout.operator(ImportGZRS3.bl_idname, text = 'GunZ RS3 (.scene.xml/.prop.xml) (Unfinished)')
     self.layout.operator(ImportRSELU.bl_idname, text = 'GunZ ELU (.elu)')
     self.layout.operator(ImportRSANI.bl_idname, text = 'GunZ ANI (.ani)')
     self.layout.operator(ImportRSCOL.bl_idname, text = 'GunZ COL (.col/.cl2)')
