@@ -1936,6 +1936,12 @@ class ExportGZRS2(Operator, ExportHelper):
         default = True
     )
 
+    doCollision: BoolProperty(
+        name = 'Collision',
+        description = "Export collision data",
+        default = True
+    )
+
     lmVersion4: BoolProperty(
         name = 'Version 4',
         description = "Fixes bit depth issues and makes use of DXT1 compression, not compatible with vanilla GunZ",
@@ -2008,6 +2014,7 @@ class GZRS2_PT_Export_Main(Panel):
         column.enabled = operator.filterMode == 'SELECTED'
 
         layout.prop(operator, 'purgeUnused')
+        layout.prop(operator, 'doCollision')
 
 class GZRS2_PT_Export_Lightmap(Panel):
     bl_space_type = 'FILE_BROWSER'

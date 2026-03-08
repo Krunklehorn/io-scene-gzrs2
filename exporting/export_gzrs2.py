@@ -31,6 +31,7 @@ def exportRS2(self, context):
     state.includeChildren   = self.includeChildren and self.filterMode == 'SELECTED'
 
     state.purgeUnused       = self.purgeUnused
+    state.doCollision       = self.doCollision
     state.lmVersion4        = self.lmVersion4
     state.mod4Fix           = self.mod4Fix and not self.lmVersion4
 
@@ -62,10 +63,13 @@ def exportRS2(self, context):
     colpath = f"{ rspath }{ os.extsep }col"
     lmpath = f"{ rspath }{ os.extsep }lm"
 
-    exportPaths = (rspath, rsxmlpath, spawnxmlpath, flagxmlpath, smokexmlpath, bsppath, colpath, lmpath)
+    exportPaths = (rspath, rsxmlpath, spawnxmlpath, flagxmlpath, smokexmlpath, bsppath, lmpath)
 
     for exportPath in exportPaths:
         createBackupFile(exportPath, purgeUnused = state.purgeUnused)
+    
+    if state.doCollision:
+        createBackupFile(colpath, purgeUnused = state.purgeUnused)
 
     windowManager = context.window_manager
 
@@ -161,11 +165,14 @@ def exportRS2(self, context):
                     if      propSubtype == 'NONE':  blPropNoneObjs.append(object)
                     elif    propSubtype == 'SKY':   blPropSkyObjs.append(object)
                     elif    propSubtype == 'FLAG':  blPropFlagObjs.append(object)
-                elif    meshType == 'COLLISION':    blColObjs.append(object)
+                elif    meshType == 'COLLISION':
+                    if state.doCollision:
+                                                    blColObjs.append(object)
                 elif    meshType == 'NAVIGATION':   blNavObjs.append(object)
 
                 if meshType == 'WORLD' and props.worldCollision:
-                    blColObjs.append(object)
+                    if state.doCollision:
+                        blColObjs.append(object)
             elif objType == 'LIGHT':
                 props = object.data.gzrs2
                 lightType =props.lightType
@@ -195,8 +202,9 @@ def exportRS2(self, context):
         return { 'CANCELLED' }
 
     if len(blColObjs) == 0:
-        self.report({ 'ERROR' }, f"GZRS2: RS export requires at least one collision mesh!")
-        return { 'CANCELLED' }
+        if state.doCollision:
+            self.report({ 'ERROR' }, f"GZRS2: RS export requires at least one collision mesh!")
+            return { 'CANCELLED' }
 
     # Sort lists
     def sortByName(x):
@@ -1129,94 +1137,95 @@ def exportRS2(self, context):
 
         writeTreeNode(rsBsptreeRoot)
 
-    # Generate Col nodes
-    coltreeVertices = []
-    coltreePolygons = []
-    o = 0
+    if state.doCollision:
+        # Generate Col nodes
+        coltreeVertices = []
+        coltreePolygons = []
+        o = 0
 
-    windowManager.progress_end()
-    windowManager.progress_begin(0, len(blColObjs))
+        windowManager.progress_end()
+        windowManager.progress_begin(0, len(blColObjs))
 
-    for c, blColObj in enumerate(blColObjs):
-        windowManager.progress_update(c)
+        for c, blColObj in enumerate(blColObjs):
+            windowManager.progress_update(c)
 
-        blMesh = blColObj.data
+            blMesh = blColObj.data
 
-        worldMatrix = blColObj.matrix_world
-        coltreeVertices += tuple(worldMatrix @ vertex.co for vertex in blMesh.vertices)
+            worldMatrix = blColObj.matrix_world
+            coltreeVertices += tuple(worldMatrix @ vertex.co for vertex in blMesh.vertices)
 
-        for polygon in blMesh.polygons:
-            positions = tuple(coltreeVertices[o + i] for i in polygon.vertices)
-            normal = polygon.normal.normalized()
+            for polygon in blMesh.polygons:
+                positions = tuple(coltreeVertices[o + i] for i in polygon.vertices)
+                normal = polygon.normal.normalized()
 
-            coltreePolygons.append(Col1HullPolygon(len(positions), positions, normal, False))
+                coltreePolygons.append(Col1HullPolygon(len(positions), positions, normal, False))
 
-        o += len(blMesh.vertices)
+            o += len(blMesh.vertices)
 
-    coltreeVertices = tuple(coltreeVertices)
-    coltreePolygons = tuple(coltreePolygons)
+        coltreeVertices = tuple(coltreeVertices)
+        coltreePolygons = tuple(coltreePolygons)
 
-    colBBMin, colBBMax = calcCoordinateBounds(coltreeVertices)
-    coltreeBoundsQuads = tuple(createBoundsQuad(colBBMin, colBBMax, s) for s in range(6))
+        colBBMin, colBBMax = calcCoordinateBounds(coltreeVertices)
+        coltreeBoundsQuads = tuple(createBoundsQuad(colBBMin, colBBMax, s) for s in range(6))
 
-    windowManager.progress_end()
-    windowManager.progress_begin(0, 1)
-    windowManager.progress_update(0)
+        windowManager.progress_end()
+        windowManager.progress_begin(0, 1)
+        windowManager.progress_update(0)
 
-    try:
-        col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads)
-    except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
-        self.report({ 'ERROR' }, error.message)
-        return { 'CANCELLED' }
+        try:
+            col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads)
+        except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
+            self.report({ 'ERROR' }, error.message)
+            return { 'CANCELLED' }
 
-    colNodeCount        = getTreeNodeCount(col1Root)
-    colTriangleCount    = getTreeTriangleCount(col1Root)
-    colTreeDepth        = getTreeDepth(col1Root)
+        colNodeCount        = getTreeNodeCount(col1Root)
+        colTriangleCount    = getTreeTriangleCount(col1Root)
+        colTreeDepth        = getTreeDepth(col1Root)
 
-    # Write Col
-    id = COL1_ID
-    version = COL1_VERSION
+        # Write Col
+        id = COL1_ID
+        version = COL1_VERSION
 
-    if state.logCol:
-        print("===================  Write Col  ===================")
-        print()
-        print(f"Path:               { colpath }")
-        print(f"ID:                 { hex(id) }")
-        print(f"Version:            { hex(version) }")
-        print()
-        print(f"Node Count:         { colNodeCount }")
-        print(f"Triangle Count:     { colTriangleCount }")
-        print(f"Depth:              { colTreeDepth }")
-        print()
+        if state.logCol:
+            print("===================  Write Col  ===================")
+            print()
+            print(f"Path:               { colpath }")
+            print(f"ID:                 { hex(id) }")
+            print(f"Version:            { hex(version) }")
+            print()
+            print(f"Node Count:         { colNodeCount }")
+            print(f"Triangle Count:     { colTriangleCount }")
+            print(f"Depth:              { colTreeDepth }")
+            print()
 
-    with open(colpath, 'wb') as file:
-        writeUInt(file, id)
-        writeUInt(file, version)
+        with open(colpath, 'wb') as file:
+            writeUInt(file, id)
+            writeUInt(file, version)
 
-        writeUInt(file, colNodeCount)
-        writeUInt(file, colTriangleCount)
+            writeUInt(file, colNodeCount)
+            writeUInt(file, colTriangleCount)
 
-        def writeCol1Node(node):
-            writePlane(file, node.plane, state.convertUnits, True)
-            writeBool(file, node.solid)
+            def writeCol1Node(node):
+                writePlane(file, node.plane, state.convertUnits, True)
+                writeBool(file, node.solid)
 
-            writeBool(file, node.positive is not None)
-            if node.positive is not None:
-                writeCol1Node(node.positive)
+                writeBool(file, node.positive is not None)
+                if node.positive is not None:
+                    writeCol1Node(node.positive)
 
-            writeBool(file, node.negative is not None)
-            if node.negative is not None:
-                writeCol1Node(node.negative)
+                writeBool(file, node.negative is not None)
+                if node.negative is not None:
+                    writeCol1Node(node.negative)
 
-            writeUInt(file, len(node.triangles))
+                writeUInt(file, len(node.triangles))
 
-            for triangle in node.triangles:
-                writeCoordinateArray(file, triangle.vertices, state.convertUnits, True)
-                writeDirection(file, triangle.normal, True)
+                for triangle in node.triangles:
+                    writeCoordinateArray(file, triangle.vertices, state.convertUnits, True)
+                    writeDirection(file, triangle.normal, True)
 
-        writeCol1Node(col1Root)
+            writeCol1Node(col1Root)
 
-    windowManager.progress_end()
+        windowManager.progress_end()
 
     # Gather lightmap data
     lightmapImage = worldProps.lightmapImage
