@@ -1954,6 +1954,12 @@ class ExportGZRS2(Operator, ExportHelper):
         default = True
     )
 
+    dumpImages: BoolProperty(
+        name = 'Dump Images',
+        description = "Writes plain BMP files of each lightmap",
+        default = False
+    )
+
     logRs: BoolProperty(
         name = 'Rs',
         description = "Log Rs data",
@@ -2038,6 +2044,8 @@ class GZRS2_PT_Export_Lightmap(Panel):
         column = layout.column()
         column.prop(operator, 'mod4Fix')
         column.enabled = not operator.lmVersion4
+
+        layout.prop(operator, 'dumpImages')
 
 class GZRS2_PT_Export_Logging(Panel):
     bl_space_type = 'FILE_BROWSER'
@@ -2463,6 +2471,12 @@ class ExportRSLM(Operator, ExportHelper):
         default = True
     )
 
+    dumpImages: BoolProperty(
+        name = 'Dump Images',
+        description = "Writes plain BMP files of each lightmap",
+        default = False
+    )
+
     logLmHeaders: BoolProperty(
         name = 'Lm Headers',
         description = "Log Lm header data",
@@ -2503,6 +2517,8 @@ class RSLM_PT_Export_Main(Panel):
         column = layout.column()
         column.prop(operator, 'mod4Fix')
         column.enabled = not operator.lmVersion4
+
+        layout.prop(operator, 'dumpImages')
 
 class RSLM_PT_Export_Logging(Panel):
     bl_space_type = 'FILE_BROWSER'
@@ -4240,7 +4256,7 @@ def menu_func_export(self, context):
     self.layout.operator(ExportRSCOL.bl_idname, text = 'GunZ COL (.col) (Beta)')
     self.layout.operator(ExportRSELU.bl_idname, text = 'GunZ ELU (.elu)')
     self.layout.operator(ExportRSNAV.bl_idname, text = 'GunZ NAV (.nav)')
-    self.layout.operator(ExportRSLM.bl_idname, text = 'GunZ LM Overwrite (.lm)')
+    self.layout.operator(ExportRSLM.bl_idname, text = 'GunZ LM (.lm) (Overwrite)')
 
 def register():
     for cls in classes:

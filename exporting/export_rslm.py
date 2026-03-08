@@ -20,6 +20,7 @@ def exportLm(self, context):
     state.doUVs         = self.doUVs
     state.lmVersion4    = self.lmVersion4
     state.mod4Fix       = self.mod4Fix and not self.lmVersion4
+    state.dumpImages    = self.dumpImages
 
     if self.panelLogging:
         print()
@@ -219,7 +220,7 @@ def exportLm(self, context):
 
         file.truncate()
 
-    # Dump Images
-    dumpImageData(imageDatas, imageSizes, imageCount, directory, filename, state)
+    if state.dumpImages:
+        dumpImageData(imageDatas, imageSizes, imageCount, directory, filename, state)
 
     return { 'FINISHED' }
