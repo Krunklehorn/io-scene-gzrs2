@@ -71,10 +71,9 @@ def exportCol(self, context):
             props = object.data.gzrs2
             meshType = props.meshType
 
-            if meshType == 'WORLD':
-                if props.worldCollision:    blColObjs.append(object)
-                else:                       invalidCount += 1
-            elif meshType == 'COLLISION':   blColObjs.append(object)
+            if      meshType == 'WORLD' and props.worldCollision:   blColObjs.append(object)
+            elif    meshType == 'COLLISION':                        blColObjs.append(object)
+            else:                                                   invalidCount += 1
         else:
             invalidCount += 1
 
