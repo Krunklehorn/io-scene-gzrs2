@@ -63,14 +63,6 @@ def exportRS2(self, context):
     colpath = f"{ rspath }{ os.extsep }col"
     lmpath = f"{ rspath }{ os.extsep }lm"
 
-    exportPaths = (rspath, rsxmlpath, spawnxmlpath, flagxmlpath, smokexmlpath, bsppath, lmpath)
-
-    for exportPath in exportPaths:
-        createBackupFile(exportPath, purgeUnused = state.purgeUnused)
-    
-    if state.doCollision:
-        createBackupFile(colpath, purgeUnused = state.purgeUnused)
-
     windowManager = context.window_manager
 
     objects = getFilteredObjects(context, state)
@@ -363,10 +355,317 @@ def exportRS2(self, context):
         propFilenames.add(propFilename)
 
     windowManager.progress_end()
+
+    # Gather vertex & face data
+    worldVertices = []
+    worldPolygons = []
+    o = 0
+
+    windowManager.progress_begin(0, len(blWorldObjs))
+
+    for w, blWorldObj in enumerate(blWorldObjs):
+        windowManager.progress_update(w)
+
+        blMesh = blWorldObj.data
+        props = blMesh.gzrs2
+
+        uvLayer1 = getOrNone(blMesh.uv_layers, 0)
+        uvLayer2 = getOrNone(blMesh.uv_layers, 1)
+
+        hasUV1s = uvLayer1 is not None
+        hasUV2s = uvLayer2 is not None
+        hasCustomNormals = blMesh.has_custom_normals
+
+        blWorldMatSlots = blWorldObj.material_slots
+        blWorldMatCount = len(blWorldMatSlots)
+        hasMatIDs = blWorldMatCount > 0
+
+        worldMatrix = blWorldObj.matrix_world
+        worldVertices += tuple(worldMatrix @ vertex.co for vertex in blMesh.vertices)
+
+        for polygon in blMesh.polygons:
+            if polygon.material_index >= blWorldMatCount:
+                self.report({ 'ERROR' }, f"GZRS2: World mesh with corrupt material indices! Verify all polygons are assigned to a valid material slot: { blWorldObj.name }")
+                return { 'CANCELLED' }
+            
+            loopRange = range(polygon.loop_start, polygon.loop_start + polygon.loop_total)
+
+            normal      = polygon.normal
+            positions   = tuple(worldVertices[o + i] for i in polygon.vertices)
+            uv1s        = tuple(uvLayer1.uv[i].vector   for i in loopRange)             if hasUV1s              else tuple(Vector((0, 0)) for _ in loopRange)
+            uv2s        = tuple(uvLayer2.uv[i].vector   for i in loopRange)             if hasUV2s              else tuple(Vector((0, 0)) for _ in loopRange)
+            normals     = tuple(blMesh.loops[i].normal  for i in loopRange)             if hasCustomNormals     else tuple(normal for _ in loopRange)
+            matID       = blWorldMats.index(blWorldMatSlots[polygon.material_index].material)  if hasMatIDs            else -1
+            drawFlags   = 0 # TODO
+            area        = polygon.area
+            detail      = props.worldDetail
+
+            worldPolygons.append(RsWorldPolygon(normal, len(positions), positions, normals, uv1s, uv2s, matID, drawFlags, area, detail))
+
+        o += len(blMesh.vertices)
+
+    worldVertices = tuple(worldVertices)
+    worldPolygons = tuple(worldPolygons)
+
+    worldBBMin, worldBBMax = calcCoordinateBounds(worldVertices)
+
+    windowManager.progress_end()
+
+    # Gather plane data
+
+    bspPlanes = []
+    octPlanes = []
+
+    for blOccObj in blOccObjs:
+        if blOccObj.gzrs2.occOct:
+            blOccObj.rotation_euler = eulerSnapped(blOccObj.rotation_euler)
+
+    context.view_layer.update()
+    
+    windowManager.progress_begin(0, len(blOccObjs))
+
+    for o, blOccObj in enumerate(blOccObjs):
+        windowManager.progress_update(o)
+
+        props = blOccObj.gzrs2
+        
+        if not (props.occBsp or props.occOct):
+            continue
+
+        worldMatrix = blOccObj.matrix_world.copy()
+
+        normal = worldMatrix.to_quaternion() @ Vector((0, 0, 1))
+        plane = normal.to_4d()
+        plane.w = -normal.dot(worldMatrix.translation)
+
+        if props.occBsp:    bspPlanes.append(plane)
+        if props.occOct:    octPlanes.append(plane)
+
+    windowManager.progress_end()
+
+    # Generate RS convex polygons
+    rsConvexPolygons = []
+    rsCVertexCount = 0
+
+    windowManager.progress_begin(0, len(worldPolygons))
+
+    for p, polygon in enumerate(worldPolygons):
+        windowManager.progress_update(w)
+
+        normal = polygon.normal.normalized()
+        plane = normal.to_4d()
+        plane.w = -normal.dot(polygon.positions[0])
+        vertexCount = polygon.vertexCount
+        positions = tuple(polygon.positions)
+        normals = tuple(normal.normalized() for normal in polygon.normals)
+
+        rsConvexPolygons.append(RsConvexPolygonExport(polygon.matID, polygon.drawFlags, plane, polygon.area, vertexCount, positions, normals))
+        rsCVertexCount += vertexCount
+
+    rsConvexPolygons = tuple(rsConvexPolygons)
+    rsCPolygonCount = len(rsConvexPolygons)
+
+    windowManager.progress_end()
+
+    # Generate Rs octree nodes
+    rsOctreePolygons = []
+
+    windowManager.progress_begin(0, len(worldPolygons))
+
+    for convexID, polygon in enumerate(worldPolygons):
+        windowManager.progress_update(convexID)
+
+        vertexCount = polygon.vertexCount
+        vertices = []
+
+        for i in range(vertexCount):
+            pos = polygon.positions[i].copy()
+            nor = polygon.normals[i].normalized()
+            uv1 = polygon.uv1s[i].copy()
+            uv2 = polygon.uv2s[i].copy()
+
+            vertices.append(Rs2TreeVertex(pos, nor, uv1, uv2))
+        rsOctreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, polygon.detail))
+
+    rsOctreePolygons = tuple(rsOctreePolygons)
+
+    depthLimit = calcDepthLimit(worldBBMin, worldBBMax)
+
+    windowManager.progress_end()
+
+    windowManager.progress_begin(0, 1)
+    windowManager.progress_update(0)
+
+    try:
+        rsOctreeRoot = createOctreeNode(rsOctreePolygons, octPlanes, worldBBMin, worldBBMax, depthLimit)
+    except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
+        self.report({ 'ERROR' }, error.message)
+        return { 'CANCELLED' }
+
+    rsONodeCount        = getTreeNodeCount(rsOctreeRoot)
+    rsOPolygonCount     = getTreePolygonCount(rsOctreeRoot)
+    rsOVertexCount      = getTreeVertexCount(rsOctreeRoot)
+    rsOIndexCount       = getTreeIndicesCount(rsOctreeRoot)
+    rsOTreeDepth        = getTreeDepth(rsOctreeRoot)
+
+    def getOctreeLmUVs(node, *, data = []):
+        if node.positive: getOctreeLmUVs(node.positive, data = data)
+        if node.negative: getOctreeLmUVs(node.negative, data = data)
+
+        for polygon in node.polygons:
+            for vertex in polygon.vertices:
+                data.append(vertex.uv2.copy())
+
+        return data
+
+    rsOctreeLmUVs = tuple(getOctreeLmUVs(rsOctreeRoot))
+
+    windowManager.progress_end()
+
+    # Generate Bsp nodes
+    rsBsptreePolygons = []
+
+    windowManager.progress_begin(0, len(worldPolygons))
+
+    for convexID, polygon in enumerate(worldPolygons):
+        windowManager.progress_update(convexID)
+
+        vertexCount = polygon.vertexCount
+        vertices = []
+
+        for i in range(vertexCount):
+            pos = polygon.positions[i].copy()
+            nor = polygon.normals[i].normalized()
+            uv1 = polygon.uv1s[i].copy()
+            uv2 = polygon.uv2s[i].copy()
+
+            vertices.append(Rs2TreeVertex(pos, nor, uv1, uv2))
+
+        rsBsptreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, polygon.detail))
+
+    rsBsptreePolygons = tuple(rsBsptreePolygons)
+
+    windowManager.progress_end()
+
+    windowManager.progress_begin(0, 1)
+    windowManager.progress_update(0)
+
+    try:
+        rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, bspPlanes, worldBBMin, worldBBMax)
+    except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
+        self.report({ 'ERROR' }, error.message)
+        return { 'CANCELLED' }
+
+    rsBNodeCount        = getTreeNodeCount(rsBsptreeRoot)
+    rsBPolygonCount     = getTreePolygonCount(rsBsptreeRoot)
+    rsBVertexCount      = getTreeVertexCount(rsBsptreeRoot)
+    rsBIndexCount       = getTreeIndicesCount(rsBsptreeRoot)
+    rsBTreeDepth        = getTreeDepth(rsBsptreeRoot)
+
+    bspNodeCount        = rsBNodeCount
+    bspPolygonCount     = rsBPolygonCount
+    bspVertexCount      = rsBVertexCount
+    bspIndexCount       = rsBIndexCount
+
+    windowManager.progress_end()
+
+    # Generate Col nodes
+    if state.doCollision:
+        coltreeVertices = []
+        coltreePolygons = []
+        o = 0
+
+        windowManager.progress_begin(0, len(blColObjs))
+
+        for c, blColObj in enumerate(blColObjs):
+            windowManager.progress_update(c)
+
+            blMesh = blColObj.data
+
+            worldMatrix = blColObj.matrix_world
+            coltreeVertices += tuple(worldMatrix @ vertex.co for vertex in blMesh.vertices)
+
+            for polygon in blMesh.polygons:
+                positions = tuple(coltreeVertices[o + i] for i in polygon.vertices)
+                normal = polygon.normal.normalized()
+
+                coltreePolygons.append(Col1HullPolygon(len(positions), positions, normal, False))
+
+            o += len(blMesh.vertices)
+
+        coltreeVertices = tuple(coltreeVertices)
+        coltreePolygons = tuple(coltreePolygons)
+
+        colBBMin, colBBMax = calcCoordinateBounds(coltreeVertices)
+        coltreeBoundsQuads = tuple(createBoundsQuad(colBBMin, colBBMax, s) for s in range(6))
+
+        windowManager.progress_end()
+
+        windowManager.progress_begin(0, 1)
+        windowManager.progress_update(0)
+
+        try:
+            col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads)
+        except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
+            self.report({ 'ERROR' }, error.message)
+            return { 'CANCELLED' }
+
+        colNodeCount        = getTreeNodeCount(col1Root)
+        colTriangleCount    = getTreeTriangleCount(col1Root)
+        colTreeDepth        = getTreeDepth(col1Root)
+        
+        windowManager.progress_end()
+
+    # Gather lightmap data
+    lightmapImage = worldProps.lightmapImage
+
+    # Never atlas, we increase the lightmap resolution instead
+    # numCells = worldProps.lightmapNumCells
+    numCells = 1
+
+    if lightmapImage:
+        imageDatas, imageSizes = generateLightmapData(self, lightmapImage, numCells, state)
+
+        if not imageDatas or not imageSizes:
+            return { 'CANCELLED' }
+    else:
+        pixelCount = LM_MIN_SIZE ** 2
+        floats = tuple(1.0 for _ in range(pixelCount * 4))
+        imageData = packLmImageData(self, LM_MIN_SIZE, floats, state)
+
+        imageDatas, imageSizes = (imageData,), (LM_MIN_SIZE,)
+
+    imageCount = len(imageDatas)
+
+    polygonOrder = bytearray(rsOPolygonCount * 4)
+    lightmapIDs = bytearray(rsOPolygonCount * 4)
+    lightmapUVs = bytearray(rsOVertexCount * 2 * 4)
+
+    polygonOrderInts = memoryview(polygonOrder).cast('I')
+    lightmapIDsInts = memoryview(lightmapIDs).cast('I')
+    lightmapUVsFloats = memoryview(lightmapUVs).cast('f')
+
+    # Never atlas, we increase the lightmap resolution instead
+    for p in range(rsOPolygonCount):
+        polygonOrderInts[p] = p
+        lightmapIDsInts[p] = 0
+
+    for v in range(rsOVertexCount):
+        uv2 = rsOctreeLmUVs[v]
+
+        lightmapUVsFloats[v * 2 + 0] = uv2.x
+        lightmapUVsFloats[v * 2 + 1] = 1 - uv2.y
+
+    polygonOrderInts.release()
+    lightmapIDsInts.release()
+    lightmapUVsFloats.release()
+
     windowManager.progress_begin(0, rsMatCount + rsLightCount + rsPropCount + rsDummyCount + rsOccCount + rsSoundCount)
     progress = 0
 
     # Write .rs.xml
+    createBackupFile(rsxmlpath, purgeUnused = state.purgeUnused)
+
     with open(rsxmlpath, 'w') as file:
         file.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
         file.write("<XML>\n")
@@ -618,8 +917,6 @@ def exportRS2(self, context):
         if rsOccCount > 0:
             file.write("\t<OCCLUSIONLIST>\n")
 
-        bspPlanes   = []
-        octPlanes   = []
         oc = 1
 
         for blOccObj in blOccObjs:
@@ -653,13 +950,6 @@ def exportRS2(self, context):
             v2 = worldMatrix @ v2
             v3 = worldMatrix @ v3
             v4 = worldMatrix @ v4
-
-            normal = worldMatrix.to_quaternion() @ Vector((0, 0, 1))
-            plane = normal.to_4d()
-            plane.w = -normal.dot(worldMatrix.translation)
-
-            if props.occBsp:    bspPlanes.append(plane)
-            if props.occOct:    octPlanes.append(plane)
 
             file.write(f"\t\t<OCCLUSION name=\"{ occPrefix }{ str(oc).zfill(2) }\">\n")
             file.write("\t\t\t<POSITION>{:f} {:f} {:f}</POSITION>\n".format(*tokenizeVec3(v1, 'POSITION', state.convertUnits, True)))
@@ -747,6 +1037,8 @@ def exportRS2(self, context):
     # Write spawn.xml
     itemSoloCount = len(blItemSoloObjs)
     itemTeamCount = len(blItemTeamObjs)
+    
+    createBackupFile(spawnxmlpath, purgeUnused = state.purgeUnused)
 
     if itemSoloCount > 0 or itemTeamCount > 0:
         with open(spawnxmlpath, 'w') as file:
@@ -782,6 +1074,8 @@ def exportRS2(self, context):
             file.write("</XML>\n")
 
     # Write flag.xml
+    createBackupFile(flagxmlpath, purgeUnused = state.purgeUnused)
+
     if len(blPropFlagObjs) > 0:
         with open(flagxmlpath, 'w') as file:
             file.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
@@ -814,6 +1108,8 @@ def exportRS2(self, context):
             file.write("</XML>\n")
 
     # Write smoke.xml
+    createBackupFile(smokexmlpath, purgeUnused = state.purgeUnused)
+
     if len(blSmokeObjs) > 0:
         with open(smokexmlpath, 'w') as file:
             file.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
@@ -839,181 +1135,8 @@ def exportRS2(self, context):
                 file.write(f"TOGGLEMINTIME=\"{  props.smokeToggleMinTime    }\"/>\n")
 
             file.write("</XML>\n")
-
-    # Gather vertex & face data
-    worldVertices = []
-    worldPolygons = []
-    o = 0
-
+    
     windowManager.progress_end()
-    windowManager.progress_begin(0, len(blWorldObjs))
-
-    for w, blWorldObj in enumerate(blWorldObjs):
-        windowManager.progress_update(w)
-
-        blMesh = blWorldObj.data
-        props = blMesh.gzrs2
-
-        uvLayer1 = getOrNone(blMesh.uv_layers, 0)
-        uvLayer2 = getOrNone(blMesh.uv_layers, 1)
-
-        hasUV1s = uvLayer1 is not None
-        hasUV2s = uvLayer2 is not None
-        hasCustomNormals = blMesh.has_custom_normals
-
-        blWorldMatSlots = blWorldObj.material_slots
-        blWorldMatCount = len(blWorldMatSlots)
-        hasMatIDs = blWorldMatCount > 0
-
-        worldMatrix = blWorldObj.matrix_world
-        worldVertices += tuple(worldMatrix @ vertex.co for vertex in blMesh.vertices)
-
-        for polygon in blMesh.polygons:
-            if polygon.material_index >= blWorldMatCount:
-                self.report({ 'ERROR' }, f"GZRS2: World mesh with corrupt material indices! Verify all polygons are assigned to a valid material slot: { blWorldObj.name }")
-                return { 'CANCELLED' }
-            
-            loopRange = range(polygon.loop_start, polygon.loop_start + polygon.loop_total)
-
-            normal      = polygon.normal
-            positions   = tuple(worldVertices[o + i] for i in polygon.vertices)
-            uv1s        = tuple(uvLayer1.uv[i].vector   for i in loopRange)             if hasUV1s              else tuple(Vector((0, 0)) for _ in loopRange)
-            uv2s        = tuple(uvLayer2.uv[i].vector   for i in loopRange)             if hasUV2s              else tuple(Vector((0, 0)) for _ in loopRange)
-            normals     = tuple(blMesh.loops[i].normal  for i in loopRange)             if hasCustomNormals     else tuple(normal for _ in loopRange)
-            matID       = blWorldMats.index(blWorldMatSlots[polygon.material_index].material)  if hasMatIDs            else -1
-            drawFlags   = 0 # TODO
-            area        = polygon.area
-            detail      = props.worldDetail
-
-            worldPolygons.append(RsWorldPolygon(normal, len(positions), positions, normals, uv1s, uv2s, matID, drawFlags, area, detail))
-
-        o += len(blMesh.vertices)
-
-    worldVertices = tuple(worldVertices)
-    worldPolygons = tuple(worldPolygons)
-
-    worldBBMin, worldBBMax = calcCoordinateBounds(worldVertices)
-
-    # Generate RS convex polygons
-    rsConvexPolygons = []
-    rsCVertexCount = 0
-
-    windowManager.progress_end()
-    windowManager.progress_begin(0, len(worldPolygons))
-
-    for p, polygon in enumerate(worldPolygons):
-        windowManager.progress_update(w)
-
-        normal = polygon.normal.normalized()
-        plane = normal.to_4d()
-        plane.w = -normal.dot(polygon.positions[0])
-        vertexCount = polygon.vertexCount
-        positions = tuple(polygon.positions)
-        normals = tuple(normal.normalized() for normal in polygon.normals)
-
-        rsConvexPolygons.append(RsConvexPolygonExport(polygon.matID, polygon.drawFlags, plane, polygon.area, vertexCount, positions, normals))
-        rsCVertexCount += vertexCount
-
-    rsConvexPolygons = tuple(rsConvexPolygons)
-    rsCPolygonCount = len(rsConvexPolygons)
-
-    # Generate Rs octree nodes
-    rsOctreePolygons = []
-
-    windowManager.progress_end()
-    windowManager.progress_begin(0, len(worldPolygons))
-
-    for convexID, polygon in enumerate(worldPolygons):
-        windowManager.progress_update(convexID)
-
-        vertexCount = polygon.vertexCount
-        vertices = []
-
-        for i in range(vertexCount):
-            pos = polygon.positions[i].copy()
-            nor = polygon.normals[i].normalized()
-            uv1 = polygon.uv1s[i].copy()
-            uv2 = polygon.uv2s[i].copy()
-
-            vertices.append(Rs2TreeVertex(pos, nor, uv1, uv2))
-        rsOctreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, polygon.detail))
-
-    rsOctreePolygons = tuple(rsOctreePolygons)
-
-    depthLimit = calcDepthLimit(worldBBMin, worldBBMax)
-
-    windowManager.progress_end()
-    windowManager.progress_begin(0, 1)
-    windowManager.progress_update(0)
-
-    try:
-        rsOctreeRoot = createOctreeNode(rsOctreePolygons, octPlanes, worldBBMin, worldBBMax, depthLimit)
-    except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
-        self.report({ 'ERROR' }, error.message)
-        return { 'CANCELLED' }
-
-    rsONodeCount        = getTreeNodeCount(rsOctreeRoot)
-    rsOPolygonCount     = getTreePolygonCount(rsOctreeRoot)
-    rsOVertexCount      = getTreeVertexCount(rsOctreeRoot)
-    rsOIndexCount       = getTreeIndicesCount(rsOctreeRoot)
-    rsOTreeDepth        = getTreeDepth(rsOctreeRoot)
-
-    def getOctreeLmUVs(node, *, data = []):
-        if node.positive: getOctreeLmUVs(node.positive, data = data)
-        if node.negative: getOctreeLmUVs(node.negative, data = data)
-
-        for polygon in node.polygons:
-            for vertex in polygon.vertices:
-                data.append(vertex.uv2.copy())
-
-        return data
-
-    rsOctreeLmUVs = tuple(getOctreeLmUVs(rsOctreeRoot))
-
-    # Generate Bsp nodes
-    rsBsptreePolygons = []
-
-    windowManager.progress_end()
-    windowManager.progress_begin(0, len(worldPolygons))
-
-    for convexID, polygon in enumerate(worldPolygons):
-        windowManager.progress_update(convexID)
-
-        vertexCount = polygon.vertexCount
-        vertices = []
-
-        for i in range(vertexCount):
-            pos = polygon.positions[i].copy()
-            nor = polygon.normals[i].normalized()
-            uv1 = polygon.uv1s[i].copy()
-            uv2 = polygon.uv2s[i].copy()
-
-            vertices.append(Rs2TreeVertex(pos, nor, uv1, uv2))
-
-        rsBsptreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, polygon.detail))
-
-    rsBsptreePolygons = tuple(rsBsptreePolygons)
-
-    windowManager.progress_end()
-    windowManager.progress_begin(0, 1)
-    windowManager.progress_update(0)
-
-    try:
-        rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, bspPlanes, worldBBMin, worldBBMax)
-    except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
-        self.report({ 'ERROR' }, error.message)
-        return { 'CANCELLED' }
-
-    rsBNodeCount        = getTreeNodeCount(rsBsptreeRoot)
-    rsBPolygonCount     = getTreePolygonCount(rsBsptreeRoot)
-    rsBVertexCount      = getTreeVertexCount(rsBsptreeRoot)
-    rsBIndexCount       = getTreeIndicesCount(rsBsptreeRoot)
-    rsBTreeDepth        = getTreeDepth(rsBsptreeRoot)
-
-    bspNodeCount        = rsBNodeCount
-    bspPolygonCount     = rsBPolygonCount
-    bspVertexCount      = rsBVertexCount
-    bspIndexCount       = rsBIndexCount
 
     def writeTreeNode(node):
         writeBounds(file, node.bbmin, node.bbmax, state.convertUnits)
@@ -1074,6 +1197,8 @@ def exportRS2(self, context):
         print(f"Index Count:        { rsOIndexCount }")
         print(f"Depth:              { rsOTreeDepth }")
         print()
+    
+    createBackupFile(rspath, purgeUnused = state.purgeUnused)
 
     with open(rspath, 'wb') as file:
         writeUInt(file, id)
@@ -1125,6 +1250,8 @@ def exportRS2(self, context):
         print(f"Vertex Count:       { bspVertexCount }")
         print(f"Index Count:        { bspIndexCount }")
         print()
+    
+    createBackupFile(bsppath, purgeUnused = state.purgeUnused)
 
     with open(bsppath, 'wb') as file:
         writeUInt(file, id)
@@ -1137,52 +1264,8 @@ def exportRS2(self, context):
 
         writeTreeNode(rsBsptreeRoot)
 
+    # Write Col
     if state.doCollision:
-        # Generate Col nodes
-        coltreeVertices = []
-        coltreePolygons = []
-        o = 0
-
-        windowManager.progress_end()
-        windowManager.progress_begin(0, len(blColObjs))
-
-        for c, blColObj in enumerate(blColObjs):
-            windowManager.progress_update(c)
-
-            blMesh = blColObj.data
-
-            worldMatrix = blColObj.matrix_world
-            coltreeVertices += tuple(worldMatrix @ vertex.co for vertex in blMesh.vertices)
-
-            for polygon in blMesh.polygons:
-                positions = tuple(coltreeVertices[o + i] for i in polygon.vertices)
-                normal = polygon.normal.normalized()
-
-                coltreePolygons.append(Col1HullPolygon(len(positions), positions, normal, False))
-
-            o += len(blMesh.vertices)
-
-        coltreeVertices = tuple(coltreeVertices)
-        coltreePolygons = tuple(coltreePolygons)
-
-        colBBMin, colBBMax = calcCoordinateBounds(coltreeVertices)
-        coltreeBoundsQuads = tuple(createBoundsQuad(colBBMin, colBBMax, s) for s in range(6))
-
-        windowManager.progress_end()
-        windowManager.progress_begin(0, 1)
-        windowManager.progress_update(0)
-
-        try:
-            col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads)
-        except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
-            self.report({ 'ERROR' }, error.message)
-            return { 'CANCELLED' }
-
-        colNodeCount        = getTreeNodeCount(col1Root)
-        colTriangleCount    = getTreeTriangleCount(col1Root)
-        colTreeDepth        = getTreeDepth(col1Root)
-
-        # Write Col
         id = COL1_ID
         version = COL1_VERSION
 
@@ -1197,6 +1280,8 @@ def exportRS2(self, context):
             print(f"Triangle Count:     { colTriangleCount }")
             print(f"Depth:              { colTreeDepth }")
             print()
+        
+        createBackupFile(colpath, purgeUnused = state.purgeUnused)
 
         with open(colpath, 'wb') as file:
             writeUInt(file, id)
@@ -1225,53 +1310,7 @@ def exportRS2(self, context):
 
             writeCol1Node(col1Root)
 
-        windowManager.progress_end()
-
-    # Gather lightmap data
-    lightmapImage = worldProps.lightmapImage
-
-    # Never atlas, we increase the lightmap resolution instead
-    # numCells = worldProps.lightmapNumCells
-    numCells = 1
-
-    if lightmapImage:
-        imageDatas, imageSizes = generateLightmapData(self, lightmapImage, numCells, state)
-
-        if not imageDatas or not imageSizes:
-            return { 'CANCELLED' }
-    else:
-        pixelCount = LM_MIN_SIZE ** 2
-        floats = tuple(1.0 for _ in range(pixelCount * 4))
-        imageData = packLmImageData(self, LM_MIN_SIZE, floats, state)
-
-        imageDatas, imageSizes = (imageData,), (LM_MIN_SIZE,)
-
-    imageCount = len(imageDatas)
-
-    polygonOrder = bytearray(rsOPolygonCount * 4)
-    lightmapIDs = bytearray(rsOPolygonCount * 4)
-    lightmapUVs = bytearray(rsOVertexCount * 2 * 4)
-
-    polygonOrderInts = memoryview(polygonOrder).cast('I')
-    lightmapIDsInts = memoryview(lightmapIDs).cast('I')
-    lightmapUVsFloats = memoryview(lightmapUVs).cast('f')
-
-    # Never atlas, we increase the lightmap resolution instead
-    for p in range(rsOPolygonCount):
-        polygonOrderInts[p] = p
-        lightmapIDsInts[p] = 0
-
-    for v in range(rsOVertexCount):
-        uv2 = rsOctreeLmUVs[v]
-
-        lightmapUVsFloats[v * 2 + 0] = uv2.x
-        lightmapUVsFloats[v * 2 + 1] = 1 - uv2.y
-
-    polygonOrderInts.release()
-    lightmapIDsInts.release()
-    lightmapUVsFloats.release()
-
-    # Write LM
+    # Write Lm
     id = LM_ID
     version = LM_VERSION_EXT if state.lmVersion4 else LM_VERSION
     lmCPolygonCount = rsCPolygonCount # CONVEX polygon count!
@@ -1286,6 +1325,8 @@ def exportRS2(self, context):
         print()
         print(f"Image Count:        { imageCount }")
         print()
+    
+    createBackupFile(lmpath, purgeUnused = state.purgeUnused)
 
     with open(lmpath, 'wb') as file:
         writeUInt(file, id)
