@@ -2844,11 +2844,9 @@ def dumpImageData(imageDatas, imageSizes, imageCount, directory, filename, state
         with open(imgpath, 'wb') as file:
             if state.lmVersion4:
                 ddsSize = 76 + 32 + 20 + pixelCount // 2
-                writeUInt(file, ddsSize)
                 writeDDSHeader(file, imageSize, pixelCount, ddsSize)
             else:
                 bmpSize = 14 + 40 + pixelCount * 3
-                writeUInt(file, bmpSize)
                 writeBMPHeader(file, imageSize, bmpSize)
 
             file.write(imageData)
