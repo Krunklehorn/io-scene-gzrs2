@@ -503,10 +503,11 @@ def exportElu(self, context):
                 return { 'CANCELLED' }
 
             eluMeshMatCount = len(eluMeshObj.material_slots)
+            hasMatIDs = eluMeshMatCount > 0
             hasCustomNormals = blMesh.has_custom_normals
 
             for triangle in blMesh.loop_triangles:
-                if triangle.material_index >= eluMeshMatCount:
+                if hasMatIDs and triangle.material_index >= eluMeshMatCount:
                     self.report({ 'ERROR' }, f"GZRS2: Mesh with corrupt material indices! Verify all polygons are assigned to a valid material slot: { meshName }")
                     return { 'CANCELLED' }
 
