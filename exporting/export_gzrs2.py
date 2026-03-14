@@ -1089,10 +1089,12 @@ def exportRS2(self, context):
 
             for blPropFlagObj in blPropFlagObjs:
                 props = blPropFlagObj.data.gzrs2
+                flagName = props.propFilename
+                flagName = flagName.replace(f"{ filename }_", "", 1)
                 windDirection = tokenizeDegrees(props.flagDirection)
                 windType = FLAG_WINDTYPE_TAGS.index(props.flagWindType)
 
-                file.write(f"\t<FLAG NAME=\"{ blPropFlagObj.name }{ os.extsep }elu\" DIRECTION=\"{ windDirection }\" POWER=\"{ props.flagPower }\">\n")
+                file.write(f"\t<FLAG NAME=\"{ flagName }{ os.extsep }elu\" DIRECTION=\"{ windDirection }\" POWER=\"{ props.flagPower }\">\n")
                 # TODO: Multiple windtype data
                 file.write(f"\t\t<WINDTYPE TYPE=\"{ windType }\" DELAY=\"{ props.flagWindDelay }\"/>\n")
 
