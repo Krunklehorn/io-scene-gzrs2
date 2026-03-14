@@ -1616,6 +1616,7 @@ def setupElu(self, eluMesh, oneOfMany, collection, context, state):
 
     if state.doEluCleanup:
         # TODO: convertUnits should affect thresholds
+        # TODO: RS3 importer doesn't run these commands properly, maybe a visibility/selection issue?
         def cleanupFunc(blObj):
             counts = countInfoReports(context)
 
@@ -2581,7 +2582,7 @@ def unpackLmImages(context, state):
     state.blLmImage = blLmImage
 
 def packLmImageData(self, imageSize, floats, state, *, fromAtlas = False, atlasSize = 0, cx = 0, cy = 0):
-    sopath = os.path.join(os.path.dirname(__file__), 'clib_gzrs2', 'clib_gzrs2.x86_64-w64-mingw32.so')
+    sopath = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'clib_gzrs2', 'clib_gzrs2.x86_64-w64-mingw32.so')
     success = True
 
     try:
