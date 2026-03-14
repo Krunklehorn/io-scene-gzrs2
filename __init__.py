@@ -1911,6 +1911,12 @@ class ExportGZRS2(Operator, ExportHelper):
         default = True
     )
 
+    panelProps: BoolProperty(
+        name = 'Props',
+        description = "Export map props",
+        default = True
+    )
+
     panelLogging: BoolProperty(
         name = 'Logging',
         description = "Log details to the console",
@@ -1963,6 +1969,12 @@ class ExportGZRS2(Operator, ExportHelper):
     dumpImages: BoolProperty(
         name = 'Dump Images',
         description = "Writes plain BMP files of each lightmap",
+        default = False
+    )
+
+    uncapLimits: BoolProperty(
+        name = 'Uncap Limits',
+        description = "Removes the check for a triangle count limit. (MAX_VERTEX)",
         default = False
     )
 
@@ -2056,6 +2068,29 @@ class GZRS2_PT_Export_Lightmap(Panel):
         column.enabled = not operator.lmVersion4
 
         layout.prop(operator, 'dumpImages')
+
+class GZRS2_PT_Export_Props(Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Props'
+    bl_parent_id = 'FILE_PT_operator'
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
+
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, 'panelProps', text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelProps
+
+        layout.prop(operator, 'uncapLimits')
 
 class GZRS2_PT_Export_Logging(Panel):
     bl_space_type = 'FILE_BROWSER'
@@ -4225,6 +4260,7 @@ classes = (
     ExportGZRS2,
     GZRS2_PT_Export_Main,
     GZRS2_PT_Export_Lightmap,
+    GZRS2_PT_Export_Props,
     GZRS2_PT_Export_Logging,
     ExportRSCOL,
     RSCOL_PT_Export_Main,

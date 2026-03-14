@@ -59,11 +59,11 @@ def exportElu(self, context):
         print("=======================================================================")
         print()
 
-        state.logEluHeaders = self.logEluHeaders
-        state.logEluMats = self.logEluMats
-        state.logEluMeshNodes = self.logEluMeshNodes
-        state.logVerboseIndices = self.logVerboseIndices and self.logEluMeshNodes
-        state.logVerboseWeights = self.logVerboseWeights and self.logEluMeshNodes
+        state.logEluHeaders         = self.logEluHeaders
+        state.logEluMats            = self.logEluMats
+        state.logEluMeshNodes       = self.logEluMeshNodes
+        state.logVerboseIndices     = self.logVerboseIndices and self.logEluMeshNodes
+        state.logVerboseWeights     = self.logVerboseWeights and self.logEluMeshNodes
 
     elupath = self.filepath
     directory = os.path.dirname(elupath)
@@ -174,9 +174,9 @@ def exportElu(self, context):
 
     # Verify filenames
     if state.isMapProp:
-        exportFilenames = set(blEmptyObj.data.gzrs2.attachmentFilename for blEmptyObj in blEmptyObjs)
+        exportFilenames  = set(blEmptyObj.data.gzrs2.attachmentFilename for blEmptyObj in blEmptyObjs)
         exportFilenames |= set(blMeshObj.data.gzrs2.propFilename for blMeshObj in blMeshObjsAll)
-        exportFilenames = set(exportFilename.replace(os.extsep + 'elu', '') for exportFilename in exportFilenames)
+        exportFilenames  = set(exportFilename.replace(os.extsep + 'elu', '') for exportFilename in exportFilenames)
 
         for exportFilename in exportFilenames:
             if exportFilename != filename:

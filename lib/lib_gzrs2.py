@@ -1951,7 +1951,7 @@ def getSelectedObjects(context):
     for area in filter(lambda x: x.type == 'OUTLINER', context.screen.areas):
         for region in filter(lambda x: x.type == 'WINDOW', area.regions):
             with context.temp_override(area = area, region = region):
-                for object in context.selected_ids:
+                for object in context.selected_objects:
                     objects.add(object)
 
                 break

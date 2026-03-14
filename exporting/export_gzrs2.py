@@ -20,6 +20,7 @@ from ..classes_gzrs2 import *
 from ..parse_gzrs2 import *
 from ..io_gzrs2 import *
 from ..lib.lib_gzrs2 import *
+from ..exporting.export_rselu import *
 
 def exportRS2(self, context):
     state = GZRS2ExportState()
@@ -1367,5 +1368,21 @@ def exportRS2(self, context):
 
         if state.dumpImages:
             dumpImageData(imageDatas, imageSizes, imageCount, directory, filename, state)
+            
+    # Write Elus
+    if self.panelProps:
+        self.isMapProp = True
+        self.filterMode = 'SELECTED'
+        self.includeChildren = True
+
+        for blPropObj in blPropObjs:
+            with context.temp_override(selected_objects = [blPropObj]):
+                elupath = os.path.join(directory, blPropObj.data.gzrs2.propFilename)
+                self.filepath = f"{ elupath }{ os.extsep }elu"
+
+                result = exportElu(self, context)
+
+                if result != { 'FINISHED' }:
+                    return result
 
     return { 'FINISHED' }
