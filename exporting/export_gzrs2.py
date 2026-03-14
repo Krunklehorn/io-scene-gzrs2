@@ -1385,6 +1385,11 @@ def exportRS2(self, context):
             
     # Write Elus
     if self.panelProps:
+        filepath            = self.filepath
+        isMapProp           = getattr(self, 'isMapProp', False)
+        filterMode          = getattr(self, 'filterMode', 'ALL')
+        includeChildren     = getattr(self, 'includeChildren', True)
+
         self.isMapProp = True
         self.filterMode = 'SELECTED'
         self.includeChildren = True
@@ -1398,5 +1403,10 @@ def exportRS2(self, context):
 
                 if result != { 'FINISHED' }:
                     return result
+        
+        self.filepath           = filepath
+        self.isMapProp          = isMapProp
+        self.filterMode         = filterMode
+        self.includeChildren    = includeChildren
 
     return { 'FINISHED' }
