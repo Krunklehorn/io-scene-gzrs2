@@ -1087,10 +1087,22 @@ def exportRS2(self, context):
             file.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
             file.write("<XML>\n")
 
+            filenamePrefix = f"{ filename }_"
+
             for blPropFlagObj in blPropFlagObjs:
                 props = blPropFlagObj.data.gzrs2
                 flagName = props.propFilename
-                flagName = flagName.replace(f"{ filename }_", "", 1)
+
+                if not flagName.lower().startswith(filenamePrefix):
+                    self.report({ 'ERROR' }, f"GZRS2: Flag filenames must begin with the '<mapname>_' prefix: { blPropFlagObj.name }")
+                    return { 'CANCELLED' }
+
+                flagName = flagName.replace(filenamePrefix, "", 1)
+
+                if '_flag' not in flagName.lower():
+                    self.report({ 'ERROR' }, f"GZRS2: Flag filenames must contain the '_flag' suffix: { blPropFlagObj.name }")
+                    return { 'CANCELLED' }
+                
                 windDirection = tokenizeDegrees(props.flagDirection)
                 windType = FLAG_WINDTYPE_TAGS.index(props.flagWindType)
 

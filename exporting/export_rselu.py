@@ -182,6 +182,13 @@ def exportElu(self, context):
             if exportFilename != filename:
                 self.report({ 'ERROR' }, "GZRS2: Prop and Attachment filenames must match the .elu export filename! This ensures synchronicity with the .rs.xml <OBJECT> tags during .rs export!")
                 return { 'CANCELLED' }
+        
+        for blMeshObj in blMeshObjsAll:
+            props = blMeshObj.data.gzrs2
+            
+            if props.propSubtype == 'FLAG' and '_flag' not in props.propFilename.lower():
+                self.report({ 'ERROR' }, f"GZRS2: Flag filenames must contain the '_flag' suffix: { blMeshObj.name }")
+                return { 'CANCELLED' }
 
     eluObjByName = {}
 
