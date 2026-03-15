@@ -33,12 +33,15 @@ def exportRS2(self, context):
 
     state.purgeUnused       = self.purgeUnused
 
+    state.doVisual          = self.doVisual
     state.doCollision       = self.doCollision
 
-    state.doLightmap        = self.panelLightmap
+    state.doLightmap        = self.panelLightmap and self.doVisual
     state.lmVersion4        = self.lmVersion4                       and self.panelLightmap
     state.mod4Fix           = self.mod4Fix and not self.lmVersion4  and self.panelLightmap
     state.dumpImages        = self.dumpImages                       and self.panelLightmap
+
+    state.doProps           = self.panelProps
 
     if self.panelLogging:
         print()
@@ -320,9 +323,9 @@ def exportRS2(self, context):
     if checkPropsParentForks(blPropObjsAll, self):      return { 'CANCELLED' }
     if checkPropsParentChains(blPropObjsAll, self):     return { 'CANCELLED' }
 
-    blWorldMats     = set(matSlot.material for blWorldObj   in blWorldObjs      for matSlot in blWorldObj.material_slots)
-    blPropMats      = set(matSlot.material for blPropObj    in blPropObjsAll    for matSlot in blPropObj.material_slots)
-    blPropMats      |= set(blPropMat.gzrs2.parent for blPropMat in blPropMats) - { None }
+    blWorldMats      = set(matSlot.material         for blWorldObj  in blWorldObjs      for matSlot in blWorldObj.material_slots)
+    blPropMats       = set(matSlot.material         for blPropObj   in blPropObjsAll    for matSlot in blPropObj.material_slots)
+    blPropMats      |= set(blPropMat.gzrs2.parent   for blPropMat   in blPropMats) - { None }
 
     if len(blWorldMats) == 0:
         self.report({ 'ERROR' }, f"GZRS2: RS export requires at least one world material!")
@@ -362,217 +365,221 @@ def exportRS2(self, context):
     windowManager.progress_end()
 
     # Gather vertex & face data
-    worldVertices = []
-    worldPolygons = []
-    o = 0
+    if state.doVisual:
+        worldVertices = []
+        worldPolygons = []
+        o = 0
 
-    windowManager.progress_begin(0, len(blWorldObjs))
+        windowManager.progress_begin(0, len(blWorldObjs))
 
-    for w, blWorldObj in enumerate(blWorldObjs):
-        windowManager.progress_update(w)
+        for w, blWorldObj in enumerate(blWorldObjs):
+            windowManager.progress_update(w)
 
-        blMesh = blWorldObj.data
-        props = blMesh.gzrs2
+            blMesh = blWorldObj.data
+            props = blMesh.gzrs2
 
-        uvLayer1 = getOrNone(blMesh.uv_layers, 0)
-        uvLayer2 = getOrNone(blMesh.uv_layers, 1)
+            uvLayer1 = getOrNone(blMesh.uv_layers, 0)
+            uvLayer2 = getOrNone(blMesh.uv_layers, 1)
 
-        hasUV1s = uvLayer1 is not None
-        hasUV2s = uvLayer2 is not None
-        hasCustomNormals = blMesh.has_custom_normals
+            hasUV1s = uvLayer1 is not None
+            hasUV2s = uvLayer2 is not None
+            hasCustomNormals = blMesh.has_custom_normals
 
-        blWorldMatSlots = blWorldObj.material_slots
-        blWorldMatCount = len(blWorldMatSlots)
-        hasMatIDs = blWorldMatCount > 0
+            blWorldMatSlots = blWorldObj.material_slots
+            blWorldMatCount = len(blWorldMatSlots)
+            hasMatIDs = blWorldMatCount > 0
 
-        worldMatrix = blWorldObj.matrix_world
-        worldVertices += tuple(worldMatrix @ vertex.co for vertex in blMesh.vertices)
+            worldMatrix = blWorldObj.matrix_world
+            worldVertices += tuple(worldMatrix @ vertex.co for vertex in blMesh.vertices)
 
-        for polygon in blMesh.polygons:
-            if hasMatIDs and polygon.material_index >= blWorldMatCount:
-                self.report({ 'ERROR' }, f"GZRS2: World mesh with corrupt material indices! Verify all polygons are assigned to a valid material slot: { blWorldObj.name }")
-                return { 'CANCELLED' }
-            
-            loopRange = range(polygon.loop_start, polygon.loop_start + polygon.loop_total)
+            for polygon in blMesh.polygons:
+                if hasMatIDs and polygon.material_index >= blWorldMatCount:
+                    self.report({ 'ERROR' }, f"GZRS2: World mesh with corrupt material indices! Verify all polygons are assigned to a valid material slot: { blWorldObj.name }")
+                    return { 'CANCELLED' }
+                
+                loopRange = range(polygon.loop_start, polygon.loop_start + polygon.loop_total)
 
-            normal      = polygon.normal
-            positions   = tuple(worldVertices[o + i] for i in polygon.vertices)
-            uv1s        = tuple(uvLayer1.uv[i].vector   for i in loopRange)                     if hasUV1s              else tuple(Vector((0, 0)) for _ in loopRange)
-            uv2s        = tuple(uvLayer2.uv[i].vector   for i in loopRange)                     if hasUV2s              else tuple(Vector((0, 0)) for _ in loopRange)
-            normals     = tuple(blMesh.loops[i].normal  for i in loopRange)                     if hasCustomNormals     else tuple(normal for _ in loopRange)
-            matID       = blWorldMats.index(blWorldMatSlots[polygon.material_index].material)   if hasMatIDs            else -1
-            drawFlags   = 0 # TODO
-            area        = polygon.area
-            detail      = props.worldDetail
+                normal      = polygon.normal
+                positions   = tuple(worldVertices[o + i] for i in polygon.vertices)
+                uv1s        = tuple(uvLayer1.uv[i].vector   for i in loopRange)                     if hasUV1s              else tuple(Vector((0, 0)) for _ in loopRange)
+                uv2s        = tuple(uvLayer2.uv[i].vector   for i in loopRange)                     if hasUV2s              else tuple(Vector((0, 0)) for _ in loopRange)
+                normals     = tuple(blMesh.loops[i].normal  for i in loopRange)                     if hasCustomNormals     else tuple(normal for _ in loopRange)
+                matID       = blWorldMats.index(blWorldMatSlots[polygon.material_index].material)   if hasMatIDs            else -1
+                drawFlags   = 0 # TODO
+                area        = polygon.area
+                detail      = props.worldDetail
 
-            worldPolygons.append(RsWorldPolygon(normal, len(positions), positions, normals, uv1s, uv2s, matID, drawFlags, area, detail))
+                worldPolygons.append(RsWorldPolygon(normal, len(positions), positions, normals, uv1s, uv2s, matID, drawFlags, area, detail))
 
-        o += len(blMesh.vertices)
+            o += len(blMesh.vertices)
 
-    worldVertices = tuple(worldVertices)
-    worldPolygons = tuple(worldPolygons)
+        worldVertices = tuple(worldVertices)
+        worldPolygons = tuple(worldPolygons)
 
-    worldBBMin, worldBBMax = calcCoordinateBounds(worldVertices)
+        worldBBMin, worldBBMax = calcCoordinateBounds(worldVertices)
 
-    windowManager.progress_end()
+        windowManager.progress_end()
 
     # Gather plane data
+    if state.doVisual:
+        bspPlanes = []
+        octPlanes = []
 
-    bspPlanes = []
-    octPlanes = []
+        for blOccObj in blOccObjs:
+            if blOccObj.gzrs2.occOct:
+                blOccObj.rotation_euler = eulerSnapped(blOccObj.rotation_euler)
 
-    for blOccObj in blOccObjs:
-        if blOccObj.gzrs2.occOct:
-            blOccObj.rotation_euler = eulerSnapped(blOccObj.rotation_euler)
-
-    context.view_layer.update()
-    
-    windowManager.progress_begin(0, len(blOccObjs))
-
-    for o, blOccObj in enumerate(blOccObjs):
-        windowManager.progress_update(o)
-
-        props = blOccObj.gzrs2
+        context.view_layer.update()
         
-        if not (props.occBsp or props.occOct):
-            continue
+        windowManager.progress_begin(0, len(blOccObjs))
 
-        worldMatrix = blOccObj.matrix_world.copy()
+        for o, blOccObj in enumerate(blOccObjs):
+            windowManager.progress_update(o)
 
-        normal = worldMatrix.to_quaternion() @ Vector((0, 0, 1))
-        plane = normal.to_4d()
-        plane.w = -normal.dot(worldMatrix.translation)
+            props = blOccObj.gzrs2
+            
+            if not (props.occBsp or props.occOct):
+                continue
 
-        if props.occBsp:    bspPlanes.append(plane)
-        if props.occOct:    octPlanes.append(plane)
+            worldMatrix = blOccObj.matrix_world.copy()
 
-    windowManager.progress_end()
+            normal = worldMatrix.to_quaternion() @ Vector((0, 0, 1))
+            plane = normal.to_4d()
+            plane.w = -normal.dot(worldMatrix.translation)
 
-    # Generate RS convex polygons
-    rsConvexPolygons = []
-    rsCVertexCount = 0
+            if props.occBsp:    bspPlanes.append(plane)
+            if props.occOct:    octPlanes.append(plane)
 
-    windowManager.progress_begin(0, len(worldPolygons))
+        windowManager.progress_end()
 
-    for p, polygon in enumerate(worldPolygons):
-        windowManager.progress_update(w)
+    # Generate Rs convex polygons
+    if state.doVisual:
+        rsConvexPolygons = []
+        rsCVertexCount = 0
 
-        normal = polygon.normal.normalized()
-        plane = normal.to_4d()
-        plane.w = -normal.dot(polygon.positions[0])
-        vertexCount = polygon.vertexCount
-        positions = tuple(polygon.positions)
-        normals = tuple(normal.normalized() for normal in polygon.normals)
+        windowManager.progress_begin(0, len(worldPolygons))
 
-        rsConvexPolygons.append(RsConvexPolygonExport(polygon.matID, polygon.drawFlags, plane, polygon.area, vertexCount, positions, normals))
-        rsCVertexCount += vertexCount
+        for p, polygon in enumerate(worldPolygons):
+            windowManager.progress_update(w)
 
-    rsConvexPolygons = tuple(rsConvexPolygons)
-    rsCPolygonCount = len(rsConvexPolygons)
+            normal = polygon.normal.normalized()
+            plane = normal.to_4d()
+            plane.w = -normal.dot(polygon.positions[0])
+            vertexCount = polygon.vertexCount
+            positions = tuple(polygon.positions)
+            normals = tuple(normal.normalized() for normal in polygon.normals)
 
-    windowManager.progress_end()
+            rsConvexPolygons.append(RsConvexPolygonExport(polygon.matID, polygon.drawFlags, plane, polygon.area, vertexCount, positions, normals))
+            rsCVertexCount += vertexCount
+
+        rsConvexPolygons = tuple(rsConvexPolygons)
+        rsCPolygonCount = len(rsConvexPolygons)
+
+        windowManager.progress_end()
 
     # Generate Rs octree nodes
-    rsOctreePolygons = []
+    if state.doVisual:
+        rsOctreePolygons = []
 
-    windowManager.progress_begin(0, len(worldPolygons))
+        windowManager.progress_begin(0, len(worldPolygons))
 
-    for convexID, polygon in enumerate(worldPolygons):
-        windowManager.progress_update(convexID)
+        for convexID, polygon in enumerate(worldPolygons):
+            windowManager.progress_update(convexID)
 
-        vertexCount = polygon.vertexCount
-        vertices = []
+            vertexCount = polygon.vertexCount
+            vertices = []
 
-        for i in range(vertexCount):
-            pos = polygon.positions[i].copy()
-            nor = polygon.normals[i].normalized()
-            uv1 = polygon.uv1s[i].copy()
-            uv2 = polygon.uv2s[i].copy()
+            for i in range(vertexCount):
+                pos = polygon.positions[i].copy()
+                nor = polygon.normals[i].normalized()
+                uv1 = polygon.uv1s[i].copy()
+                uv2 = polygon.uv2s[i].copy()
 
-            vertices.append(Rs2TreeVertex(pos, nor, uv1, uv2))
-        rsOctreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, polygon.detail))
+                vertices.append(Rs2TreeVertex(pos, nor, uv1, uv2))
+            rsOctreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, polygon.detail))
 
-    rsOctreePolygons = tuple(rsOctreePolygons)
+        rsOctreePolygons = tuple(rsOctreePolygons)
 
-    depthLimit = calcDepthLimit(worldBBMin, worldBBMax)
+        depthLimit = calcDepthLimit(worldBBMin, worldBBMax)
 
-    windowManager.progress_end()
+        windowManager.progress_end()
 
-    windowManager.progress_begin(0, 1)
-    windowManager.progress_update(0)
+        windowManager.progress_begin(0, 1)
+        windowManager.progress_update(0)
 
-    try:
-        rsOctreeRoot = createOctreeNode(rsOctreePolygons, octPlanes, worldBBMin, worldBBMax, depthLimit)
-    except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
-        self.report({ 'ERROR' }, error.message)
-        return { 'CANCELLED' }
+        try:
+            rsOctreeRoot = createOctreeNode(rsOctreePolygons, octPlanes, worldBBMin, worldBBMax, depthLimit)
+        except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
+            self.report({ 'ERROR' }, error.message)
+            return { 'CANCELLED' }
 
-    rsONodeCount        = getTreeNodeCount(rsOctreeRoot)
-    rsOPolygonCount     = getTreePolygonCount(rsOctreeRoot)
-    rsOVertexCount      = getTreeVertexCount(rsOctreeRoot)
-    rsOIndexCount       = getTreeIndicesCount(rsOctreeRoot)
-    rsOTreeDepth        = getTreeDepth(rsOctreeRoot)
+        rsONodeCount        = getTreeNodeCount(rsOctreeRoot)
+        rsOPolygonCount     = getTreePolygonCount(rsOctreeRoot)
+        rsOVertexCount      = getTreeVertexCount(rsOctreeRoot)
+        rsOIndexCount       = getTreeIndicesCount(rsOctreeRoot)
+        rsOTreeDepth        = getTreeDepth(rsOctreeRoot)
 
-    def getOctreeLmUVs(node, *, data = []):
-        if node.positive: getOctreeLmUVs(node.positive, data = data)
-        if node.negative: getOctreeLmUVs(node.negative, data = data)
+        def getOctreeLmUVs(node, *, data = []):
+            if node.positive: getOctreeLmUVs(node.positive, data = data)
+            if node.negative: getOctreeLmUVs(node.negative, data = data)
 
-        for polygon in node.polygons:
-            for vertex in polygon.vertices:
-                data.append(vertex.uv2.copy())
+            for polygon in node.polygons:
+                for vertex in polygon.vertices:
+                    data.append(vertex.uv2.copy())
 
-        return data
+            return data
 
-    rsOctreeLmUVs = tuple(getOctreeLmUVs(rsOctreeRoot))
+        rsOctreeLmUVs = tuple(getOctreeLmUVs(rsOctreeRoot))
 
-    windowManager.progress_end()
+        windowManager.progress_end()
 
     # Generate Bsp nodes
-    rsBsptreePolygons = []
+    if state.doVisual:
+        rsBsptreePolygons = []
 
-    windowManager.progress_begin(0, len(worldPolygons))
+        windowManager.progress_begin(0, len(worldPolygons))
 
-    for convexID, polygon in enumerate(worldPolygons):
-        windowManager.progress_update(convexID)
+        for convexID, polygon in enumerate(worldPolygons):
+            windowManager.progress_update(convexID)
 
-        vertexCount = polygon.vertexCount
-        vertices = []
+            vertexCount = polygon.vertexCount
+            vertices = []
 
-        for i in range(vertexCount):
-            pos = polygon.positions[i].copy()
-            nor = polygon.normals[i].normalized()
-            uv1 = polygon.uv1s[i].copy()
-            uv2 = polygon.uv2s[i].copy()
+            for i in range(vertexCount):
+                pos = polygon.positions[i].copy()
+                nor = polygon.normals[i].normalized()
+                uv1 = polygon.uv1s[i].copy()
+                uv2 = polygon.uv2s[i].copy()
 
-            vertices.append(Rs2TreeVertex(pos, nor, uv1, uv2))
+                vertices.append(Rs2TreeVertex(pos, nor, uv1, uv2))
 
-        rsBsptreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, polygon.detail))
+            rsBsptreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, polygon.detail))
 
-    rsBsptreePolygons = tuple(rsBsptreePolygons)
+        rsBsptreePolygons = tuple(rsBsptreePolygons)
 
-    windowManager.progress_end()
+        windowManager.progress_end()
 
-    windowManager.progress_begin(0, 1)
-    windowManager.progress_update(0)
+        windowManager.progress_begin(0, 1)
+        windowManager.progress_update(0)
 
-    try:
-        rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, bspPlanes, worldBBMin, worldBBMax)
-    except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
-        self.report({ 'ERROR' }, error.message)
-        return { 'CANCELLED' }
+        try:
+            rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, bspPlanes, worldBBMin, worldBBMax)
+        except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
+            self.report({ 'ERROR' }, error.message)
+            return { 'CANCELLED' }
 
-    rsBNodeCount        = getTreeNodeCount(rsBsptreeRoot)
-    rsBPolygonCount     = getTreePolygonCount(rsBsptreeRoot)
-    rsBVertexCount      = getTreeVertexCount(rsBsptreeRoot)
-    rsBIndexCount       = getTreeIndicesCount(rsBsptreeRoot)
-    rsBTreeDepth        = getTreeDepth(rsBsptreeRoot)
+        rsBNodeCount        = getTreeNodeCount(rsBsptreeRoot)
+        rsBPolygonCount     = getTreePolygonCount(rsBsptreeRoot)
+        rsBVertexCount      = getTreeVertexCount(rsBsptreeRoot)
+        rsBIndexCount       = getTreeIndicesCount(rsBsptreeRoot)
+        rsBTreeDepth        = getTreeDepth(rsBsptreeRoot)
 
-    bspNodeCount        = rsBNodeCount
-    bspPolygonCount     = rsBPolygonCount
-    bspVertexCount      = rsBVertexCount
-    bspIndexCount       = rsBIndexCount
+        bspNodeCount        = rsBNodeCount
+        bspPolygonCount     = rsBPolygonCount
+        bspVertexCount      = rsBVertexCount
+        bspIndexCount       = rsBIndexCount
 
-    windowManager.progress_end()
+        windowManager.progress_end()
 
     # Generate Col nodes
     if state.doCollision:
@@ -1187,102 +1194,104 @@ def exportRS2(self, context):
             writeDirection(file, polygon.normal, True)
 
     # Write Rs
-    id = RS2_ID
-    version = RS2_VERSION
+    if state.doVisual:
+        id = RS2_ID
+        version = RS2_VERSION
 
-    if state.logRs:
-        print("===================  Write Rs   ===================")
-        print()
-        print(f"Path:               { rspath }")
-        print(f"ID:                 { hex(id) }")
-        print(f"Version:            { hex(version) }")
-        print()
-        print(f"Material Count:     { rsMatCount }")
-        print()
-        print("Convex:")
-        print(f"Polygon Count:      { rsCPolygonCount }")
-        print(f"Vertex Count:       { rsCVertexCount }")
-        print()
-        print("Bsptree:")
-        print(f"Node Count:         { rsBNodeCount }")
-        print(f"Polygon Count:      { rsBPolygonCount }")
-        print(f"Vertex Count:       { rsBVertexCount }")
-        print(f"Index Count:        { rsBIndexCount }")
-        print(f"Depth:              { rsBTreeDepth }")
-        print()
-        print("Octree:")
-        print(f"Node Count:         { rsONodeCount }")
-        print(f"Polygon Count:      { rsOPolygonCount }")
-        print(f"Vertex Count:       { rsOVertexCount }")
-        print(f"Index Count:        { rsOIndexCount }")
-        print(f"Depth:              { rsOTreeDepth }")
-        print()
-    
-    createBackupFile(rspath, purgeUnused = state.purgeUnused)
+        if state.logRs:
+            print("===================  Write Rs   ===================")
+            print()
+            print(f"Path:               { rspath }")
+            print(f"ID:                 { hex(id) }")
+            print(f"Version:            { hex(version) }")
+            print()
+            print(f"Material Count:     { rsMatCount }")
+            print()
+            print("Convex:")
+            print(f"Polygon Count:      { rsCPolygonCount }")
+            print(f"Vertex Count:       { rsCVertexCount }")
+            print()
+            print("Bsptree:")
+            print(f"Node Count:         { rsBNodeCount }")
+            print(f"Polygon Count:      { rsBPolygonCount }")
+            print(f"Vertex Count:       { rsBVertexCount }")
+            print(f"Index Count:        { rsBIndexCount }")
+            print(f"Depth:              { rsBTreeDepth }")
+            print()
+            print("Octree:")
+            print(f"Node Count:         { rsONodeCount }")
+            print(f"Polygon Count:      { rsOPolygonCount }")
+            print(f"Vertex Count:       { rsOVertexCount }")
+            print(f"Index Count:        { rsOIndexCount }")
+            print(f"Depth:              { rsOTreeDepth }")
+            print()
+        
+        createBackupFile(rspath, purgeUnused = state.purgeUnused)
 
-    with open(rspath, 'wb') as file:
-        writeUInt(file, id)
-        writeUInt(file, version)
+        with open(rspath, 'wb') as file:
+            writeUInt(file, id)
+            writeUInt(file, version)
 
-        writeInt(file, rsMatCount)
+            writeInt(file, rsMatCount)
 
-        for texpath in rsMatTexpaths:
-            writeStringPacked(file, texpath)
+            for texpath in rsMatTexpaths:
+                writeStringPacked(file, texpath)
 
-        writeUInt(file, rsCPolygonCount)
-        writeUInt(file, rsCVertexCount)
+            writeUInt(file, rsCPolygonCount)
+            writeUInt(file, rsCVertexCount)
 
-        for polygon in rsConvexPolygons:
-            writeInt(file, polygon.matID)
-            writeUInt(file, polygon.drawFlags)
-            writePlane(file, polygon.plane, state.convertUnits, True)
-            writeFloat(file, polygon.area)
-            writeUInt(file, polygon.vertexCount)
+            for polygon in rsConvexPolygons:
+                writeInt(file, polygon.matID)
+                writeUInt(file, polygon.drawFlags)
+                writePlane(file, polygon.plane, state.convertUnits, True)
+                writeFloat(file, polygon.area)
+                writeUInt(file, polygon.vertexCount)
 
-            writeCoordinateArray(file, polygon.positions, state.convertUnits, True)
-            writeDirectionArray(file, polygon.normals, True)
+                writeCoordinateArray(file, polygon.positions, state.convertUnits, True)
+                writeDirectionArray(file, polygon.normals, True)
 
-        writeUInt(file, rsBNodeCount)
-        writeUInt(file, rsBPolygonCount)
-        writeUInt(file, rsBVertexCount)
-        writeUInt(file, rsBIndexCount)
+            writeUInt(file, rsBNodeCount)
+            writeUInt(file, rsBPolygonCount)
+            writeUInt(file, rsBVertexCount)
+            writeUInt(file, rsBIndexCount)
 
-        writeUInt(file, rsONodeCount)
-        writeUInt(file, rsOPolygonCount)
-        writeUInt(file, rsOVertexCount)
-        writeUInt(file, rsOIndexCount)
+            writeUInt(file, rsONodeCount)
+            writeUInt(file, rsOPolygonCount)
+            writeUInt(file, rsOVertexCount)
+            writeUInt(file, rsOIndexCount)
 
-        writeTreeNode(rsOctreeRoot)
+            writeTreeNode(rsOctreeRoot)
 
     # Write Bsp
-    id = BSP_ID
-    version = BSP_VERSION
+    if state.doVisual:
+        id = BSP_ID
+        version = BSP_VERSION
 
-    if state.logBsp:
-        print("===================  Write Bsp  ===================")
-        print()
-        print(f"Path:               { bsppath }")
-        print(f"ID:                 { hex(id) }")
-        print(f"Version:            { hex(version) }")
-        print()
-        print(f"Node Count:         { bspNodeCount }")
-        print(f"Polygon Count:      { bspPolygonCount }")
-        print(f"Vertex Count:       { bspVertexCount }")
-        print(f"Index Count:        { bspIndexCount }")
-        print()
-    
-    createBackupFile(bsppath, purgeUnused = state.purgeUnused)
+        if state.logBsp:
+            print("===================  Write Bsp  ===================")
+            print()
+            print(f"Path:               { bsppath }")
+            print(f"ID:                 { hex(id) }")
+            print(f"Version:            { hex(version) }")
+            print()
+            print(f"Node Count:         { bspNodeCount }")
+            print(f"Polygon Count:      { bspPolygonCount }")
+            print(f"Vertex Count:       { bspVertexCount }")
+            print(f"Index Count:        { bspIndexCount }")
+            print()
+        
+        createBackupFile(bsppath, purgeUnused = state.purgeUnused)
 
-    with open(bsppath, 'wb') as file:
-        writeUInt(file, id)
-        writeUInt(file, version)
+        with open(bsppath, 'wb') as file:
+            writeUInt(file, id)
+            writeUInt(file, version)
 
-        writeUInt(file, bspNodeCount)
-        writeUInt(file, bspPolygonCount)
-        writeUInt(file, bspVertexCount)
-        writeUInt(file, bspIndexCount)
+            writeUInt(file, bspNodeCount)
+            writeUInt(file, bspPolygonCount)
+            writeUInt(file, bspVertexCount)
+            writeUInt(file, bspIndexCount)
 
-        writeTreeNode(rsBsptreeRoot)
+            writeTreeNode(rsBsptreeRoot)
 
     # Write Col
     if state.doCollision:
@@ -1384,7 +1393,7 @@ def exportRS2(self, context):
             dumpImageData(imageDatas, imageSizes, imageCount, directory, filename, state)
             
     # Write Elus
-    if self.panelProps:
+    if state.doProps:
         filepath            = self.filepath
         isMapProp           = getattr(self, 'isMapProp', False)
         filterMode          = getattr(self, 'filterMode', 'ALL')

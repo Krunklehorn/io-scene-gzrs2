@@ -443,12 +443,15 @@ class GZRS2ExportState:
 
     purgeUnused:            bool = False
     
+    doVisual:               bool = False
     doCollision:            bool = False
 
     doLightmap:             bool = False
     lmVersion4:             bool = False
     mod4Fix:                bool = False
     dumpImages:             bool = False
+
+    doProps:                bool = False
 
     logRs:                  bool = False
     logBsp:                 bool = False

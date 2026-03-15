@@ -1948,6 +1948,12 @@ class ExportGZRS2(Operator, ExportHelper):
         default = True
     )
 
+    doVisual: BoolProperty(
+        name = 'Visual',
+        description = "Export visual data",
+        default = True
+    )
+
     doCollision: BoolProperty(
         name = 'Collision',
         description = "Export collision data",
@@ -2038,6 +2044,7 @@ class GZRS2_PT_Export_Main(Panel):
         column.enabled = operator.filterMode == 'SELECTED'
 
         layout.prop(operator, 'purgeUnused')
+        layout.prop(operator, 'doVisual')
         layout.prop(operator, 'doCollision')
 
 class GZRS2_PT_Export_Lightmap(Panel):
@@ -2051,7 +2058,11 @@ class GZRS2_PT_Export_Lightmap(Panel):
         return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
 
     def draw_header(self, context):
-        self.layout.prop(context.space_data.active_operator, 'panelLightmap', text = "")
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.prop(operator, 'panelLightmap', text = "")
+        layout.enabled = operator.doVisual
 
     def draw(self, context):
         layout = self.layout
@@ -2059,7 +2070,7 @@ class GZRS2_PT_Export_Lightmap(Panel):
 
         layout.use_property_split = True
         layout.use_property_decorate = False
-        layout.enabled = operator.panelLightmap
+        layout.enabled = operator.panelLightmap and operator.doVisual
 
         layout.prop(operator, 'lmVersion4')
 
