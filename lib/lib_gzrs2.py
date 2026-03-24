@@ -140,7 +140,7 @@ def pathExists(path):
 
 def isValidTexBase(texBase):
     if texBase.endswith(os.sep):                return False
-    elif os.path.splitext(texBase)[1] == '':    return False
+    # elif os.path.splitext(texBase)[1] == '':    return False
 
     return True
 
