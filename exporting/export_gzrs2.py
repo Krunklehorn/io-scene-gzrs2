@@ -484,7 +484,7 @@ def exportRS2(self, context):
 
         windowManager.progress_end()
 
-    # Generate Rs octree nodes
+    # Generate octree nodes
     if state.doVisual:
         rsOctreePolygons = []
 
@@ -503,6 +503,7 @@ def exportRS2(self, context):
                 uv2 = polygon.uv2s[i].copy()
 
                 vertices.append(Rs2TreeVertex(pos, nor, uv1, uv2))
+            
             rsOctreePolygons.append(Rs2TreePolygonExport(polygon.matID, convexID, polygon.drawFlags, vertexCount, tuple(vertices), polygon.normal, polygon.detail))
 
         rsOctreePolygons = tuple(rsOctreePolygons)
@@ -540,7 +541,7 @@ def exportRS2(self, context):
 
         windowManager.progress_end()
 
-    # Generate Bsp nodes
+    # Generate bsptree nodes
     if state.doVisual:
         rsBsptreePolygons = []
 
