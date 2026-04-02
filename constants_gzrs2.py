@@ -260,7 +260,7 @@ FLAG_LIMIT_COMPARE_DATA = (
 MESH_TYPE_DATA = (
     ('NONE',        'None',         "Not a Realspace mesh. Will not be exported"),
     ('RAW',         'Raw',          "Freshly imported, may need modification. Will not be exported"),
-    ('WORLD',       'World',        "World mesh, lit statically, necessary for graphics, must be fully sealed with no leaks"),
+    ('WORLD',       'World',        "World mesh, lit statically, necessary for graphics"),
     ('PROP',        'Prop',         "Prop mesh, lit dynamically, does not contribute to bsptree or octree data. Recorded in .rs.xml, exports to .elu"),
     ('COLLISION',   'Collision',    "Collision mesh, not visible, necessary for gameplay, must be fully sealed with no leaks"),
     ('NAVIGATION',  'Navigation',   "Navigation mesh, not visible, only necessary for Quest mode")

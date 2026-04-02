@@ -85,6 +85,7 @@ def exportRS2(self, context):
     # TODO: New mesh tags
     #   algn#_: 0 face camera, 1 face camera fixed z-axis
     #   water_: it's wet
+    #   water2_: it's wet
     #   sea_:   it's wet
 
     # TODO: Verify blitzkrieg data
@@ -392,6 +393,13 @@ def exportRS2(self, context):
             worldMatrix = blWorldObj.matrix_world
             worldVertices += tuple(worldMatrix @ vertex.co for vertex in blMesh.vertices)
 
+            drawFlags = 0
+
+            if props.worldCastShadow:    drawFlags |= RM_FLAG_CASTSHADOW
+            if props.worldReceiveShadow: drawFlags |= RM_FLAG_RECEIVESHADOW
+            if props.worldPassBullet:    drawFlags |= RM_FLAG_PASSBULLET
+            if props.worldPassRocket:    drawFlags |= RM_FLAG_PASSROCKET
+
             for polygon in blMesh.polygons:
                 if hasMatIDs and polygon.material_index >= blWorldMatCount:
                     self.report({ 'ERROR' }, f"GZRS2: World mesh with corrupt material indices! Verify all polygons are assigned to a valid material slot: { blWorldObj.name }")
@@ -405,7 +413,6 @@ def exportRS2(self, context):
                 uv2s        = tuple(uvLayer2.uv[i].vector   for i in loopRange)                     if hasUV2s              else tuple(Vector((0, 0)) for _ in loopRange)
                 normals     = tuple(blMesh.loops[i].normal  for i in loopRange)                     if hasCustomNormals     else tuple(normal for _ in loopRange)
                 matID       = blWorldMats.index(blWorldMatSlots[polygon.material_index].material)   if hasMatIDs            else -1
-                drawFlags   = 0 # TODO
                 area        = polygon.area
                 detail      = props.worldDetail
 

@@ -3290,6 +3290,26 @@ class GZRS2MeshProperties(PropertyGroup):
         default = False
     )
 
+    worldCastShadow: BoolProperty(
+        name = 'Cast Shadow',
+        default = True
+    )
+
+    worldReceiveShadow: BoolProperty(
+        name = 'Receive Shadow',
+        default = True
+    )
+
+    worldPassBullet: BoolProperty(
+        name = 'Pass Bullet',
+        default = False
+    )
+
+    worldPassRocket: BoolProperty(
+        name = 'Pass Rocket',
+        default = False
+    )
+
     propSubtype: EnumProperty(
         name = 'Subtype',
         items = PROP_SUBTYPE_DATA,
@@ -3397,6 +3417,16 @@ class GZRS2_PT_Realspace_Mesh(Panel):
         if props.meshType == 'WORLD':
             column.prop(props, 'worldCollision')
             column.prop(props, 'worldDetail')
+            
+            box = layout.box()
+            column2 = box.column()
+            column2.label(text = "Draw Flags")
+            column2.label(text = "- No effects in Blender")
+            column2.label(text = "- Discarded upon import")
+            column2.prop(props, 'worldCastShadow')
+            column2.prop(props, 'worldReceiveShadow')
+            column2.prop(props, 'worldPassBullet')
+            column2.prop(props, 'worldPassRocket')
         elif props.meshType == 'PROP':
             column.prop(props, 'propSubtype')
             column.prop(props, 'propFilename')
@@ -3434,6 +3464,8 @@ class GZRS2_PT_Realspace_Mesh(Panel):
                 column2.prop(props, 'flagLimitOffset')
                 column2.prop(props, 'flagLimitCompare')
                 column2.enabled = props.flagUseLimit
+        
+        column = layout.column()
 
         if props.meshType in ('WORLD', 'COLLISION', 'NAVIGATION'):
             column.operator(GZRS2_OT_Preprocess_Geometry.bl_idname, text = "Pre-process Geometry")
