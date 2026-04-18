@@ -34,7 +34,9 @@ def exportRS2(self, context):
     state.purgeUnused       = self.purgeUnused
 
     state.doVisual          = self.doVisual
-    state.doCollision       = self.doCollision
+
+    state.doCollision       = self.panelCollision
+    state.checkDegenerate   = self.checkDegenerate
 
     state.doLightmap        = self.panelLightmap and self.doVisual
     state.lmVersion4        = self.lmVersion4                       and self.panelLightmap
@@ -517,7 +519,7 @@ def exportRS2(self, context):
 
         try:
             rsOctreeRoot = createOctreeNode(rsOctreePolygons, octPlanes, worldBBMin, worldBBMax, depthLimit)
-        except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
+        except GZRS2EdgePlaneIntersectionError as error:
             self.report({ 'ERROR' }, error.message)
             return { 'CANCELLED' }
 
@@ -572,7 +574,7 @@ def exportRS2(self, context):
 
         try:
             rsBsptreeRoot = createBsptreeNode(rsBsptreePolygons, bspPlanes, worldBBMin, worldBBMax)
-        except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
+        except GZRS2EdgePlaneIntersectionError as error:
             self.report({ 'ERROR' }, error.message)
             return { 'CANCELLED' }
 
@@ -625,7 +627,7 @@ def exportRS2(self, context):
         windowManager.progress_update(0)
 
         try:
-            col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads)
+            col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads, state.checkDegenerate)
         except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
             self.report({ 'ERROR' }, error.message)
             return { 'CANCELLED' }

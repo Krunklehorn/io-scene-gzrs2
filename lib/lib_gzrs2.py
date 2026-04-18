@@ -2264,16 +2264,17 @@ def createBoundsQuad(bbmin, bbmax, side):
 
     return Col1BoundaryPolygon(4, vertices, normal)
 
-def createColTriangles(polygons):
+def createColTriangles(polygons, checkDegenerate):
     triangles = []
+    
+    if checkDegenerate:
+        for polygon in polygons:
+            vertexPairs = enumerate(polygon.vertices)
+            vertexPairs = tuple((v1, v2, vertex1, vertex2) for v1, vertex1 in vertexPairs for v2, vertex2 in vertexPairs if v1 != v2)
 
-    for polygon in polygons:
-        vertexPairs = enumerate(polygon.vertices)
-        vertexPairs = tuple((v1, v2, vertex1, vertex2) for v1, vertex1 in vertexPairs for v2, vertex2 in vertexPairs if v1 != v2)
-
-        for _, _, vertex1, vertex2 in vertexPairs:
-            if vec3IsClose(vertex1, vertex2, RS_COORD_THRESHOLD):
-                raise GZRS2DegeneratePolygonError("GZRS2: createColTriangles() found a degenerate polygon! Try using the \"Pre-process Geometry\" operation or turn on the Mesh Analyzer and set it to \"Intersect\" to search for issues!")
+            for _, _, vertex1, vertex2 in vertexPairs:
+                if vec3IsClose(vertex1, vertex2, RS_COORD_THRESHOLD):
+                    raise GZRS2DegeneratePolygonError("GZRS2: createColTriangles() found a degenerate polygon! Try using the \"Pre-process Geometry\" operation or turn on the Mesh Analyzer and set it to \"Intersect\" to search for issues!")
 
     for polygon in polygons:
         for v in range(polygon.vertexCount - 2):
@@ -2357,7 +2358,7 @@ def getPartitionPolygon(plane, boundsPolygons):
 
     return True, Col1BoundaryPolygon(vertexCount, posVertices, -up.copy()), Col1BoundaryPolygon(vertexCount, negVertices, up.copy()), outputPolygons
 
-def createColtreeNode(colPolygons, boundsPolygons, *, depth = 0):
+def createColtreeNode(colPolygons, boundsPolygons, checkDegenerate, *, depth = 0):
     colPolygonCount = len(colPolygons)
     boundsPolygonCount = len(boundsPolygons)
 
@@ -2457,7 +2458,7 @@ def createColtreeNode(colPolygons, boundsPolygons, *, depth = 0):
         bevelPlanes = tuple(bevelPlanes)
 
         # print("\t" * depth, "Export solid:", len(boundsPolygons))
-        result = Col1TreeNode(Vector((0, 0, 0, 0)), True, None, None, createColTriangles(boundsPolygons))
+        result = Col1TreeNode(Vector((0, 0, 0, 0)), True, None, None, createColTriangles(boundsPolygons, checkDegenerate))
 
         for plane in bevelPlanes:
             # print("\t" * depth, "Export bevel:", plane)
@@ -2480,15 +2481,15 @@ def createColtreeNode(colPolygons, boundsPolygons, *, depth = 0):
         negBoundsPolygons = tuple(negBoundsPolygons)
 
         # print("\t" * depth, "Positive:", len(posColPolygons), len(posBoundsPolygons))
-        positive = createColtreeNode(posColPolygons, posBoundsPolygons, depth = depth + 1)
+        positive = createColtreeNode(posColPolygons, posBoundsPolygons, checkDegenerate, depth = depth + 1)
         # print("\t" * depth, "Negative:", len(negColPolygons), len(negBoundsPolygons))
-        negative = createColtreeNode(negColPolygons, negBoundsPolygons, depth = depth + 1)
+        negative = createColtreeNode(negColPolygons, negBoundsPolygons, checkDegenerate, depth = depth + 1)
 
         # print("\t" * depth, "Export fork:", bool(positive), bool(negative))
         return Col1TreeNode(plane, False, positive, negative, ())
     
     # print("\t" * depth, "Export hull:", colPolygonCount)
-    return Col1TreeNode(Vector((0, 0, 0, 0)), False, None, None, createColTriangles(colPolygons))
+    return Col1TreeNode(Vector((0, 0, 0, 0)), False, None, None, createColTriangles(colPolygons, checkDegenerate))
 
 def getTreeNodeCount(tree):
     count = 1

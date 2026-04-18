@@ -1911,6 +1911,12 @@ class ExportGZRS2(Operator, ExportHelper):
         default = True
     )
 
+    panelCollision: BoolProperty(
+        name = 'Collision',
+        description = "Export collision data",
+        default = True
+    )
+
     panelProps: BoolProperty(
         name = 'Props',
         description = "Export map props",
@@ -1954,9 +1960,9 @@ class ExportGZRS2(Operator, ExportHelper):
         default = True
     )
 
-    doCollision: BoolProperty(
-        name = 'Collision',
-        description = "Export collision data",
+    checkDegenerate: BoolProperty(
+        name = 'Check Degenerate',
+        description = "Check for degenerate polygons when building the collision tree",
         default = True
     )
 
@@ -2045,7 +2051,32 @@ class GZRS2_PT_Export_Main(Panel):
 
         layout.prop(operator, 'purgeUnused')
         layout.prop(operator, 'doVisual')
-        layout.prop(operator, 'doCollision')
+
+class GZRS2_PT_Export_Collision(Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Collision'
+    bl_parent_id = 'FILE_PT_operator'
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == 'EXPORT_SCENE_OT_gzrs2'
+
+    def draw_header(self, context):
+        self.layout.prop(context.space_data.active_operator, 'panelCollision', text = "")
+
+    def draw(self, context):
+        layout = self.layout
+        operator = context.space_data.active_operator
+
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.enabled = operator.panelCollision
+
+        layout.prop(operator, 'checkDegenerate')
+
+        if not operator.checkDegenerate:
+            layout.label(text = "Safety feature! Disable at your own risk!")
 
 class GZRS2_PT_Export_Lightmap(Panel):
     bl_space_type = 'FILE_BROWSER'
@@ -2172,6 +2203,12 @@ class ExportRSCOL(Operator, ExportHelper):
         default = True
     )
 
+    checkDegenerate: BoolProperty(
+        name = 'Check Degenerate',
+        description = "Check for degenerate polygons when building the collision tree",
+        default = True
+    )
+
     logCol: BoolProperty(
         name = 'Col',
         description = "Log Col data",
@@ -2212,6 +2249,11 @@ class RSCOL_PT_Export_Main(Panel):
         column = layout.column()
         column.prop(operator, 'includeChildren')
         column.enabled = operator.filterMode == 'SELECTED'
+
+        layout.prop(operator, 'checkDegenerate')
+
+        if not operator.checkDegenerate:
+            layout.label(text = "Safety feature! Disable at your own risk!")
 
 class RSCOL_PT_Export_Logging(Panel):
     bl_space_type = 'FILE_BROWSER'
@@ -4302,6 +4344,7 @@ classes = (
     RSLM_PT_Import_Logging,
     ExportGZRS2,
     GZRS2_PT_Export_Main,
+    GZRS2_PT_Export_Collision,
     GZRS2_PT_Export_Lightmap,
     GZRS2_PT_Export_Props,
     GZRS2_PT_Export_Logging,

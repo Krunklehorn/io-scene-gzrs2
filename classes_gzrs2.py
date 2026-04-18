@@ -444,7 +444,9 @@ class GZRS2ExportState:
     purgeUnused:            bool = False
     
     doVisual:               bool = False
+
     doCollision:            bool = False
+    checkDegenerate:        bool = False
 
     doLightmap:             bool = False
     lmVersion4:             bool = False
@@ -457,8 +459,6 @@ class GZRS2ExportState:
     logBsp:                 bool = False
     logCol:                 bool = False
     logLm:                  bool = False
-
-    treeDepthLimit:         int = 0
 
 @dataclass
 class RsConvexPolygonExport:

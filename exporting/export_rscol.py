@@ -29,6 +29,8 @@ def exportCol(self, context):
     state.filterMode        = self.filterMode
     state.includeChildren   = self.includeChildren and self.filterMode == 'SELECTED'
 
+    state.checkDegenerate   = self.checkDegenerate
+
     if self.panelLogging:
         print()
         print("=======================================================================")
@@ -123,7 +125,7 @@ def exportCol(self, context):
     windowManager.progress_update(0)
 
     try:
-        col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads)
+        col1Root = createColtreeNode(coltreePolygons, coltreeBoundsQuads, state.checkDegenerate)
     except (GZRS2EdgePlaneIntersectionError, GZRS2DegeneratePolygonError) as error:
         self.report({ 'ERROR' }, error.message)
         return { 'CANCELLED' }
