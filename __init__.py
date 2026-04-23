@@ -189,8 +189,29 @@ class GZRS2_OT_Preprocess_Geometry(Operator):
         blObj.select_set(True)
 
         bpy.ops.object.mode_set(mode = 'EDIT')
-
         bpy.ops.mesh.select_mode(type = 'VERT')
+        
+        bpy.ops.mesh.select_all(action = 'DESELECT')
+        bpy.ops.mesh.select_non_manifold(extend = False, use_wire = False, use_boundary = False, use_multi_face = False, use_non_contiguous = True, use_verts = False)
+
+        if blMesh.total_vert_sel > 0:
+            self.report({ 'ERROR' }, f"GZRS2: Mesh contains edges connected to faces with opposite normals! Must fix selected geometry!")
+            return { 'CANCELLED' }
+        
+        bpy.ops.mesh.select_all(action = 'DESELECT')
+        bpy.ops.mesh.select_non_manifold(extend = False, use_wire = False, use_boundary = False, use_multi_face = True, use_non_contiguous = False, use_verts = False)
+
+        if blMesh.total_vert_sel > 0:
+            self.report({ 'ERROR' }, f"GZRS2: Mesh contains edges connected to multiple faces! Must fix selected geometry!")
+            return { 'CANCELLED' }
+        
+        bpy.ops.mesh.select_all(action = 'DESELECT')
+        bpy.ops.mesh.select_non_manifold(extend = False, use_wire = False, use_boundary = True, use_multi_face = False, use_non_contiguous = False, use_verts = False)
+
+        if blMesh.total_vert_sel > 0:
+            self.report({ 'ERROR' }, f"GZRS2: Mesh contains non-manifold boundary! Must fix selected geometry!")
+            return { 'CANCELLED' }
+        
         bpy.ops.mesh.select_all(action = 'SELECT')
         bpy.ops.mesh.dissolve_degenerate(threshold = RS_COORD_THRESHOLD)
 
@@ -220,8 +241,8 @@ class GZRS2_OT_Preprocess_Geometry(Operator):
         bpy.ops.mesh.select_all(action = 'SELECT')
 
         if blMesh.gzrs2.meshType in ('WORLD', 'COLLISION'):
-            bpy.ops.mesh.vert_connect_nonplanar(angle_limit = 0.0174533)
             bpy.ops.mesh.vert_connect_concave()
+            bpy.ops.mesh.vert_connect_nonplanar(angle_limit = 0.0174533)
 
         bpy.ops.mesh.select_all(action = 'SELECT')
         bpy.ops.mesh.dissolve_degenerate(threshold = RS_COORD_THRESHOLD)
