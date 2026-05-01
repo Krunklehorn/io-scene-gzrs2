@@ -2123,7 +2123,7 @@ def choosePlane(polygons, *, checkCounts = False, getter = lambda x: x):
     chosenPolygon = None
     chosenPlane = None
 
-    for polygon1 in polygons:
+    for p1, polygon1 in enumerate(polygons):
         if polygon1.used:
             continue
 
@@ -2133,7 +2133,10 @@ def choosePlane(polygons, *, checkCounts = False, getter = lambda x: x):
         plane = normal.to_4d()
         plane.w = -normal.dot(getter(polygon1.vertices[0]))
 
-        for polygon2 in polygons:
+        for p2, polygon2 in enumerate(polygons):
+            if p2 == p1:
+                continue
+            
             counts[classifyFacing(polygon2, plane, getter = getter)] += 1
 
         # Always prioritize balance
