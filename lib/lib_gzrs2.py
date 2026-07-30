@@ -2269,6 +2269,8 @@ def createBoundsQuad(bbmin, bbmax, side):
 
 def createColTriangles(polygons, checkDegenerate):
     triangles = []
+
+    # TODO: Handle degeneracy gracefully or prevent it in the first place
     
     if checkDegenerate:
         for polygon in polygons:

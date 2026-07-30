@@ -17,20 +17,17 @@ RaGEZONE thread: ***https://forum.ragezone.com/f496/io_scene_gzrs2-blender-3-1-m
 
 [***ONLY WORKS WITH BLENDER 4.2.x!! >> DOWNLOAD v0.9.7***](https://github.com/Krunklehorn/io-scene-gzrs2/releases/tag/v0.9.7)
 
-* NEW: "Pre-process Geometry" operator!
-    * Available on World, Navigation and Collision meshes
-    * Dissolves degenerate and co-linear vertices, deletes loose pieces then splits non-planar and concave faces
-    * Useful for overcoming geometry errors during map export
-* NEW: Server profile for Duelists!
-    * Light properties: Range, Shadow Bias, Shadow Resolution
-    * Material properties: Specular Power (IOR Level), Normal/Specular/Emissive texture paths, Height Offset
-    * .rs.xml LIGHT tags: DIRECTION, RANGE, INNERCONE, OUTERCONE, SHADOWBIAS, SHADOWRES
-    * .rs.xml MATERIAL tags: POWER, SPECULARINTENSITY, EMISSIVEINTENSITY, HEIGHTOFFSET, NORMALMAP, SPECULARMAP, EMISSIVEMAP
-* Armature modifiers no longer enable volume preservation upon import
-* Valid bone and bone root prefixes now include "obj_" variants
-* RobinNorling: Fixed GunZ 2 texture loading
-* Overhauled project folder structure
-* Other minor fixes
+* NEW: .rs exporter now also exports .elu map props in bulk
+* NEW: .rs exporter now includes partial support for per-polygon draw flags
+    * For sanity reasons these are instead set on a per-object basis and are discarded by the importer
+    * Currently supports the following RM flags: CASTSHADOW, RECEIVESHADOW, PASSBULLET and PASSROCKET
+* .col exporter is now available standalone
+* .col exporter degenerate polygon check has been made optional, disable at your own risk!!
+* Improved Pre-process Geometry operator checks for and highlights non-manifold geometry
+* Performance has been improved by removing progress indicator updates during tree generation
+* Lightmap image dumps are now optional
+* Flag filenames are now verified
+* Other minor fixes and improvements
 
 
 # Summary
